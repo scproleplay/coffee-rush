@@ -6,6 +6,7 @@
   // --- Config ---
   const STORAGE_KEY = "coffeeRushBestScore";
   const SOUND_KEY = "coffeeRushSoundOn";
+  const ACHIEVEMENTS_KEY = "coffeeRushAchievements";
   const SHARE_URL = "https://codecup-coffee-rush.netlify.app";
   const GOLDEN_CHANCE = 0.25; // ~25% of cups are golden
   const COMBO_WINDOW_MS = 900; // clicks within this window keep the combo alive
@@ -26,6 +27,16 @@
     { min: 21, max: 50,  name: "Coffee Catcher",  emoji: "☕" },
     { min: 51, max: 80,  name: "Caffeine Pro",    emoji: "⚡" },
     { min: 81, max: Infinity, name: "Coffee Master", emoji: "👑" },
+  ];
+
+  // Achievements: each test receives the final game stats and returns true
+  // if the achievement is earned by that game.
+  const ACHIEVEMENTS = [
+    { id: "first_sip",      name: "First Sip",      emoji: "☕", desc: "Score at least 1 point",                       test: function (g) { return g.score >= 1; } },
+    { id: "coffee_catcher", name: "Coffee Catcher", emoji: "🥤", desc: "Score at least 25 points",                      test: function (g) { return g.score >= 25; } },
+    { id: "caffeine_pro",   name: "Caffeine Pro",   emoji: "⚡", desc: "Score at least 50 points",                      test: function (g) { return g.score >= 50; } },
+    { id: "coffee_master",  name: "Coffee Master",  emoji: "👑", desc: "Score at least 100 points",                     test: function (g) { return g.score >= 100; } },
+    { id: "golden_hunter",  name: "Golden Hunter",  emoji: "✨", desc: "Catch 5 golden coffees in one game",            test: function (g) { return g.goldenCups >= 5; } },
   ];
 
   // --- Elements ---
@@ -55,6 +66,9 @@
   const finalBestEl     = document.getElementById("finalBest");
   const rankEmojiEl     = document.getElementById("rankEmoji");
   const rankNameEl      = document.getElementById("rankName");
+  const achievementToastEl = document.getElementById("achievementToast");
+  const achievementsListEl = document.getElementById("achievementsList");
+  const achievementsCountEl = document.getElementById("achievementsCount");
 
   const copiedToast     = document.getElementById("copiedToast");
   const soundToggle     = document.getElementById("soundToggle");
@@ -85,6 +99,9 @@
   let combo = 0;
   let lastClickAt = 0;
   let comboResetTimerId = null;
+  let goldenCupsCaught = 0;
+  let unlockedAchievements = loadAchievements();
+  let achievementToastTimerId = null;
 
   // --- Audio (WebAudio click sound, no external files) ---
   let audioCtx = null;
@@ -153,6 +170,22 @@
   }
   function saveSoundPref(on) {
     try { localStorage.setItem(SOUND_KEY, on ? "1" : "0"); } catch (e) { /* ignore */ }
+  }
+  function loadAchievements() {
+    // Returns a Set of achievement IDs already unlocked.
+    try {
+      const raw = localStorage.getItem(ACHIEVEMENTS_KEY);
+      if (!raw) return new Set();
+      const arr = JSON.parse(raw);
+      if (!Array.isArray(arr)) return new Set();
+      return new Set(arr.filter(function (x) { return typeof x === "string"; }));
+    } catch (e) {
+      return new Set();
+    }
+  }
+  function saveAchievements(set) {
+    try { localStorage.setItem(ACHIEVEMENTS_KEY, JSON.stringify(Array.from(set))); }
+    catch (e) { /* ignore */ }
   }
 
   // --- Helpers ---
@@ -266,13 +299,16 @@
     welcomeScreen.hidden = false;
     gameUI.hidden = true;
     gameOverScreen.hidden = true;
+    // Hide any leftover achievement toast from a previous game
+    achievementToastEl.hidden = true;
+    if (achievementToastTimerId) { clearTimeout(achievementToastTimerId); achievementToastTimerId = null; }
   }
   function showGame() {
     welcomeScreen.hidden = true;
     gameOverScreen.hidden = true;
     gameUI.hidden = false;
   }
-  function showGameOver() {
+  function showGameOver(newlyUnlocked) {
     if (timerId) { clearInterval(timerId); timerId = null; }
     isPlaying = false;
     playArea.classList.add("disabled");
@@ -283,9 +319,63 @@
     rankEmojiEl.textContent = rank.emoji;
     rankNameEl.textContent  = rank.name;
 
+    renderAchievements(newlyUnlocked || []);
+
     gameUI.hidden = true;
     welcomeScreen.hidden = true;
     gameOverScreen.hidden = false;
+  }
+
+  function renderAchievements(newlyUnlocked) {
+    // Build the tile list. Clear any previous content first so a re-render
+    // (e.g. back to game-over from main menu) doesn't duplicate tiles.
+    achievementsListEl.innerHTML = "";
+    const newlyUnlockedIds = new Set(newlyUnlocked.map(function (a) { return a.id; }));
+
+    for (let i = 0; i < ACHIEVEMENTS.length; i++) {
+      const a = ACHIEVEMENTS[i];
+      const isUnlocked = unlockedAchievements.has(a.id);
+      const isNew = newlyUnlockedIds.has(a.id);
+
+      const li = document.createElement("li");
+      li.className = "achievement-tile " + (isUnlocked ? "unlocked" : "locked") + (isNew ? " newly-unlocked" : "");
+      li.title = a.desc;
+      li.setAttribute("aria-label", (isUnlocked ? "Unlocked: " : "Locked: ") + a.name + " — " + a.desc);
+
+      const emojiEl = document.createElement("span");
+      emojiEl.className = "achievement-emoji";
+      emojiEl.textContent = a.emoji;
+      li.appendChild(emojiEl);
+
+      const nameEl = document.createElement("span");
+      nameEl.className = "achievement-name";
+      nameEl.textContent = a.name;
+      li.appendChild(nameEl);
+
+      achievementsListEl.appendChild(li);
+    }
+
+    const total = ACHIEVEMENTS.length;
+    const unlockedCount = unlockedAchievements.size;
+    achievementsCountEl.textContent = unlockedCount + "/" + total;
+
+    // Show the toast only if there's a fresh unlock this game
+    if (newlyUnlocked.length > 0) {
+      const names = newlyUnlocked.map(function (a) { return a.name; });
+      achievementToastEl.textContent = "🏆 Unlocked: " + names.join(" · ");
+      achievementToastEl.hidden = false;
+      // Restart the slide-in animation each time it appears
+      achievementToastEl.style.animation = "none";
+      void achievementToastEl.offsetWidth;
+      achievementToastEl.style.animation = "";
+      if (achievementToastTimerId) clearTimeout(achievementToastTimerId);
+      achievementToastTimerId = setTimeout(function () {
+        achievementToastEl.hidden = true;
+        achievementToastTimerId = null;
+      }, 3500);
+    } else {
+      achievementToastEl.hidden = true;
+    }
   }
 
   // --- Difficulty selection ---
@@ -341,6 +431,7 @@
     score = 0;
     combo = 0;
     lastClickAt = 0;
+    goldenCupsCaught = 0;
     if (comboResetTimerId) { clearTimeout(comboResetTimerId); comboResetTimerId = null; }
 
     applyCupSize(currentDifficulty);
@@ -383,8 +474,28 @@
       bestScore = score;
       saveBest(bestScore);
     }
+
+    // Evaluate achievements for this game. newlyUnlocked lists the ones
+    // that were just earned and weren't already in the saved set.
+    const gameStats = { score: score, goldenCups: goldenCupsCaught };
+    const newlyUnlocked = [];
+    for (let i = 0; i < ACHIEVEMENTS.length; i++) {
+      const a = ACHIEVEMENTS[i];
+      if (!unlockedAchievements.has(a.id) && a.test(gameStats)) {
+        unlockedAchievements.add(a.id);
+        newlyUnlocked.push(a);
+      }
+    }
+    if (newlyUnlocked.length > 0) {
+      saveAchievements(unlockedAchievements);
+      // Quick celebratory chime — three short high notes
+      setTimeout(function () { playClick({ type: "triangle", freq: 880,  freqEnd: 1320, peak: 0.18, dur: 0.08 }); }, 0);
+      setTimeout(function () { playClick({ type: "triangle", freq: 1175, freqEnd: 1760, peak: 0.18, dur: 0.08 }); }, 110);
+      setTimeout(function () { playClick({ type: "triangle", freq: 1568, freqEnd: 2349, peak: 0.20, dur: 0.18 }); }, 220);
+    }
+
     playEndSound();
-    showGameOver();
+    showGameOver(newlyUnlocked);
   }
 
   function handleCupClick(e) {
@@ -419,8 +530,12 @@
     }
     updateCombo();
 
-    if (isGolden) playGoldenSound();
-    else          playNormalSound();
+    if (isGolden) {
+      goldenCupsCaught += 1;
+      playGoldenSound();
+    } else {
+      playNormalSound();
+    }
 
     score += points;
     updateScore();
