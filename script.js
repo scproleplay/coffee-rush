@@ -1,0 +1,504 @@
+/* Coffee Rush — click the cup as many times as you can! */
+
+(function () {
+  "use strict";
+
+  // --- Config ---
+  const STORAGE_KEY = "coffeeRushBestScore";
+  const SOUND_KEY = "coffeeRushSoundOn";
+  const SHARE_URL = "https://timely-licorice-1e6cfa.netlify.app";
+  const GOLDEN_CHANCE = 0.25; // ~25% of cups are golden
+  const COMBO_WINDOW_MS = 900; // clicks within this window keep the combo alive
+  const COMBO_BURST_THRESHOLD = 2; // show "Combo xN!" starting at x2
+  const COUNTDOWN_SECONDS = ["3", "2", "1", "GO!"];
+
+  // Difficulty profiles
+  const DIFFICULTIES = {
+    easy:   { duration: 30, cupSize: "size-easy",   cupBase: 110, insane: false, label: "Easy Mode" },
+    normal: { duration: 30, cupSize: "",            cupBase: 90,  insane: false, label: "Normal Mode" },
+    hard:   { duration: 20, cupSize: "size-hard",   cupBase: 70,  insane: false, label: "Hard Mode" },
+    insane: { duration: 15, cupSize: "size-insane", cupBase: 70,  insane: true,  label: "Insane Mode" },
+  };
+
+  // Rank tiers (score -> { name, emoji })
+  const RANKS = [
+    { min:  0, max: 20,  name: "Beginner Sipper", emoji: "🥛" },
+    { min: 21, max: 50,  name: "Coffee Catcher",  emoji: "☕" },
+    { min: 51, max: 80,  name: "Caffeine Pro",    emoji: "⚡" },
+    { min: 81, max: Infinity, name: "Coffee Master", emoji: "👑" },
+  ];
+
+  // --- Elements ---
+  const welcomeScreen   = document.getElementById("welcomeScreen");
+  const gameUI          = document.getElementById("gameUI");
+  const gameOverScreen  = document.getElementById("gameOverScreen");
+  const startGameBtn    = document.getElementById("startGameBtn");
+  const playAgainBtn    = document.getElementById("playAgainBtn");
+  const backToMenuBtn   = document.getElementById("backToMenuBtn");
+  const shareFinalBtn   = document.getElementById("shareFinalBtn");
+  const difficultyBtns  = document.querySelectorAll(".difficulty-btn");
+  const welcomeBestEl   = document.getElementById("welcomeBest");
+
+  const scoreEl         = document.getElementById("score");
+  const timeEl          = document.getElementById("time");
+  const comboEl         = document.getElementById("combo");
+  const difficultyBadge = document.getElementById("difficultyBadge");
+  const countdownEl     = document.getElementById("countdown");
+  const countdownText   = countdownEl.querySelector(".countdown-text");
+
+  const cup             = document.getElementById("cup");
+  const playArea        = document.getElementById("playArea");
+  const messageEl       = document.getElementById("message");
+  const sparklesEl      = cup.querySelector(".sparkles");
+
+  const finalScoreEl    = document.getElementById("finalScore");
+  const finalBestEl     = document.getElementById("finalBest");
+  const rankEmojiEl     = document.getElementById("rankEmoji");
+  const rankNameEl      = document.getElementById("rankName");
+
+  const copiedToast     = document.getElementById("copiedToast");
+  const soundToggle     = document.getElementById("soundToggle");
+  const soundIcon       = document.getElementById("soundIcon");
+
+  // Populate the sparkles once (only visible when .cup.golden)
+  if (sparklesEl && !sparklesEl.children.length) {
+    for (let i = 1; i <= 4; i++) {
+      const s = document.createElement("span");
+      s.className = "spark spark-" + i;
+      s.textContent = "✨";
+      sparklesEl.appendChild(s);
+    }
+  }
+
+  // --- State ---
+  let score = 0;
+  let timeLeft = 0;
+  let gameDuration = 30;
+  let currentDifficulty = "normal";
+  let isPlaying = false;
+  let isGolden = false;
+  let timerId = null;
+  let countdownId = null;
+  let copiedTimerId = null;
+  let bestScore = loadBest();
+  let soundOn = loadSoundPref();
+  let combo = 0;
+  let lastClickAt = 0;
+  let comboResetTimerId = null;
+
+  // --- Audio (WebAudio click sound, no external files) ---
+  let audioCtx = null;
+  function getAudioCtx() {
+    if (audioCtx) return audioCtx;
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return null;
+      audioCtx = new Ctx();
+    } catch (e) {
+      audioCtx = null;
+    }
+    return audioCtx;
+  }
+  function playClick(opts) {
+    if (!soundOn) return;
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+    // Resume context if browser suspended it (autoplay policy)
+    if (ctx.state === "suspended") {
+      try { ctx.resume(); } catch (e) { /* ignore */ }
+    }
+    const o = opts || {};
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = o.type || "square";
+    osc.frequency.setValueAtTime(o.freq || 720, now);
+    osc.frequency.exponentialRampToValueAtTime(o.freqEnd || (o.freq ? o.freq * 0.5 : 320), now + 0.08);
+    const peak = o.peak != null ? o.peak : 0.18;
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(peak, now + 0.005);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + (o.dur || 0.09));
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + (o.dur || 0.1) + 0.02);
+  }
+  function playGoldenSound() { playClick({ type: "triangle", freq: 1100, freqEnd: 1600, peak: 0.22, dur: 0.14 }); }
+  function playNormalSound() { playClick({ type: "square",   freq: 720,  freqEnd: 360,  peak: 0.16, dur: 0.08 }); }
+  function playCountdownSound() { playClick({ type: "sine",   freq: 520,  freqEnd: 520,  peak: 0.14, dur: 0.12 }); }
+  function playGoSound()         { playClick({ type: "sawtooth", freq: 880, freqEnd: 1320, peak: 0.22, dur: 0.18 }); }
+  function playEndSound()        { playClick({ type: "sine",   freq: 440,  freqEnd: 220,  peak: 0.18, dur: 0.25 }); }
+
+  // --- Persistence ---
+  function loadBest() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      const n = raw == null ? 0 : parseInt(raw, 10);
+      return Number.isFinite(n) && n >= 0 ? n : 0;
+    } catch (e) {
+      return 0;
+    }
+  }
+  function saveBest(n) {
+    try { localStorage.setItem(STORAGE_KEY, String(n)); } catch (e) { /* ignore */ }
+  }
+  function loadSoundPref() {
+    try {
+      const raw = localStorage.getItem(SOUND_KEY);
+      if (raw == null) return true;
+      return raw === "1";
+    } catch (e) {
+      return true;
+    }
+  }
+  function saveSoundPref(on) {
+    try { localStorage.setItem(SOUND_KEY, on ? "1" : "0"); } catch (e) { /* ignore */ }
+  }
+
+  // --- Helpers ---
+  function setMessage(text, win) {
+    messageEl.textContent = text || "";
+    messageEl.classList.toggle("win", !!win);
+  }
+  function showCopiedToast(text) {
+    copiedToast.textContent = text;
+    copiedToast.classList.add("show");
+    if (copiedTimerId) clearTimeout(copiedTimerId);
+    copiedTimerId = setTimeout(function () {
+      copiedToast.classList.remove("show");
+    }, 1600);
+  }
+  function copyToClipboard(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      return navigator.clipboard.writeText(text);
+    }
+    return new Promise(function (resolve, reject) {
+      try {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.setAttribute("readonly", "");
+        ta.style.position = "fixed";
+        ta.style.top = "-1000px";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        const ok = document.execCommand("copy");
+        document.body.removeChild(ta);
+        ok ? resolve() : reject(new Error("copy failed"));
+      } catch (err) {
+        reject(err);
+      }
+    });
+  }
+  function updateScore() { scoreEl.textContent = String(score); }
+  function updateTime()  { timeEl.textContent  = String(timeLeft); }
+  function updateCombo() { comboEl.textContent = "x" + (combo || 1); }
+  function placeCupCenter() {
+    const area = playArea.getBoundingClientRect();
+    const cupSize = cup.offsetWidth || 90;
+    const x = (area.width - cupSize) / 2;
+    const y = (area.height - cupSize) / 2;
+    cup.style.left = x + "px";
+    cup.style.top  = y + "px";
+  }
+  function moveCupRandom() {
+    const area = playArea.getBoundingClientRect();
+    const cupSize = cup.offsetWidth || 90;
+    const padding = 10;
+    const maxX = Math.max(0, area.width - cupSize - padding);
+    const maxY = Math.max(0, area.height - cupSize - padding);
+    const x = padding + Math.random() * maxX;
+    const y = padding + Math.random() * maxY;
+    cup.style.left = x + "px";
+    cup.style.top  = y + "px";
+
+    // ~25% chance to spawn a golden cup
+    isGolden = Math.random() < GOLDEN_CHANCE;
+    cup.classList.toggle("golden", isGolden);
+  }
+  function applyCupSize(diffKey) {
+    const cfg = DIFFICULTIES[diffKey];
+    cup.classList.remove("size-easy", "size-hard", "size-insane", "insane");
+    if (cfg.cupSize) cup.classList.add(cfg.cupSize);
+    if (cfg.insane) cup.classList.add("insane");
+  }
+  function spawnFloatText(points) {
+    const el = document.createElement("span");
+    el.className = "float-text plus" + points;
+    el.textContent = "+" + points;
+    const areaRect  = playArea.getBoundingClientRect();
+    const cupRect   = cup.getBoundingClientRect();
+    const x = cupRect.left - areaRect.left + cupRect.width / 2;
+    const y = cupRect.top  - areaRect.top  + cupRect.height / 2;
+    el.style.left = x + "px";
+    el.style.top  = y + "px";
+    playArea.appendChild(el);
+    el.addEventListener("animationend", function () {
+      if (el.parentNode) el.parentNode.removeChild(el);
+    });
+  }
+  function spawnComboBurst(level) {
+    const el = document.createElement("div");
+    el.className = "combo-burst" + (level >= 5 ? " x-high" : "");
+    el.textContent = "Combo x" + level + "!";
+    playArea.appendChild(el);
+    el.addEventListener("animationend", function () {
+      if (el.parentNode) el.parentNode.removeChild(el);
+    });
+  }
+  function rankFor(s) {
+    for (let i = 0; i < RANKS.length; i++) {
+      if (s >= RANKS[i].min && s <= RANKS[i].max) return RANKS[i];
+    }
+    return RANKS[0];
+  }
+
+  // --- Screens ---
+  function showWelcome() {
+    cancelCountdown();
+    if (timerId) { clearInterval(timerId); timerId = null; }
+    isPlaying = false;
+    combo = 0;
+    lastClickAt = 0;
+    if (comboResetTimerId) { clearTimeout(comboResetTimerId); comboResetTimerId = null; }
+
+    welcomeBestEl.textContent = String(bestScore);
+    welcomeScreen.hidden = false;
+    gameUI.hidden = true;
+    gameOverScreen.hidden = true;
+  }
+  function showGame() {
+    welcomeScreen.hidden = true;
+    gameOverScreen.hidden = true;
+    gameUI.hidden = false;
+  }
+  function showGameOver() {
+    if (timerId) { clearInterval(timerId); timerId = null; }
+    isPlaying = false;
+    playArea.classList.add("disabled");
+
+    finalScoreEl.textContent = String(score);
+    finalBestEl.textContent  = String(bestScore);
+    const rank = rankFor(score);
+    rankEmojiEl.textContent = rank.emoji;
+    rankNameEl.textContent  = rank.name;
+
+    gameUI.hidden = true;
+    welcomeScreen.hidden = true;
+    gameOverScreen.hidden = false;
+  }
+
+  // --- Difficulty selection ---
+  function selectDifficulty(key) {
+    if (!DIFFICULTIES[key]) return;
+    currentDifficulty = key;
+    difficultyBtns.forEach(function (b) {
+      const isSel = b.getAttribute("data-difficulty") === key;
+      b.classList.toggle("selected", isSel);
+      b.setAttribute("aria-checked", isSel ? "true" : "false");
+    });
+  }
+
+  // --- Countdown ---
+  function cancelCountdown() {
+    if (countdownId) { clearTimeout(countdownId); countdownId = null; }
+    countdownEl.hidden = true;
+  }
+  function runCountdown(onDone) {
+    cancelCountdown();
+    countdownEl.hidden = false;
+    let i = 0;
+    function showNext() {
+      if (i >= COUNTDOWN_SECONDS.length) {
+        countdownEl.hidden = true;
+        onDone();
+        return;
+      }
+      const label = COUNTDOWN_SECONDS[i];
+      countdownText.textContent = label;
+      countdownText.classList.toggle("go", label === "GO!");
+      // Restart the CSS animation
+      countdownText.style.animation = "none";
+      void countdownText.offsetWidth;
+      countdownText.style.animation = "";
+      if (label === "GO!") {
+        playGoSound();
+      } else {
+        playCountdownSound();
+      }
+      i++;
+      countdownId = setTimeout(showNext, 1000);
+    }
+    showNext();
+  }
+
+  // --- Game flow ---
+  function startGame() {
+    if (isPlaying) return;
+    const cfg = DIFFICULTIES[currentDifficulty];
+    gameDuration = cfg.duration;
+    timeLeft = gameDuration;
+    score = 0;
+    combo = 0;
+    lastClickAt = 0;
+    if (comboResetTimerId) { clearTimeout(comboResetTimerId); comboResetTimerId = null; }
+
+    applyCupSize(currentDifficulty);
+    difficultyBadge.textContent = cfg.label;
+
+    updateScore();
+    updateTime();
+    updateCombo();
+    setMessage("Get ready…", false);
+    hideShareUi();
+    showGame();
+    placeCupCenter();
+
+    // Disable cup until "GO!"
+    playArea.classList.add("disabled");
+    cup.classList.remove("golden");
+
+    runCountdown(function () {
+      isPlaying = true;
+      playArea.classList.remove("disabled");
+      setMessage("Go! Tap the cup! ☕", false);
+      moveCupRandom();
+      timerId = setInterval(tick, 1000);
+    });
+  }
+
+  function tick() {
+    timeLeft--;
+    updateTime();
+    if (timeLeft <= 0) endGame();
+  }
+
+  function endGame() {
+    if (timerId) { clearInterval(timerId); timerId = null; }
+    isPlaying = false;
+    if (comboResetTimerId) { clearTimeout(comboResetTimerId); comboResetTimerId = null; }
+
+    const isNewBest = score > bestScore;
+    if (isNewBest) {
+      bestScore = score;
+      saveBest(bestScore);
+    }
+    playEndSound();
+    showGameOver();
+  }
+
+  function handleCupClick(e) {
+    e.preventDefault();
+    if (!isPlaying) return;
+
+    // Combo: count a click as continuing the combo if it lands within
+    // COMBO_WINDOW_MS of the previous click. Otherwise it starts a new
+    // combo at 1 (no multiplier). The multiplier is simply "combo".
+    const now = performance.now();
+    if (lastClickAt && (now - lastClickAt) <= COMBO_WINDOW_MS) {
+      combo += 1;
+    } else {
+      combo = 1;
+    }
+    lastClickAt = now;
+
+    // Reset combo if the player doesn't click again in time
+    if (comboResetTimerId) clearTimeout(comboResetTimerId);
+    comboResetTimerId = setTimeout(function () {
+      combo = 0;
+      updateCombo();
+    }, COMBO_WINDOW_MS + 60);
+
+    const basePoints = isGolden ? 5 : 1;
+    const points = basePoints * combo;
+
+    // Floating text shows the points actually earned
+    spawnFloatText(points);
+    if (combo >= COMBO_BURST_THRESHOLD) {
+      spawnComboBurst(combo);
+    }
+    updateCombo();
+
+    if (isGolden) playGoldenSound();
+    else          playNormalSound();
+
+    score += points;
+    updateScore();
+    moveCupRandom();
+
+    // Pop animation
+    cup.classList.remove("pop");
+    void cup.offsetWidth;
+    cup.classList.add("pop");
+  }
+
+  function hideShareUi() {
+    /* No longer using a floating share button — share is on the game-over screen. */
+  }
+
+  function buildShareText() {
+    return "I scored " + score + " in Coffee Rush ☕ Can you beat me? " + SHARE_URL;
+  }
+
+  function handleShare() {
+    const text = buildShareText();
+    copyToClipboard(text).then(
+      function () { showCopiedToast("Copied to clipboard!"); },
+      function () { showCopiedToast("Couldn't copy — try again"); }
+    );
+  }
+
+  function handleResize() {
+    if (isPlaying) return;
+    if (!gameUI.hidden) placeCupCenter();
+  }
+
+  function toggleSound() {
+    soundOn = !soundOn;
+    soundIcon.textContent = soundOn ? "🔊" : "🔇";
+    soundToggle.classList.toggle("muted", !soundOn);
+    soundToggle.setAttribute("aria-pressed", soundOn ? "true" : "false");
+    saveSoundPref(soundOn);
+    if (soundOn) {
+      // Give audible feedback when turning on
+      playClick({ type: "sine", freq: 880, freqEnd: 660, peak: 0.14, dur: 0.1 });
+    }
+  }
+
+  // --- Init display ---
+  function init() {
+    soundIcon.textContent = soundOn ? "🔊" : "🔇";
+    soundToggle.classList.toggle("muted", !soundOn);
+    soundToggle.setAttribute("aria-pressed", soundOn ? "true" : "false");
+    selectDifficulty("normal");
+    showWelcome();
+  }
+
+  // --- Events ---
+  startGameBtn.addEventListener("click", function () {
+    // Prime the audio context on this user gesture (mobile autoplay policy)
+    getAudioCtx();
+    startGame();
+  });
+  playAgainBtn.addEventListener("click", function () { getAudioCtx(); startGame(); });
+  backToMenuBtn.addEventListener("click", showWelcome);
+  shareFinalBtn.addEventListener("click", handleShare);
+  soundToggle.addEventListener("click", toggleSound);
+
+  difficultyBtns.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      const key = btn.getAttribute("data-difficulty");
+      selectDifficulty(key);
+    });
+  });
+
+  cup.addEventListener("click", handleCupClick);
+  cup.addEventListener("touchstart", function (e) {
+    if (isPlaying) e.preventDefault();
+  }, { passive: false });
+
+  window.addEventListener("resize", handleResize);
+  window.addEventListener("orientationchange", handleResize);
+
+  init();
+})();

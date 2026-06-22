@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Coffee Rush ☕</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <h1 class="title">Coffee Rush ☕</h1>
+      <p class="subtitle">Click the coffee cup as many times as you can!</p>
+      <ul class="rules" aria-label="Scoring rules">
+        <li class="rule rule-normal">☕ Normal = <strong>+1</strong></li>
+        <li class="rule rule-golden">✨ Golden = <strong>+5</strong></li>
+      </ul>
+    </header>
+
+    <!-- Welcome / Start Screen -->
+    <section id="welcomeScreen" class="welcome-screen" aria-label="Welcome screen">
+      <div class="welcome-card">
+        <h2 class="welcome-title">Welcome to Coffee Rush! ☕</h2>
+        <p class="welcome-text">Tap coffee cups to score points before the timer runs out.<br />Build combos for big scores!</p>
+
+        <div class="difficulty-picker" role="radiogroup" aria-label="Choose difficulty">
+          <p class="difficulty-label">Choose your difficulty:</p>
+          <div class="difficulty-options">
+            <button class="difficulty-btn" data-difficulty="easy" role="radio" aria-checked="false">
+              <span class="diff-emoji">😊</span>
+              <span class="diff-name">Easy</span>
+              <span class="diff-desc">30s · Big cup</span>
+            </button>
+            <button class="difficulty-btn selected" data-difficulty="normal" role="radio" aria-checked="true">
+              <span class="diff-emoji">☕</span>
+              <span class="diff-name">Normal</span>
+              <span class="diff-desc">30s · Normal cup</span>
+            </button>
+            <button class="difficulty-btn" data-difficulty="hard" role="radio" aria-checked="false">
+              <span class="diff-emoji">😬</span>
+              <span class="diff-name">Hard</span>
+              <span class="diff-desc">20s · Small cup</span>
+            </button>
+            <button class="difficulty-btn" data-difficulty="insane" role="radio" aria-checked="false">
+              <span class="diff-emoji">🔥</span>
+              <span class="diff-name">Insane</span>
+              <span class="diff-desc">15s · Tiny &amp; fast</span>
+            </button>
+          </div>
+        </div>
+
+        <button id="startGameBtn" class="btn btn-primary btn-large">Start Game ☕</button>
+
+        <div class="best-row">
+          <span class="best-label">Best Score:</span>
+          <span id="welcomeBest" class="best-value">0</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Game UI (hidden until game starts) -->
+    <section id="gameUI" class="game-ui" hidden>
+      <section class="hud">
+        <div class="hud-item">
+          <span class="hud-label">Score</span>
+          <span id="score" class="hud-value">0</span>
+        </div>
+        <div class="hud-item">
+          <span class="hud-label">Time</span>
+          <span id="time" class="hud-value">30</span>
+        </div>
+        <div class="hud-item">
+          <span class="hud-label">Combo</span>
+          <span id="combo" class="hud-value">x1</span>
+        </div>
+      </section>
+
+      <div class="difficulty-badge">
+        <span id="difficultyBadge">Normal Mode</span>
+      </div>
+
+      <!-- Countdown overlay (3, 2, 1, GO!) — lives inside the play area
+           so the absolutely-positioned overlay covers the play area only. -->
+      <main id="playArea" class="play-area" aria-label="Game play area">
+        <button id="cup" class="cup" aria-label="Click the coffee cup">
+          <span class="sparkles" aria-hidden="true"></span>
+          <span class="cup-emoji">☕</span>
+        </button>
+        <div id="countdown" class="countdown" aria-live="polite" hidden>
+          <span class="countdown-text">3</span>
+        </div>
+      </main>
+
+      <div id="message" class="message" aria-live="polite"></div>
+    </section>
+
+    <!-- Game Over Screen -->
+    <section id="gameOverScreen" class="game-over-screen" hidden aria-label="Game over">
+      <div class="game-over-card">
+        <h2 class="game-over-title">Time's Up! ⏰</h2>
+
+        <div class="result-grid">
+          <div class="result-item">
+            <span class="result-label">Final Score</span>
+            <span id="finalScore" class="result-value final-score">0</span>
+          </div>
+          <div class="result-item">
+            <span class="result-label">Best Score</span>
+            <span id="finalBest" class="result-value">0</span>
+          </div>
+        </div>
+
+        <div class="rank-badge">
+          <span class="rank-emoji" id="rankEmoji">☕</span>
+          <span class="rank-name" id="rankName">Beginner Sipper</span>
+        </div>
+
+        <p class="challenge-text">Can you beat my score? 💪</p>
+
+        <div class="game-over-actions">
+          <button id="playAgainBtn" class="btn btn-primary">Play Again ☕</button>
+          <button id="shareFinalBtn" class="btn btn-share">📋 Share Score</button>
+          <button id="backToMenuBtn" class="btn btn-secondary">Main Menu</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Toast + sound toggle in top corner -->
+    <button id="soundToggle" class="sound-toggle" aria-label="Toggle sound" aria-pressed="true">
+      <span id="soundIcon">🔊</span>
+    </button>
+
+    <div id="copiedToast" class="copied-toast" aria-live="polite"></div>
+
+    <footer class="footer">
+      <a href="https://www.buymeacoffee.com/sunboys" class="bmc-btn" target="_blank" rel="noopener noreferrer" aria-label="Support CodeCup Studio">☕ Support CodeCup Studio</a>
+      <p class="footer-note">Made with love and caffeine.</p>
+    </footer>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
