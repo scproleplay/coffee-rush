@@ -1668,3 +1668,206 @@ body {
     padding: 10px 12px;
   }
 }
+
+/* ============================================================
+   Math Rush (math-rush.html)
+   ============================================================ */
+
+.math-play-area {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  flex: 1;
+  background: #fff7e0;
+  border: 4px dashed #ff5a1f;
+  border-radius: 22px;
+  padding: 16px;
+  margin-bottom: 14px;
+}
+
+.math-question {
+  background: #fff;
+  border: 4px solid #ff5a1f;
+  border-radius: 18px;
+  padding: 20px 16px;
+  text-align: center;
+  box-shadow: 0 6px 0 #c44a00;
+}
+
+.math-question-text {
+  font-size: clamp(2rem, 8vw, 3.4rem);
+  font-weight: 900;
+  color: #ff5a1f;
+  text-shadow: 2px 2px 0 #ffd24a, 4px 4px 0 rgba(0, 0, 0, 0.15);
+  letter-spacing: 1px;
+  line-height: 1.1;
+  word-spacing: 6px;
+}
+
+.math-answer-row {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+  justify-content: center;
+}
+
+.math-answer-input {
+  flex: 1;
+  font-family: inherit;
+  font-size: clamp(1.2rem, 4vw, 1.5rem);
+  font-weight: 800;
+  text-align: center;
+  color: #3a1f00;
+  background: #fff;
+  border: 3px solid #3a1f00;
+  border-radius: 14px;
+  padding: 10px 14px;
+  box-shadow: 0 4px 0 #3a1f00;
+  outline: none;
+  transition: transform 0.08s ease, box-shadow 0.08s ease, border-color 0.15s ease;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.math-answer-input::-webkit-outer-spin-button,
+.math-answer-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.math-answer-input:focus {
+  border-color: #ff5a1f;
+  box-shadow: 0 4px 0 #c44a00;
+}
+
+.math-answer-row .btn {
+  min-width: 110px;
+  font-size: 1rem;
+  padding: 10px 18px;
+}
+
+.keypad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.keypad-btn {
+  background: #fff;
+  color: #3a1f00;
+  font-family: inherit;
+  font-size: clamp(1.2rem, 4.5vw, 1.6rem);
+  font-weight: 900;
+  padding: 14px 0;
+  border: 3px solid #3a1f00;
+  border-radius: 14px;
+  box-shadow: 0 4px 0 #3a1f00;
+  cursor: pointer;
+  transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.keypad-btn:hover {
+  background: #fff7e0;
+}
+
+.keypad-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 #3a1f00;
+}
+
+.keypad-btn.is-backspace {
+  background: #fff7e0;
+  color: #b34a00;
+  font-size: clamp(1rem, 4vw, 1.3rem);
+}
+
+.keypad-btn.is-submit {
+  background: #2ec27e;
+  color: #fff;
+  font-size: clamp(1.2rem, 4.5vw, 1.6rem);
+  box-shadow: 0 4px 0 #1e8a5a;
+}
+
+.keypad-btn.is-submit:hover {
+  background: #36d18a;
+}
+
+.keypad-btn.is-submit:active {
+  box-shadow: 0 2px 0 #1e8a5a;
+}
+
+.math-feedback {
+  text-align: center;
+  min-height: 1.6em;
+  font-weight: 800;
+  font-size: 1.05rem;
+  color: #fff;
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.2);
+}
+
+.math-feedback.is-correct {
+  color: #2ec27e;
+  text-shadow: 1px 1px 0 #1e8a5a;
+}
+
+.math-feedback.is-wrong {
+  color: #d83a1a;
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.2);
+}
+
+/* Result row on the game-over card: shows correct/wrong counts
+   and the "New best!" badge. */
+.math-result-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+
+.math-result-pill {
+  display: inline-block;
+  background: #fff7e0;
+  border: 2px solid #b34a00;
+  border-radius: 999px;
+  padding: 5px 12px;
+  color: #3a1f00;
+  font-weight: 800;
+  font-size: 0.9rem;
+}
+
+.math-new-best-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, #2ec27e, #1e8a5a);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  box-shadow: 0 2px 0 #1e8a5a;
+}
+
+/* Mobile tweaks for Math Rush */
+@media (max-width: 480px) {
+  .math-play-area {
+    padding: 12px;
+  }
+  .math-question {
+    padding: 16px 12px;
+  }
+  .math-answer-row .btn {
+    min-width: 90px;
+    padding: 10px 12px;
+    font-size: 0.95rem;
+  }
+  .keypad-btn {
+    padding: 12px 0;
+  }
+}

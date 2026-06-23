@@ -2,23 +2,24 @@
 
 ## Bugs to check
 - Test each game on mobile
-- Test all difficulty modes (Coffee Rush)
+- Test all difficulty modes (Coffee Rush, Math Rush)
 - Test the sound button (Coffee Rush)
 - Test the Support CodeCup Studio button on every page
 - Confirm share text URLs are correct on every game:
   - Coffee Rush: https://codecup-coffee-rush.netlify.app/coffee-rush.html
   - Reaction Timer: https://codecup-coffee-rush.netlify.app/reaction-timer.html
+  - Math Rush: https://codecup-coffee-rush.netlify.app/math-rush.html
 
 ## Future game ideas
 - Coffee shop upgrade game
 - Typing speed game
-- Math challenge game
 
 ## Future improvements
 - Daily challenge mode
 - Background music toggle
 - More Memory Match themes / difficulty levels
 - More special coffee types (Coffee Rush)
+- Per-difficulty best scores for Math Rush
 
 ## Completed tasks
 - Built Coffee Rush
@@ -36,6 +37,7 @@
 - Published Coffee Rush online
 - Built Reaction Timer
 - Built Memory Match
+- Built Math Rush
 - Restructured into CodeCup Arcade
 - Added arcade homepage with game cards
 - Added cross-game links and "Back to Arcade" buttons

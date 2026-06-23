@@ -7,6 +7,7 @@ A small collection of browser games by CodeCup Studio.
 - [Coffee Rush ☕](https://codecup-coffee-rush.netlify.app/coffee-rush.html) — Catch coffee cups before time runs out.
 - [Reaction Timer ⚡](https://codecup-coffee-rush.netlify.app/reaction-timer.html) — Wait for green, then click as fast as you can.
 - [Memory Match 🧠](https://codecup-coffee-rush.netlify.app/memory-match.html) — Match all 8 pairs in as few moves and as little time as possible.
+- [Math Rush ➕](https://codecup-coffee-rush.netlify.app/math-rush.html) — Solve as many problems as you can in 60 seconds.
 
 Arcade homepage:
 https://codecup-coffee-rush.netlify.app/
@@ -89,6 +90,33 @@ Click or tap the coffee cup before it disappears.
 - Reset best button
 - Support button
 
+## Math Rush
+
+- A 60-second math challenge. Solve as many problems as you can.
+- Questions use addition, subtraction, and multiplication.
+- Type or tap your answer, then press Enter or ✓.
+- Wrong answers can be corrected within 2.5 seconds before the game moves on.
+- Best score is saved in your browser.
+
+### Difficulty Modes
+
+- Easy: addition and subtraction, numbers 1–20, +1 point per correct
+- Normal: addition, subtraction, and multiplication, numbers 1–50, +2 points per correct
+- Hard: addition, subtraction, and multiplication, numbers 1–100, +3 points per correct
+
+### Features
+
+- Difficulty modes
+- 60-second timer
+- Score, correct, and wrong counters
+- Best score saving
+- Share score button
+- Try Again button
+- Main Menu button
+- Reset best button
+- Support button
+- On-screen numeric keypad for mobile
+
 ## Support
 
 If you enjoy these games, you can support CodeCup Studio here:
@@ -103,3 +131,4 @@ Support helps future games and updates.
 - Coffee Rush v1.1
 - Reaction Timer v1.0
 - Memory Match v1.0
+- Math Rush v1.0
