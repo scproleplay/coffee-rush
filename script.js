@@ -32,14 +32,14 @@
 
   // Achievements: each test receives the final game stats and returns true
   // if the achievement is earned by that game.
-  // `golden_hunter` is the only non-score achievement (catch 5 golden cups).
+  // `golden_hunter` is the only non-score achievement (catch 15 golden cups).
   const ACHIEVEMENTS = [
-    { id: "first_sip",      name: "First Sip",      emoji: "☕", desc: "Score at least 100 points",            test: function (g) { return g.score >= 100; } },
-    { id: "coffee_catcher", name: "Coffee Catcher", emoji: "🥤", desc: "Score at least 500 points",            test: function (g) { return g.score >= 500; } },
-    { id: "caffeine_pro",   name: "Caffeine Pro",   emoji: "⚡", desc: "Score at least 1500 points",           test: function (g) { return g.score >= 1500; } },
-    { id: "coffee_master",  name: "Coffee Master",  emoji: "👑", desc: "Score at least 3000 points",           test: function (g) { return g.score >= 3000; } },
-    { id: "coffee_legend",  name: "Coffee Legend",  emoji: "🌟", desc: "Score at least 5000 points",           test: function (g) { return g.score >= 5000; } },
-    { id: "golden_hunter",  name: "Golden Hunter",  emoji: "✨", desc: "Catch 5 golden coffees in one game",   test: function (g) { return g.goldenCups >= 5; } },
+    { id: "first_sip",      name: "First Sip",      emoji: "☕", desc: "Score 100+",            test: function (g) { return g.score >= 100; } },
+    { id: "coffee_catcher", name: "Coffee Catcher", emoji: "🥤", desc: "Score 500+",            test: function (g) { return g.score >= 500; } },
+    { id: "caffeine_pro",   name: "Caffeine Pro",   emoji: "⚡", desc: "Score 1500+",           test: function (g) { return g.score >= 1500; } },
+    { id: "coffee_master",  name: "Coffee Master",  emoji: "👑", desc: "Score 3000+",           test: function (g) { return g.score >= 3000; } },
+    { id: "coffee_legend",  name: "Coffee Legend",  emoji: "🌟", desc: "Score 5000+",           test: function (g) { return g.score >= 5000; } },
+    { id: "golden_hunter",  name: "Golden Hunter",  emoji: "✨", desc: "Catch 15 golden coffees", test: function (g) { return g.goldenCups >= 15; } },
   ];
 
   // --- Elements ---
@@ -369,6 +369,11 @@
       nameEl.className = "achievement-name";
       nameEl.textContent = a.name;
       li.appendChild(nameEl);
+
+      const reqEl = document.createElement("span");
+      reqEl.className = "achievement-req";
+      reqEl.textContent = a.desc;
+      li.appendChild(reqEl);
 
       achievementsListEl.appendChild(li);
     }
