@@ -18,13 +18,17 @@
         <div class="rt-play-area-inner">
           <span id="rtMessage" class="rt-play-area-msg">Tap to Start</span>
           <span id="rtResultTime" class="rt-play-area-time" hidden></span>
+          <span id="rtRating" class="rt-play-area-rating" hidden></span>
         </div>
       </button>
 
       <div id="rtResultActions" class="rt-result-actions" hidden>
         <button id="rtTryAgain" class="btn btn-primary" type="button">Try Again</button>
+        <button id="rtShare" class="btn btn-share" type="button" hidden>📋 Share Score</button>
         <a id="rtBackHome" class="btn btn-secondary" href="index.html">Back to Coffee Rush</a>
       </div>
+
+      <div id="rtCopiedToast" class="copied-toast" aria-live="polite"></div>
 
       <section class="rt-stats" aria-label="Stats">
         <div class="rt-stat-item">
@@ -46,7 +50,7 @@
       <a href="https://www.buymeacoffee.com/sunboys" class="bmc-btn" target="_blank" rel="noopener noreferrer" aria-label="Support CodeCup Studio">☕ Support CodeCup Studio</a>
       <p class="footer-note">Made with love and caffeine.</p>
       <p class="footer-version">Reaction Timer v1.0</p>
-      <p class="rt-back-line"><a class="rt-link-back" href="index.html">← Back to Coffee Rush</a></p>
+      <button id="rtResetBest" class="btn-reset" type="button" aria-label="Reset best reaction time and tries">Reset Best</button>
     </footer>
   </div>
 

@@ -5,6 +5,7 @@
 
   // --- Config ---
   const STORAGE_KEY = "reactionTimerBestMs";
+  const SHARE_URL = "https://codecup-coffee-rush.netlify.app/reaction-timer.html";
   const MIN_WAIT_MS = 2000;
   const MAX_WAIT_MS = 5000;
 
@@ -12,6 +13,7 @@
   // One of: "idle" | "waiting" | "ready" | "result" | "too_soon"
   let state = "idle";
   let waitTimerId = null;
+  let copiedTimerId = null;
   let readyAt = 0;       // performance.now() captured when the screen turned green
   let lastMs = null;     // most recent reaction time, in ms (null until first complete attempt)
   let bestMs = loadBest();
@@ -21,8 +23,12 @@
   const playArea    = document.getElementById("playArea");
   const messageEl   = document.getElementById("rtMessage");
   const resultTimeEl = document.getElementById("rtResultTime");
+  const ratingEl    = document.getElementById("rtRating");
   const resultActionsEl = document.getElementById("rtResultActions");
   const tryAgainBtn = document.getElementById("rtTryAgain");
+  const shareBtn    = document.getElementById("rtShare");
+  const resetBestBtn = document.getElementById("rtResetBest");
+  const copiedToastEl = document.getElementById("rtCopiedToast");
   const bestEl      = document.getElementById("rtBest");
   const lastEl      = document.getElementById("rtLast");
   const triesEl     = document.getElementById("rtTries");
@@ -47,6 +53,12 @@
     if (ms == null) return "—";
     return ms + " ms";
   }
+  function getRating(ms) {
+    if (ms < 200)  return "Lightning Fast ⚡";
+    if (ms < 350)  return "Very Fast 🔥";
+    if (ms < 500)  return "Good 👍";
+    return "Keep Practicing ☕";
+  }
   function renderStats() {
     bestEl.textContent  = formatMs(bestMs);
     lastEl.textContent  = formatMs(lastMs);
@@ -60,6 +72,41 @@
     if (waitTimerId) { clearTimeout(waitTimerId); waitTimerId = null; }
   }
 
+  // --- Toast + clipboard ---
+  function showCopiedToast(text) {
+    copiedToastEl.textContent = text;
+    copiedToastEl.classList.add("show");
+    if (copiedTimerId) clearTimeout(copiedTimerId);
+    copiedTimerId = setTimeout(function () {
+      copiedToastEl.classList.remove("show");
+    }, 1600);
+  }
+  function copyToClipboard(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      return navigator.clipboard.writeText(text);
+    }
+    return new Promise(function (resolve, reject) {
+      try {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.setAttribute("readonly", "");
+        ta.style.position = "fixed";
+        ta.style.top = "-1000px";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        const ok = document.execCommand("copy");
+        document.body.removeChild(ta);
+        ok ? resolve() : reject(new Error("copy failed"));
+      } catch (err) {
+        reject(err);
+      }
+    });
+  }
+  function buildShareText() {
+    return "I got " + lastMs + " ms on Reaction Timer ⚡ Can you beat me? " + SHARE_URL;
+  }
+
   // --- State transitions ---
   function showIdle() {
     state = "idle";
@@ -68,7 +115,9 @@
     messageEl.textContent = "Tap to Start";
     messageEl.hidden = false;
     resultTimeEl.hidden = true;
+    ratingEl.hidden = true;
     resultActionsEl.hidden = true;
+    shareBtn.hidden = true;
     playArea.setAttribute("aria-label", "Start reaction timer");
   }
   function startWaiting() {
@@ -77,7 +126,9 @@
     messageEl.textContent = "Wait...";
     messageEl.hidden = false;
     resultTimeEl.hidden = true;
+    ratingEl.hidden = true;
     resultActionsEl.hidden = true;
+    shareBtn.hidden = true;
     playArea.setAttribute("aria-label", "Wait for green");
 
     const delay = MIN_WAIT_MS + Math.random() * (MAX_WAIT_MS - MIN_WAIT_MS);
@@ -96,7 +147,9 @@
     messageEl.textContent = "CLICK!";
     messageEl.hidden = false;
     resultTimeEl.hidden = true;
+    ratingEl.hidden = true;
     resultActionsEl.hidden = true;
+    shareBtn.hidden = true;
     // Capture the moment the green appears, NOT when the user clicks Start.
     readyAt = performance.now();
     playArea.setAttribute("aria-label", "Click now");
@@ -107,7 +160,9 @@
     messageEl.textContent = "Too soon! 🤚";
     messageEl.hidden = false;
     resultTimeEl.hidden = true;
+    ratingEl.hidden = true;
     resultActionsEl.hidden = false;
+    shareBtn.hidden = true; // no score to share on a miss
     playArea.setAttribute("aria-label", "Too soon — try again");
   }
   function showResult(ms) {
@@ -119,7 +174,10 @@
     messageEl.hidden = false;
     resultTimeEl.textContent = formatMs(ms);
     resultTimeEl.hidden = false;
+    ratingEl.textContent = getRating(ms);
+    ratingEl.hidden = false;
     resultActionsEl.hidden = false;
+    shareBtn.hidden = false; // there's now a score worth sharing
     playArea.setAttribute("aria-label", "Reaction time " + ms + " milliseconds");
   }
 
@@ -161,6 +219,32 @@
     showIdle();
   }
 
+  function handleShare() {
+    if (lastMs == null) return; // nothing to share yet
+    const text = buildShareText();
+    copyToClipboard(text).then(
+      function () { showCopiedToast("Copied to clipboard!"); },
+      function () { showCopiedToast("Couldn't copy — try again"); }
+    );
+  }
+
+  function handleResetBest() {
+    const ok = window.confirm("Reset best reaction time and tries?");
+    if (!ok) return;
+    try { localStorage.removeItem(STORAGE_KEY); } catch (e) { /* ignore */ }
+    bestMs = null;
+    tries = 0;
+    renderStats();
+    // If we're sitting on a result, refresh its label — the cleared best
+    // means the player no longer holds a "new best" for the just-shown time.
+    if (state === "result" && lastMs != null) {
+      bestMs = null;
+      // If lastMs was being shown as a new best, demote it to "Your time".
+      messageEl.textContent = "Your time";
+    }
+    showCopiedToast("Best reset");
+  }
+
   // --- Init ---
   function init() {
     renderStats();
@@ -174,6 +258,11 @@
       e.preventDefault();
       handleTryAgain();
     });
+    shareBtn.addEventListener("click", function (e) {
+      e.preventDefault();
+      handleShare();
+    });
+    if (resetBestBtn) resetBestBtn.addEventListener("click", handleResetBest);
   }
 
   init();

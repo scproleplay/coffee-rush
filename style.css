@@ -1203,6 +1203,20 @@ body {
   background: linear-gradient(135deg, #fff4c2, #ffd24a);
 }
 
+/* Rating line shown under the time during the result state.
+   Distinct from the time number (smaller, brown) so it doesn't compete. */
+.rt-play-area-rating {
+  font-size: clamp(0.95rem, 3.2vw, 1.3rem);
+  font-weight: 800;
+  color: #3a1f00;
+  background: #fff7e0;
+  border: 2px solid #3a1f00;
+  border-radius: 999px;
+  padding: 4px 14px;
+  box-shadow: 0 2px 0 #3a1f00;
+  line-height: 1.1;
+}
+
 /* Stats row (Best / Last / Tries) */
 .rt-stats {
   display: grid;
@@ -1235,26 +1249,6 @@ body {
   color: #ff5a1f;
   line-height: 1.1;
   margin-top: 2px;
-}
-
-/* "← Back to Coffee Rush" link in the Reaction Timer footer */
-.rt-back-line {
-  margin-top: 8px;
-}
-
-.rt-link-back {
-  color: #fff7e0;
-  font-size: 0.9rem;
-  font-weight: 600;
-  text-decoration: none;
-  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.15);
-  border-bottom: 1px dashed rgba(255, 247, 224, 0.6);
-  padding-bottom: 1px;
-}
-
-.rt-link-back:hover {
-  color: #fff;
-  border-bottom-color: #fff;
 }
 
 /* "Try Reaction Timer ⚡" link shown in the Coffee Rush footer */
