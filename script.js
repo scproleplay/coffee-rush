@@ -23,20 +23,23 @@
 
   // Rank tiers (score -> { name, emoji })
   const RANKS = [
-    { min:  0, max: 20,  name: "Beginner Sipper", emoji: "🥛" },
-    { min: 21, max: 50,  name: "Coffee Catcher",  emoji: "☕" },
-    { min: 51, max: 80,  name: "Caffeine Pro",    emoji: "⚡" },
-    { min: 81, max: Infinity, name: "Coffee Master", emoji: "👑" },
+    { min:    0, max:  499,        name: "Beginner Sipper", emoji: "🥛" },
+    { min:  500, max: 1499,        name: "Coffee Catcher",  emoji: "☕" },
+    { min: 1500, max: 2999,        name: "Caffeine Pro",    emoji: "⚡" },
+    { min: 3000, max: 4999,        name: "Coffee Master",   emoji: "👑" },
+    { min: 5000, max: Infinity,    name: "Coffee Legend",   emoji: "🌟" },
   ];
 
   // Achievements: each test receives the final game stats and returns true
   // if the achievement is earned by that game.
+  // `golden_hunter` is the only non-score achievement (catch 5 golden cups).
   const ACHIEVEMENTS = [
-    { id: "first_sip",      name: "First Sip",      emoji: "☕", desc: "Score at least 1 point",                       test: function (g) { return g.score >= 1; } },
-    { id: "coffee_catcher", name: "Coffee Catcher", emoji: "🥤", desc: "Score at least 25 points",                      test: function (g) { return g.score >= 25; } },
-    { id: "caffeine_pro",   name: "Caffeine Pro",   emoji: "⚡", desc: "Score at least 50 points",                      test: function (g) { return g.score >= 50; } },
-    { id: "coffee_master",  name: "Coffee Master",  emoji: "👑", desc: "Score at least 100 points",                     test: function (g) { return g.score >= 100; } },
-    { id: "golden_hunter",  name: "Golden Hunter",  emoji: "✨", desc: "Catch 5 golden coffees in one game",            test: function (g) { return g.goldenCups >= 5; } },
+    { id: "first_sip",      name: "First Sip",      emoji: "☕", desc: "Score at least 100 points",            test: function (g) { return g.score >= 100; } },
+    { id: "coffee_catcher", name: "Coffee Catcher", emoji: "🥤", desc: "Score at least 500 points",            test: function (g) { return g.score >= 500; } },
+    { id: "caffeine_pro",   name: "Caffeine Pro",   emoji: "⚡", desc: "Score at least 1500 points",           test: function (g) { return g.score >= 1500; } },
+    { id: "coffee_master",  name: "Coffee Master",  emoji: "👑", desc: "Score at least 3000 points",           test: function (g) { return g.score >= 3000; } },
+    { id: "coffee_legend",  name: "Coffee Legend",  emoji: "🌟", desc: "Score at least 5000 points",           test: function (g) { return g.score >= 5000; } },
+    { id: "golden_hunter",  name: "Golden Hunter",  emoji: "✨", desc: "Catch 5 golden coffees in one game",   test: function (g) { return g.goldenCups >= 5; } },
   ];
 
   // --- Elements ---

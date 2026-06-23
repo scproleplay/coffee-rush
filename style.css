@@ -795,7 +795,7 @@ body {
 .achievements-list {
   list-style: none;
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 8px;
   padding: 0;
 }
@@ -967,6 +967,14 @@ body {
   font-size: 0.9rem;
   font-weight: 600;
   text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.15);
+}
+
+.footer-version {
+  margin-top: 4px;
+  color: rgba(255, 247, 224, 0.75);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.3px;
 }
 
 /* Mobile tweaks */
