@@ -6,6 +6,7 @@ A small collection of browser games by CodeCup Studio.
 
 - [Coffee Rush ☕](https://codecup-coffee-rush.netlify.app/coffee-rush.html) — Catch coffee cups before time runs out.
 - [Reaction Timer ⚡](https://codecup-coffee-rush.netlify.app/reaction-timer.html) — Wait for green, then click as fast as you can.
+- [Memory Match 🧠](https://codecup-coffee-rush.netlify.app/memory-match.html) — Match all 8 pairs in as few moves and as little time as possible.
 
 Arcade homepage:
 https://codecup-coffee-rush.netlify.app/
@@ -69,6 +70,25 @@ Click or tap the coffee cup before it disappears.
 - Sound toggle
 - Support button
 
+## Memory Match
+
+- A 4x4 grid of cards with 8 matching pairs.
+- Click any card to start the timer and reveal it.
+- Click a second card to make a guess.
+- Matching pairs stay revealed. Non-matching pairs flip back after a moment.
+- Match all 8 pairs to win.
+- Best moves and best time are saved in your browser.
+
+### Features
+
+- Move counter
+- Timer
+- Best moves and best time tracking
+- Try Again button
+- Back to Arcade button
+- Reset best button
+- Support button
+
 ## Support
 
 If you enjoy these games, you can support CodeCup Studio here:
@@ -82,3 +102,4 @@ Support helps future games and updates.
 - CodeCup Arcade v1.0
 - Coffee Rush v1.1
 - Reaction Timer v1.0
+- Memory Match v1.0

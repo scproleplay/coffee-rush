@@ -1416,3 +1416,255 @@ body {
     font-size: 2.2rem;
   }
 }
+
+/* ============================================================
+   Memory Match (memory-match.html)
+   ============================================================ */
+
+.mm-main {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  flex: 1;
+  margin: 6px 0 14px;
+}
+
+.mm-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.mm-stat-item {
+  background: #fff;
+  border: 3px solid #ff5a1f;
+  border-radius: 14px;
+  padding: 8px 6px;
+  text-align: center;
+  box-shadow: 0 4px 0 #c44a00;
+}
+
+.mm-stat-label {
+  display: block;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: #b34a00;
+  font-weight: 700;
+}
+
+.mm-stat-value {
+  display: block;
+  font-size: clamp(1rem, 3.5vw, 1.3rem);
+  font-weight: 800;
+  color: #ff5a1f;
+  line-height: 1.1;
+  margin-top: 2px;
+}
+
+.mm-new-game-row {
+  display: flex;
+  justify-content: center;
+}
+
+.memory-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  perspective: 1000px;
+}
+
+.memory-card {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  padding: 0;
+  border: 3px solid #3a1f00;
+  border-radius: 14px;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  transform-style: preserve-3d;
+  transition: transform 0.4s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 4px 0 #3a1f00;
+}
+
+.memory-card:active {
+  transform: translateY(2px) scale(0.98);
+  box-shadow: 0 2px 0 #3a1f00;
+}
+
+.memory-card:disabled {
+  cursor: default;
+}
+
+.memory-card-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 11px;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.memory-card-back {
+  background: linear-gradient(135deg, #fff7e0, #ffd24a);
+  color: #3a1f00;
+  font-size: clamp(1.4rem, 4.5vw, 2.2rem);
+  font-weight: 900;
+}
+
+.memory-card-front {
+  background: #fff;
+  color: #3a1f00;
+  font-size: clamp(1.8rem, 7vw, 3rem);
+  transform: rotateY(180deg);
+  line-height: 1;
+}
+
+.memory-card.is-flipped {
+  transform: rotateY(180deg);
+  border-color: #ff5a1f;
+  box-shadow: 0 4px 0 #c44a00;
+}
+
+.memory-card.is-flipped:active {
+  transform: rotateY(180deg) translateY(2px) scale(0.98);
+}
+
+.memory-card.is-matched {
+  border-color: #1e8a5a;
+  background: #fff;
+  box-shadow: 0 4px 0 #1e8a5a;
+  /* Locked in the face-up orientation — disabled buttons can't be clicked
+     again, so we just want them to stay face-up. The rotateY(180) is
+     already set by .is-flipped, so no extra transform needed. */
+}
+
+.memory-card.is-matched .memory-card-front {
+  background: linear-gradient(135deg, #fff4c2, #ffd24a);
+}
+
+/* Win screen — appears in-flow below the grid when the player matches
+   all 8 pairs. Same card language as the other game-over cards. */
+.mm-win-screen {
+  margin-top: 4px;
+}
+
+.mm-win-card {
+  background: #fff;
+  border: 4px solid #ff5a1f;
+  border-radius: 22px;
+  padding: 22px 18px;
+  box-shadow: 0 8px 0 #c44a00;
+  text-align: center;
+  animation: card-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.mm-win-title {
+  font-size: clamp(1.4rem, 5vw, 1.9rem);
+  color: #ff5a1f;
+  margin-bottom: 6px;
+  text-shadow: 2px 2px 0 #ffd24a;
+}
+
+.mm-win-subtitle {
+  color: #3a1f00;
+  font-weight: 700;
+  margin-bottom: 14px;
+}
+
+.mm-win-stats {
+  background: #fff7e0;
+  border: 2px dashed #b34a00;
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+}
+
+.mm-win-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mm-win-label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #b34a00;
+  font-weight: 800;
+}
+
+.mm-win-pair {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.mm-win-value {
+  font-size: clamp(1.1rem, 4vw, 1.4rem);
+  font-weight: 900;
+  color: #ff5a1f;
+}
+
+.mm-win-sep {
+  font-size: 0.85rem;
+  color: #8a6b3a;
+  font-weight: 600;
+}
+
+.mm-new-best-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, #2ec27e, #1e8a5a);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  box-shadow: 0 2px 0 #1e8a5a;
+  margin-left: 4px;
+}
+
+.mm-result-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+
+.mm-result-row .btn {
+  width: 100%;
+  max-width: 320px;
+}
+
+/* Mobile tweaks for Memory Match */
+@media (max-width: 480px) {
+  .mm-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .memory-grid {
+    gap: 8px;
+  }
+  .memory-card {
+    border-width: 2px;
+    box-shadow: 0 3px 0 #3a1f00;
+  }
+  .mm-win-stats {
+    padding: 10px 12px;
+  }
+}

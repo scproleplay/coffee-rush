@@ -1,26 +1,24 @@
-# Coffee Rush TODO
+# CodeCup Arcade TODO
 
 ## Bugs to check
-- Test the game on mobile
-- Test all difficulty modes
-- Test the sound button
-- Test the Support CodeCup Studio button
-- Make sure the share text uses https://codecup-coffee-rush.netlify.app
-
-## Version 1.1 ideas
-- Add achievements
-- Add a better game-over screen
-- Add more special coffee types
-- Add daily challenge mode
-- Add background music toggle
-- Add better mobile layout
+- Test each game on mobile
+- Test all difficulty modes (Coffee Rush)
+- Test the sound button (Coffee Rush)
+- Test the Support CodeCup Studio button on every page
+- Confirm share text URLs are correct on every game:
+  - Coffee Rush: https://codecup-coffee-rush.netlify.app/coffee-rush.html
+  - Reaction Timer: https://codecup-coffee-rush.netlify.app/reaction-timer.html
 
 ## Future game ideas
-- Memory card game
-- Reaction timer game
 - Coffee shop upgrade game
 - Typing speed game
 - Math challenge game
+
+## Future improvements
+- Daily challenge mode
+- Background music toggle
+- More Memory Match themes / difficulty levels
+- More special coffee types (Coffee Rush)
 
 ## Completed tasks
 - Built Coffee Rush
@@ -30,5 +28,15 @@
 - Added combo system
 - Added sound button
 - Added Support CodeCup Studio button
+- Added achievements
+- Added per-cup visibility timeout
+- Added share score button
+- Added best score saving
 - Connected GitHub to Netlify
-- Published the game online
+- Published Coffee Rush online
+- Built Reaction Timer
+- Built Memory Match
+- Restructured into CodeCup Arcade
+- Added arcade homepage with game cards
+- Added cross-game links and "Back to Arcade" buttons
+- Added per-game reset best/progress buttons

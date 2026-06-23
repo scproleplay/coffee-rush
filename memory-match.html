@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Memory Match 🧠</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <h1 class="title">Memory Match 🧠</h1>
+      <p class="subtitle">Match all 8 pairs in as few moves and as little time as possible.</p>
+    </header>
+
+    <main class="mm-main" aria-label="Memory match">
+      <section class="mm-stats" aria-label="Game stats">
+        <div class="mm-stat-item">
+          <span class="mm-stat-label">Moves</span>
+          <span id="mmMoves" class="mm-stat-value">0</span>
+        </div>
+        <div class="mm-stat-item">
+          <span class="mm-stat-label">Time</span>
+          <span id="mmTime" class="mm-stat-value">00:00</span>
+        </div>
+        <div class="mm-stat-item">
+          <span class="mm-stat-label">Best moves</span>
+          <span id="mmBestMoves" class="mm-stat-value">—</span>
+        </div>
+        <div class="mm-stat-item">
+          <span class="mm-stat-label">Best time</span>
+          <span id="mmBestTime" class="mm-stat-value">—</span>
+        </div>
+      </section>
+
+      <div class="mm-new-game-row">
+        <button id="mmNewGame" class="btn btn-secondary" type="button">New Game</button>
+      </div>
+
+      <div id="memoryGrid" class="memory-grid" role="grid" aria-label="Memory cards"></div>
+
+      <section id="mmWinScreen" class="mm-win-screen" hidden aria-label="You won">
+        <div class="mm-win-card">
+          <h2 class="mm-win-title">You matched them all! 🧠</h2>
+          <p class="mm-win-subtitle">Great memory.</p>
+
+          <div class="mm-win-stats">
+            <div class="mm-win-row">
+              <span class="mm-win-label">This game</span>
+              <span class="mm-win-pair">
+                <span id="mmWinCurrentMoves" class="mm-win-value">0</span>
+                <span class="mm-win-sep">moves</span>
+                <span class="mm-win-sep">·</span>
+                <span id="mmWinCurrentTime" class="mm-win-value">00:00</span>
+                <span class="mm-win-sep">time</span>
+              </span>
+            </div>
+            <div class="mm-win-row">
+              <span class="mm-win-label">Best moves</span>
+              <span class="mm-win-pair">
+                <span id="mmWinBestMoves" class="mm-win-value">—</span>
+                <span id="mmWinBestMovesBadge" class="mm-new-best-badge" hidden>New best!</span>
+              </span>
+            </div>
+            <div class="mm-win-row">
+              <span class="mm-win-label">Best time</span>
+              <span class="mm-win-pair">
+                <span id="mmWinBestTime" class="mm-win-value">—</span>
+                <span id="mmWinBestTimeBadge" class="mm-new-best-badge" hidden>New best!</span>
+              </span>
+            </div>
+          </div>
+
+          <div class="mm-result-row">
+            <button id="mmTryAgain" class="btn btn-primary" type="button">Try Again</button>
+            <a id="mmBackArcade" class="btn btn-secondary" href="index.html">Back to Arcade</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <a href="https://www.buymeacoffee.com/sunboys" class="bmc-btn" target="_blank" rel="noopener noreferrer" aria-label="Support CodeCup Studio">☕ Support CodeCup Studio</a>
+      <p class="footer-note">Made with love and caffeine.</p>
+      <p class="footer-version">Memory Match v1.0</p>
+      <button id="mmResetBest" class="btn-reset" type="button" aria-label="Reset best moves and best time">Reset Best</button>
+      <p class="arcade-back-line"><a class="arcade-back-pill" href="index.html" aria-label="Back to CodeCup Arcade">← Back to Arcade</a></p>
+    </footer>
+  </div>
+
+  <script src="memory-match.js"></script>
+</body>
+</html>
