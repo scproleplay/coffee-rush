@@ -15,10 +15,10 @@
 
   // Difficulty profiles
   const DIFFICULTIES = {
-    easy:   { duration: 60, cupSize: "size-easy",   cupBase: 110, insane: false, label: "Easy Mode" },
-    normal: { duration: 60, cupSize: "",            cupBase: 90,  insane: false, label: "Normal Mode" },
-    hard:   { duration: 45, cupSize: "size-hard",   cupBase: 70,  insane: false, label: "Hard Mode" },
-    insane: { duration: 30, cupSize: "size-insane", cupBase: 70,  insane: true,  label: "Insane Mode" },
+    easy:   { duration: 60, cupTimeoutMs: 2000, cupSize: "size-easy",   cupBase: 110, insane: false, label: "Easy Mode" },
+    normal: { duration: 60, cupTimeoutMs: 1500, cupSize: "",            cupBase: 90,  insane: false, label: "Normal Mode" },
+    hard:   { duration: 45, cupTimeoutMs: 1100, cupSize: "size-hard",   cupBase: 70,  insane: false, label: "Hard Mode" },
+    insane: { duration: 30, cupTimeoutMs:  800, cupSize: "size-insane", cupBase: 70,  insane: true,  label: "Insane Mode" },
   };
 
   // Rank tiers (score -> { name, emoji })
@@ -97,6 +97,7 @@
   let isGolden = false;
   let timerId = null;
   let countdownId = null;
+  let cupTimeoutId = null;
   let copiedTimerId = null;
   let bestScore = loadBest();
   let soundOn = loadSoundPref();
@@ -308,6 +309,7 @@
   function showWelcome() {
     cancelCountdown();
     if (timerId) { clearInterval(timerId); timerId = null; }
+    clearCupTimeout();
     isPlaying = false;
     combo = 0;
     lastClickAt = 0;
@@ -417,6 +419,32 @@
     if (countdownId) { clearTimeout(countdownId); countdownId = null; }
     countdownEl.hidden = true;
   }
+
+  // --- Cup timeout (per-spawn visibility window) ---
+  // Each spawned cup is given a short window in which the player can click
+  // it. If the player doesn't click in time, the cup moves to a new spot,
+  // the combo resets, and a new cup + new timer are spawned. Golden and
+  // normal cups use the same per-difficulty timeout.
+  function clearCupTimeout() {
+    if (cupTimeoutId) { clearTimeout(cupTimeoutId); cupTimeoutId = null; }
+  }
+  function armCupTimeout(ms) {
+    clearCupTimeout();
+    if (!isPlaying) return;
+    cupTimeoutId = setTimeout(function () {
+      cupTimeoutId = null;
+      if (!isPlaying) return;
+      // Miss: move cup to a new spot and reset combo. No points awarded.
+      combo = 0;
+      updateCombo();
+      lastClickAt = 0;
+      if (comboResetTimerId) { clearTimeout(comboResetTimerId); comboResetTimerId = null; }
+      moveCupRandom();
+      // The miss already cleared any combo reset timer above; arm a fresh
+      // timeout for the newly-spawned cup.
+      armCupTimeout(ms);
+    }, ms);
+  }
   function runCountdown(onDone) {
     cancelCountdown();
     countdownEl.hidden = false;
@@ -456,6 +484,8 @@
     lastClickAt = 0;
     goldenCupsCaught = 0;
     if (comboResetTimerId) { clearTimeout(comboResetTimerId); comboResetTimerId = null; }
+    // Defensive: clear any cup-timeout left over from a prior game.
+    clearCupTimeout();
 
     applyCupSize(currentDifficulty);
     difficultyBadge.textContent = cfg.label;
@@ -477,6 +507,7 @@
       playArea.classList.remove("disabled");
       setMessage("Go! Tap the cup! ☕", false);
       moveCupRandom();
+      armCupTimeout(cfg.cupTimeoutMs);
       timerId = setInterval(tick, 1000);
     });
   }
@@ -489,6 +520,7 @@
 
   function endGame() {
     if (timerId) { clearInterval(timerId); timerId = null; }
+    clearCupTimeout();
     isPlaying = false;
     if (comboResetTimerId) { clearTimeout(comboResetTimerId); comboResetTimerId = null; }
 
@@ -524,6 +556,10 @@
   function handleCupClick(e) {
     e.preventDefault();
     if (!isPlaying) return;
+
+    // The click counts: cancel any pending cup-timeout for the cup just
+    // clicked, before we move the cup to a new spot.
+    clearCupTimeout();
 
     // Combo: count a click as continuing the combo if it lands within
     // COMBO_WINDOW_MS of the previous click. Otherwise it starts a new
@@ -563,6 +599,9 @@
     score += points;
     updateScore();
     moveCupRandom();
+
+    // Arm a fresh per-cup visibility window for the newly-spawned cup.
+    armCupTimeout(DIFFICULTIES[currentDifficulty].cupTimeoutMs);
 
     // Pop animation
     cup.classList.remove("pop");
