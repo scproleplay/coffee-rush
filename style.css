@@ -1073,3 +1073,226 @@ body {
     transform: none;
   }
 }
+
+/* ============================================================
+   Reaction Timer (reaction-timer.html)
+   ============================================================ */
+
+.rt-main {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  flex: 1;
+  margin: 6px 0 14px;
+}
+
+.rt-play-area {
+  position: relative;
+  flex: 1;
+  min-height: 280px;
+  border: 4px solid #3a1f00;
+  border-radius: 22px;
+  background: #fff7e0;
+  box-shadow: 0 6px 0 #3a1f00;
+  cursor: pointer;
+  font-family: inherit;
+  color: #3a1f00;
+  padding: 0;
+  /* Reset button defaults that fight with our flex layout */
+  text-align: center;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: background 0.15s ease, transform 0.08s ease;
+}
+
+.rt-play-area:active {
+  transform: translateY(2px);
+  box-shadow: 0 4px 0 #3a1f00;
+}
+
+.rt-play-area-inner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 18px;
+}
+
+.rt-play-area-msg {
+  font-size: clamp(1.6rem, 6vw, 2.4rem);
+  font-weight: 900;
+  color: #3a1f00;
+  text-shadow: 2px 2px 0 rgba(255, 255, 255, 0.6);
+  line-height: 1.1;
+}
+
+.rt-play-area-time {
+  font-size: clamp(2.2rem, 9vw, 3.4rem);
+  font-weight: 900;
+  color: #ff5a1f;
+  text-shadow: 2px 2px 0 #ffd24a, 4px 4px 0 rgba(0, 0, 0, 0.15);
+  line-height: 1;
+  letter-spacing: 1px;
+}
+
+/* Result actions row that sits below the play area (not inside it).
+   Shown only when state is "result" or "too_soon". */
+.rt-result-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+
+.rt-result-actions .btn {
+  min-width: 200px;
+}
+
+/* State: idle — orange/yellow "Tap to Start" */
+.rt-play-area.is-idle {
+  background: linear-gradient(135deg, #ffd24a, #ffb000);
+  color: #3a1f00;
+}
+
+/* State: waiting — red/orange "Wait..." (red signals: don't click yet) */
+.rt-play-area.is-waiting {
+  background: linear-gradient(135deg, #ff7a3d, #d83a1a);
+  color: #fff;
+}
+
+.rt-play-area.is-waiting .rt-play-area-msg {
+  color: #fff;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* State: ready — green "CLICK!" with a gentle pulse so the player notices */
+.rt-play-area.is-ready {
+  background: linear-gradient(135deg, #6dd17a, #2ec27e);
+  color: #fff;
+  animation: rt-ready-pulse 0.6s ease-in-out infinite alternate;
+}
+
+.rt-play-area.is-ready .rt-play-area-msg {
+  color: #fff;
+  text-shadow: 3px 3px 0 #1e8a5a, 6px 6px 0 rgba(0, 0, 0, 0.25);
+  font-size: clamp(2.4rem, 10vw, 4rem);
+}
+
+@keyframes rt-ready-pulse {
+  from { transform: scale(1); }
+  to   { transform: scale(1.02); }
+}
+
+/* State: too soon — soft red "Too soon!" */
+.rt-play-area.is-too-soon {
+  background: linear-gradient(135deg, #ff9a6b, #d83a1a);
+  color: #fff;
+}
+
+.rt-play-area.is-too-soon .rt-play-area-msg {
+  color: #fff;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* State: result — same orange as idle, but with the time + actions visible */
+.rt-play-area.is-result {
+  background: linear-gradient(135deg, #fff4c2, #ffd24a);
+}
+
+/* Stats row (Best / Last / Tries) */
+.rt-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.rt-stat-item {
+  background: #fff;
+  border: 3px solid #ff5a1f;
+  border-radius: 14px;
+  padding: 10px 8px;
+  text-align: center;
+  box-shadow: 0 4px 0 #c44a00;
+}
+
+.rt-stat-label {
+  display: block;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #b34a00;
+  font-weight: 700;
+}
+
+.rt-stat-value {
+  display: block;
+  font-size: clamp(1.1rem, 4vw, 1.5rem);
+  font-weight: 800;
+  color: #ff5a1f;
+  line-height: 1.1;
+  margin-top: 2px;
+}
+
+/* "← Back to Coffee Rush" link in the Reaction Timer footer */
+.rt-back-line {
+  margin-top: 8px;
+}
+
+.rt-link-back {
+  color: #fff7e0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.15);
+  border-bottom: 1px dashed rgba(255, 247, 224, 0.6);
+  padding-bottom: 1px;
+}
+
+.rt-link-back:hover {
+  color: #fff;
+  border-bottom-color: #fff;
+}
+
+/* "Try Reaction Timer ⚡" link shown in the Coffee Rush footer */
+.cr-more-games {
+  display: inline-block;
+  margin-top: 8px;
+  background: #fff7e0;
+  color: #b34a00;
+  font-weight: 800;
+  font-size: 0.9rem;
+  text-decoration: none;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 2px solid #3a1f00;
+  box-shadow: 0 3px 0 #3a1f00;
+  transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.15s ease;
+}
+
+.cr-more-games:hover {
+  background: #fff;
+}
+
+.cr-more-games:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #3a1f00;
+}
+
+/* Mobile tweaks for Reaction Timer */
+@media (max-width: 480px) {
+  .rt-play-area {
+    min-height: 320px;
+  }
+  .rt-result-actions .btn {
+    min-width: 160px;
+    padding: 10px 16px;
+    font-size: 0.95rem;
+  }
+  .rt-stat-item {
+    padding: 8px 6px;
+  }
+}

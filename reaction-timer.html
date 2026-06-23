@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reaction Timer ⚡</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <h1 class="title">Reaction Timer ⚡</h1>
+      <p class="subtitle">Wait for green, then click as fast as you can.</p>
+    </header>
+
+    <main class="rt-main" aria-label="Reaction timer">
+      <button id="playArea" class="rt-play-area is-idle" type="button" aria-label="Start reaction timer">
+        <div class="rt-play-area-inner">
+          <span id="rtMessage" class="rt-play-area-msg">Tap to Start</span>
+          <span id="rtResultTime" class="rt-play-area-time" hidden></span>
+        </div>
+      </button>
+
+      <div id="rtResultActions" class="rt-result-actions" hidden>
+        <button id="rtTryAgain" class="btn btn-primary" type="button">Try Again</button>
+        <a id="rtBackHome" class="btn btn-secondary" href="index.html">Back to Coffee Rush</a>
+      </div>
+
+      <section class="rt-stats" aria-label="Stats">
+        <div class="rt-stat-item">
+          <span class="rt-stat-label">Best</span>
+          <span id="rtBest" class="rt-stat-value">—</span>
+        </div>
+        <div class="rt-stat-item">
+          <span class="rt-stat-label">Last</span>
+          <span id="rtLast" class="rt-stat-value">—</span>
+        </div>
+        <div class="rt-stat-item">
+          <span class="rt-stat-label">Tries</span>
+          <span id="rtTries" class="rt-stat-value">0</span>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <a href="https://www.buymeacoffee.com/sunboys" class="bmc-btn" target="_blank" rel="noopener noreferrer" aria-label="Support CodeCup Studio">☕ Support CodeCup Studio</a>
+      <p class="footer-note">Made with love and caffeine.</p>
+      <p class="footer-version">Reaction Timer v1.0</p>
+      <p class="rt-back-line"><a class="rt-link-back" href="index.html">← Back to Coffee Rush</a></p>
+    </footer>
+  </div>
+
+  <script src="reaction-timer.js"></script>
+</body>
+</html>
