@@ -15,10 +15,10 @@
 
   // Difficulty profiles
   const DIFFICULTIES = {
-    easy:   { duration: 30, cupSize: "size-easy",   cupBase: 110, insane: false, label: "Easy Mode" },
-    normal: { duration: 30, cupSize: "",            cupBase: 90,  insane: false, label: "Normal Mode" },
-    hard:   { duration: 20, cupSize: "size-hard",   cupBase: 70,  insane: false, label: "Hard Mode" },
-    insane: { duration: 15, cupSize: "size-insane", cupBase: 70,  insane: true,  label: "Insane Mode" },
+    easy:   { duration: 60, cupSize: "size-easy",   cupBase: 110, insane: false, label: "Easy Mode" },
+    normal: { duration: 60, cupSize: "",            cupBase: 90,  insane: false, label: "Normal Mode" },
+    hard:   { duration: 45, cupSize: "size-hard",   cupBase: 70,  insane: false, label: "Hard Mode" },
+    insane: { duration: 30, cupSize: "size-insane", cupBase: 70,  insane: true,  label: "Insane Mode" },
   };
 
   // Rank tiers (score -> { name, emoji })
@@ -76,6 +76,7 @@
   const copiedToast     = document.getElementById("copiedToast");
   const soundToggle     = document.getElementById("soundToggle");
   const soundIcon       = document.getElementById("soundIcon");
+  const resetProgressBtn = document.getElementById("resetProgressBtn");
 
   // Populate the sparkles once (only visible when .cup.golden)
   if (sparklesEl && !sparklesEl.children.length) {
@@ -189,6 +190,20 @@
   function saveAchievements(set) {
     try { localStorage.setItem(ACHIEVEMENTS_KEY, JSON.stringify(Array.from(set))); }
     catch (e) { /* ignore */ }
+  }
+
+  // Clears best score and unlocked achievements from localStorage so the
+  // player can test fresh. Sound preference is left alone (out of scope).
+  function resetProgress() {
+    const ok = window.confirm("Reset best score and all unlocked achievements?");
+    if (!ok) return;
+    try { localStorage.removeItem(STORAGE_KEY); } catch (e) { /* ignore */ }
+    try { localStorage.removeItem(ACHIEVEMENTS_KEY); } catch (e) { /* ignore */ }
+    bestScore = 0;
+    unlockedAchievements = new Set();
+    // Reflect the cleared best score on the welcome screen.
+    welcomeBestEl.textContent = "0";
+    showCopiedToast("Progress reset");
   }
 
   // --- Helpers ---
@@ -602,6 +617,7 @@
   backToMenuBtn.addEventListener("click", showWelcome);
   shareFinalBtn.addEventListener("click", handleShare);
   soundToggle.addEventListener("click", toggleSound);
+  if (resetProgressBtn) resetProgressBtn.addEventListener("click", resetProgress);
 
   difficultyBtns.forEach(function (btn) {
     btn.addEventListener("click", function () {

@@ -594,6 +594,36 @@ body {
   color: #ff5a1f;
 }
 
+.reset-row {
+  margin-top: 10px;
+  display: flex;
+  justify-content: center;
+}
+
+.btn-reset {
+  background: transparent;
+  color: #b34a00;
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 4px 10px;
+  border: 1.5px dashed #b34a00;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.btn-reset:hover {
+  background: #fff7e0;
+  color: #3a1f00;
+}
+
+.btn-reset:active {
+  transform: translateY(1px);
+}
+
 /* Game UI wrapper (hides hud+playArea when on welcome/game-over) */
 .game-ui {
   display: flex;
