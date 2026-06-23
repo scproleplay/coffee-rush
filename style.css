@@ -1290,3 +1290,129 @@ body {
     padding: 8px 6px;
   }
 }
+
+/* ============================================================
+   CodeCup Arcade homepage (index.html)
+   ============================================================ */
+
+.arcade-main {
+  display: flex;
+  flex: 1;
+  margin: 6px 0 14px;
+}
+
+.arcade-grid {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+  align-content: start;
+}
+
+.game-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  background: #fff;
+  border: 4px solid #ff5a1f;
+  border-radius: 22px;
+  padding: 18px 14px;
+  text-align: center;
+  box-shadow: 0 8px 0 #c44a00;
+}
+
+.game-card-emoji {
+  font-size: 2.6rem;
+  line-height: 1;
+  filter: drop-shadow(2px 2px 0 rgba(0, 0, 0, 0.1));
+}
+
+.game-card-name {
+  font-size: clamp(1.1rem, 3.5vw, 1.4rem);
+  font-weight: 900;
+  color: #ff5a1f;
+  text-shadow: 2px 2px 0 #ffd24a;
+  line-height: 1.1;
+  margin: 0;
+}
+
+.game-card-desc {
+  color: #3a1f00;
+  font-size: clamp(0.85rem, 2.5vw, 0.95rem);
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 0;
+  flex: 1;
+}
+
+.game-card .btn {
+  margin-top: 4px;
+  width: 100%;
+  max-width: 220px;
+  /* .btn is a <button> or <a>; either way it should not stretch to the
+     full card width, but it should be the full button-target width. */
+}
+
+.game-card .btn:disabled,
+.game-card .btn[disabled] {
+  background: #e6d6b0;
+  color: #8a6b3a;
+  box-shadow: 0 4px 0 #b34a00;
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+
+.game-card .btn:disabled:active {
+  transform: none;
+  box-shadow: 0 4px 0 #b34a00;
+}
+
+/* "← Back to Arcade" pill used in the per-game footers. Sits next to
+   the existing "Try Reaction Timer" / "Reset Best" pills. */
+.arcade-back-line {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.arcade-back-pill {
+  display: inline-block;
+  background: #fff7e0;
+  color: #b34a00;
+  font-weight: 800;
+  font-size: 0.85rem;
+  text-decoration: none;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 2px solid #3a1f00;
+  box-shadow: 0 3px 0 #3a1f00;
+  transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.15s ease;
+}
+
+.arcade-back-pill:hover {
+  background: #fff;
+}
+
+.arcade-back-pill:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #3a1f00;
+}
+
+/* Mobile tweaks for the arcade homepage */
+@media (max-width: 480px) {
+  .arcade-grid {
+    grid-template-columns: 1fr;
+  }
+  .game-card {
+    padding: 14px 12px;
+  }
+  .game-card-emoji {
+    font-size: 2.2rem;
+  }
+}

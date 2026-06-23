@@ -7,7 +7,7 @@
   const STORAGE_KEY = "coffeeRushBestScore";
   const SOUND_KEY = "coffeeRushSoundOn";
   const ACHIEVEMENTS_KEY = "coffeeRushAchievements";
-  const SHARE_URL = "https://codecup-coffee-rush.netlify.app";
+  const SHARE_URL = "https://codecup-coffee-rush.netlify.app/coffee-rush.html";
   const GOLDEN_CHANCE = 0.25; // ~25% of cups are golden
   const COMBO_WINDOW_MS = 900; // clicks within this window keep the combo alive
   const COMBO_BURST_THRESHOLD = 2; // show "Combo xN!" starting at x2
