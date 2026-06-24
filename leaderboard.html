@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Global Leaderboard 🌍 · CodeCup Arcade</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <h1 class="lb-page-title">🌍 Global Leaderboard</h1>
+      <p class="lb-page-sub">Top 100 players for every CodeCup Arcade game.</p>
+    </header>
+
+    <main class="arcade-main" aria-label="Leaderboard">
+      <div class="lb-tabs" role="tablist" aria-label="Game">
+        <button class="lb-tab is-active" type="button" role="tab" data-game="coffee-rush" aria-selected="true">☕ Coffee Rush</button>
+        <button class="lb-tab" type="button" role="tab" data-game="reaction-timer" aria-selected="false">⚡ Reaction Timer</button>
+        <button class="lb-tab" type="button" role="tab" data-game="memory-match" aria-selected="false">🧠 Memory Match</button>
+        <button class="lb-tab" type="button" role="tab" data-game="math-rush" aria-selected="false">➕ Math Rush</button>
+      </div>
+
+      <ol id="lbList" class="lb-list lb-list--tall" aria-live="polite" aria-busy="true">
+        <li class="lb-empty">Loading…</li>
+      </ol>
+    </main>
+
+    <footer class="footer">
+      <a href="https://www.buymeacoffee.com/sunboys" class="bmc-btn" target="_blank" rel="noopener noreferrer" aria-label="Support CodeCup Studio">☕ Support CodeCup Studio</a>
+      <p class="footer-note">Made with love and caffeine.</p>
+      <p class="footer-version">Leaderboard v1.0</p>
+      <p class="arcade-back-line"><a class="arcade-back-pill" href="index.html" aria-label="Back to CodeCup Arcade">← Back to Arcade</a></p>
+    </footer>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script src="leaderboard-client.js"></script>
+  <script src="leaderboard.js"></script>
+</body>
+</html>

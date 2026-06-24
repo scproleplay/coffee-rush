@@ -75,6 +75,18 @@
             <button id="mmTryAgain" class="btn btn-primary" type="button">Try Again</button>
             <a id="mmBackArcade" class="btn btn-secondary" href="index.html">Back to Arcade</a>
           </div>
+
+          <section class="lb-section" aria-label="Global leaderboard">
+            <span class="lb-heading">🌍 Global Leaderboard</span>
+            <ol id="lbListMM" class="lb-list" aria-live="polite" aria-busy="true">
+              <li class="lb-empty">Loading…</li>
+            </ol>
+            <div class="lb-form">
+              <input id="lbNicknameMM" class="lb-input" type="text" maxlength="12" placeholder="Nickname" aria-label="Nickname (max 12 characters)" autocomplete="off" />
+              <button id="lbSubmitMM" class="btn btn-primary lb-submit" type="button">Submit Score</button>
+              <span id="lbStatusMM" class="lb-status" aria-live="polite"></span>
+            </div>
+          </section>
         </div>
       </section>
     </main>
@@ -88,6 +100,9 @@
     </footer>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script src="leaderboard-client.js"></script>
   <script src="memory-match.js"></script>
 </body>
 </html>

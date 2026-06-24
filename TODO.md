@@ -20,6 +20,8 @@
 - More Memory Match themes / difficulty levels
 - More special coffee types (Coffee Rush)
 - Per-difficulty best scores for Math Rush
+- Profanity filter on leaderboard nicknames (server-side)
+- Per-difficulty leaderboard tabs on the leaderboard page
 
 ## Completed tasks
 - Built Coffee Rush
@@ -42,3 +44,5 @@
 - Added arcade homepage with game cards
 - Added cross-game links and "Back to Arcade" buttons
 - Added per-game reset best/progress buttons
+- Added Supabase-backed global leaderboard (top 100 per game)
+- Added leaderboard.html with 4 tabs and a shared client module

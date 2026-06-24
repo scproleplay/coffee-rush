@@ -12,6 +12,19 @@ A small collection of browser games by CodeCup Studio.
 Arcade homepage:
 https://codecup-coffee-rush.netlify.app/
 
+## Global Leaderboard 🌍
+
+Each game has a global top-100 leaderboard. After finishing a game, enter a nickname (1–12 characters, no other personal info is collected) and submit. Your best result will appear in the list.
+
+Leaderboard page:
+https://codecup-coffee-rush.netlify.app/leaderboard.html
+
+Sort rules:
+- Coffee Rush — highest score wins.
+- Reaction Timer — lowest reaction time wins.
+- Memory Match — lowest moves wins; tie-break on lowest time.
+- Math Rush — highest score wins.
+
 ## Coffee Rush
 
 Click or tap the coffee cup before it disappears.
@@ -132,3 +145,4 @@ Support helps future games and updates.
 - Reaction Timer v1.0
 - Memory Match v1.0
 - Math Rush v1.0
+- Leaderboard v1.0

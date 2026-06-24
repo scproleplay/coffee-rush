@@ -143,6 +143,18 @@
           <button id="mathShareFinal" class="btn btn-share" type="button">📋 Share Score</button>
           <button id="mathMainMenu" class="btn btn-secondary" type="button">Main Menu</button>
         </div>
+
+        <section class="lb-section" aria-label="Global leaderboard">
+          <span class="lb-heading">🌍 Global Leaderboard</span>
+          <ol id="lbListMath" class="lb-list" aria-live="polite" aria-busy="true">
+            <li class="lb-empty">Loading…</li>
+          </ol>
+          <div class="lb-form">
+            <input id="lbNicknameMath" class="lb-input" type="text" maxlength="12" placeholder="Nickname" aria-label="Nickname (max 12 characters)" autocomplete="off" />
+            <button id="lbSubmitMath" class="btn btn-primary lb-submit" type="button">Submit Score</button>
+            <span id="lbStatusMath" class="lb-status" aria-live="polite"></span>
+          </div>
+        </section>
       </div>
     </section>
 
@@ -157,6 +169,9 @@
     </footer>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script src="leaderboard-client.js"></script>
   <script src="math-rush.js"></script>
 </body>
 </html>

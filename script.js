@@ -78,6 +78,12 @@
   const soundIcon       = document.getElementById("soundIcon");
   const resetProgressBtn = document.getElementById("resetProgressBtn");
 
+  // --- Global leaderboard (Supabase) ---
+  const lbListCoffeeRush   = document.getElementById("lbListCoffeeRush");
+  const lbNicknameCoffeeRush = document.getElementById("lbNicknameCoffeeRush");
+  const lbSubmitCoffeeRush = document.getElementById("lbSubmitCoffeeRush");
+  const lbStatusCoffeeRush = document.getElementById("lbStatusCoffeeRush");
+
   // Populate the sparkles once (only visible when .cup.golden)
   if (sparklesEl && !sparklesEl.children.length) {
     for (let i = 1; i <= 4; i++) {
@@ -344,6 +350,84 @@
     gameUI.hidden = true;
     welcomeScreen.hidden = true;
     gameOverScreen.hidden = false;
+
+    // Load the top-100 leaderboard for this game. Errors are shown inline
+    // and don't block the game-over screen.
+    loadLeaderboardCoffeeRush(score);
+  }
+
+  function escapeHtmlCR(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c];
+    });
+  }
+
+  function renderLbRows(targetEl, rows, currentNickname) {
+    if (!rows || rows.length === 0) {
+      targetEl.innerHTML = '<li class="lb-empty">No scores yet. Be the first!</li>';
+      return;
+    }
+    const parts = [];
+    const lcNick = (currentNickname || "").toLowerCase();
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      const isYou = lcNick && (r.nickname || "").toLowerCase() === lcNick;
+      const value = window.Leaderboard.formatGameValue("coffee-rush", r);
+      parts.push(
+        '<li class="' + (isYou ? "is-you" : "") + '">' +
+          '<span class="lb-rank">#' + (i + 1) + '</span>' +
+          '<span class="lb-name">' + escapeHtmlCR(r.nickname || "") + '</span>' +
+          '<span class="lb-value">' + escapeHtmlCR(value) + '</span>' +
+        '</li>'
+      );
+    }
+    targetEl.innerHTML = parts.join("");
+  }
+
+  function loadLeaderboardCoffeeRush(currentScore) {
+    lbListCoffeeRush.setAttribute("aria-busy", "true");
+    lbListCoffeeRush.innerHTML = '<li class="lb-empty">Loading…</li>';
+    window.Leaderboard.fetchTop100("coffee-rush").then(function (res) {
+      lbListCoffeeRush.setAttribute("aria-busy", "false");
+      if (res.error) {
+        lbListCoffeeRush.innerHTML = '<li class="lb-error">Couldn\'t load leaderboard.</li>';
+        return;
+      }
+      // Prefer the most recently typed nickname from the input, otherwise
+      // just the latest successful submit's nickname.
+      const currentNick = (lbNicknameCoffeeRush && lbNicknameCoffeeRush.value || "").trim() || lastSubmittedNickCoffeeRush;
+      renderLbRows(lbListCoffeeRush, res.data, currentNick);
+    });
+  }
+
+  let lastSubmittedNickCoffeeRush = "";
+
+  function handleSubmitCoffeeRush() {
+    const nick = (lbNicknameCoffeeRush.value || "").trim();
+    if (nick.length < 1 || nick.length > 12) {
+      lbStatusCoffeeRush.textContent = "Nickname must be 1-12 characters.";
+      lbStatusCoffeeRush.classList.add("is-error");
+      return;
+    }
+    lbStatusCoffeeRush.classList.remove("is-error");
+    lbStatusCoffeeRush.textContent = "Submitting…";
+    lbSubmitCoffeeRush.disabled = true;
+    window.Leaderboard.submitScore({
+      game: "coffee-rush",
+      nickname: nick,
+      score: score,
+    }).then(function (res) {
+      lbSubmitCoffeeRush.disabled = false;
+      if (res.ok) {
+        lastSubmittedNickCoffeeRush = nick;
+        lbStatusCoffeeRush.classList.remove("is-error");
+        lbStatusCoffeeRush.textContent = "✓ Submitted!";
+        loadLeaderboardCoffeeRush(score);
+      } else {
+        lbStatusCoffeeRush.classList.add("is-error");
+        lbStatusCoffeeRush.textContent = "Couldn't submit — try again.";
+      }
+    });
   }
 
   function renderAchievements(newlyUnlocked) {
@@ -662,6 +746,7 @@
   shareFinalBtn.addEventListener("click", handleShare);
   soundToggle.addEventListener("click", toggleSound);
   if (resetProgressBtn) resetProgressBtn.addEventListener("click", resetProgress);
+  if (lbSubmitCoffeeRush) lbSubmitCoffeeRush.addEventListener("click", handleSubmitCoffeeRush);
 
   difficultyBtns.forEach(function (btn) {
     btn.addEventListener("click", function () {

@@ -57,6 +57,12 @@
   const tryAgainBtn        = document.getElementById("mmTryAgain");
   const resetBestBtn       = document.getElementById("mmResetBest");
 
+  // --- Global leaderboard (Supabase) ---
+  const lbListMM          = document.getElementById("lbListMM");
+  const lbNicknameMM      = document.getElementById("lbNicknameMM");
+  const lbSubmitMM        = document.getElementById("lbSubmitMM");
+  const lbStatusMM        = document.getElementById("lbStatusMM");
+
   // --- Helpers ---
   function shuffle(arr) {
     // Fisher-Yates
@@ -222,6 +228,83 @@
     winBestMovesBadge.hidden      = !isNewBestMoves;
     winBestTimeBadge.hidden       = !isNewBestTime;
     showWinScreen();
+
+    // Load the top-100 leaderboard for this game. Errors are shown inline
+    // and don't block the win screen.
+    loadLeaderboardMM();
+  }
+
+  function escapeHtmlMM(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c];
+    });
+  }
+
+  function renderLbRowsMM(targetEl, rows, currentNickname) {
+    if (!rows || rows.length === 0) {
+      targetEl.innerHTML = '<li class="lb-empty">No scores yet. Be the first!</li>';
+      return;
+    }
+    const parts = [];
+    const lcNick = (currentNickname || "").toLowerCase();
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      const isYou = lcNick && (r.nickname || "").toLowerCase() === lcNick;
+      const value = window.Leaderboard.formatGameValue("memory-match", r);
+      parts.push(
+        '<li class="' + (isYou ? "is-you" : "") + '">' +
+          '<span class="lb-rank">#' + (i + 1) + '</span>' +
+          '<span class="lb-name">' + escapeHtmlMM(r.nickname || "") + '</span>' +
+          '<span class="lb-value">' + escapeHtmlMM(value) + '</span>' +
+        '</li>'
+      );
+    }
+    targetEl.innerHTML = parts.join("");
+  }
+
+  let lastSubmittedNickMM = "";
+
+  function loadLeaderboardMM() {
+    lbListMM.setAttribute("aria-busy", "true");
+    lbListMM.innerHTML = '<li class="lb-empty">Loading…</li>';
+    window.Leaderboard.fetchTop100("memory-match").then(function (res) {
+      lbListMM.setAttribute("aria-busy", "false");
+      if (res.error) {
+        lbListMM.innerHTML = '<li class="lb-error">Couldn\'t load leaderboard.</li>';
+        return;
+      }
+      const currentNick = (lbNicknameMM && lbNicknameMM.value || "").trim() || lastSubmittedNickMM;
+      renderLbRowsMM(lbListMM, res.data, currentNick);
+    });
+  }
+
+  function handleSubmitMM() {
+    const nick = (lbNicknameMM.value || "").trim();
+    if (nick.length < 1 || nick.length > 12) {
+      lbStatusMM.textContent = "Nickname must be 1-12 characters.";
+      lbStatusMM.classList.add("is-error");
+      return;
+    }
+    lbStatusMM.classList.remove("is-error");
+    lbStatusMM.textContent = "Submitting…";
+    lbSubmitMM.disabled = true;
+    window.Leaderboard.submitScore({
+      game: "memory-match",
+      nickname: nick,
+      moves: moves,
+      timeSeconds: Math.round(elapsedMs),
+    }).then(function (res) {
+      lbSubmitMM.disabled = false;
+      if (res.ok) {
+        lastSubmittedNickMM = nick;
+        lbStatusMM.classList.remove("is-error");
+        lbStatusMM.textContent = "✓ Submitted!";
+        loadLeaderboardMM();
+      } else {
+        lbStatusMM.classList.add("is-error");
+        lbStatusMM.textContent = "Couldn't submit — try again.";
+      }
+    });
   }
 
   function showWinScreen() { winScreenEl.hidden = false; }
@@ -243,6 +326,7 @@
     newGameBtn.addEventListener("click", newGame);
     tryAgainBtn.addEventListener("click", newGame);
     if (resetBestBtn) resetBestBtn.addEventListener("click", handleResetBest);
+    if (lbSubmitMM) lbSubmitMM.addEventListener("click", handleSubmitMM);
   }
 
   init();

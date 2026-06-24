@@ -33,6 +33,12 @@
   const lastEl      = document.getElementById("rtLast");
   const triesEl     = document.getElementById("rtTries");
 
+  // --- Global leaderboard (Supabase) ---
+  const lbListRT          = document.getElementById("lbListRT");
+  const lbNicknameRT      = document.getElementById("lbNicknameRT");
+  const lbSubmitRT        = document.getElementById("lbSubmitRT");
+  const lbStatusRT        = document.getElementById("lbStatusRT");
+
   // --- Persistence ---
   function loadBest() {
     try {
@@ -179,6 +185,82 @@
     resultActionsEl.hidden = false;
     shareBtn.hidden = false; // there's now a score worth sharing
     playArea.setAttribute("aria-label", "Reaction time " + ms + " milliseconds");
+
+    // Load the top-100 leaderboard for this game. Errors are shown inline
+    // and don't block the result screen.
+    loadLeaderboardRT(ms);
+  }
+
+  function escapeHtmlRT(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c];
+    });
+  }
+
+  function renderLbRowsRT(targetEl, rows, currentNickname) {
+    if (!rows || rows.length === 0) {
+      targetEl.innerHTML = '<li class="lb-empty">No scores yet. Be the first!</li>';
+      return;
+    }
+    const parts = [];
+    const lcNick = (currentNickname || "").toLowerCase();
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      const isYou = lcNick && (r.nickname || "").toLowerCase() === lcNick;
+      const value = window.Leaderboard.formatGameValue("reaction-timer", r);
+      parts.push(
+        '<li class="' + (isYou ? "is-you" : "") + '">' +
+          '<span class="lb-rank">#' + (i + 1) + '</span>' +
+          '<span class="lb-name">' + escapeHtmlRT(r.nickname || "") + '</span>' +
+          '<span class="lb-value">' + escapeHtmlRT(value) + '</span>' +
+        '</li>'
+      );
+    }
+    targetEl.innerHTML = parts.join("");
+  }
+
+  let lastSubmittedNickRT = "";
+
+  function loadLeaderboardRT() {
+    lbListRT.setAttribute("aria-busy", "true");
+    lbListRT.innerHTML = '<li class="lb-empty">Loading…</li>';
+    window.Leaderboard.fetchTop100("reaction-timer").then(function (res) {
+      lbListRT.setAttribute("aria-busy", "false");
+      if (res.error) {
+        lbListRT.innerHTML = '<li class="lb-error">Couldn\'t load leaderboard.</li>';
+        return;
+      }
+      const currentNick = (lbNicknameRT && lbNicknameRT.value || "").trim() || lastSubmittedNickRT;
+      renderLbRowsRT(lbListRT, res.data, currentNick);
+    });
+  }
+
+  function handleSubmitRT() {
+    const nick = (lbNicknameRT.value || "").trim();
+    if (nick.length < 1 || nick.length > 12) {
+      lbStatusRT.textContent = "Nickname must be 1-12 characters.";
+      lbStatusRT.classList.add("is-error");
+      return;
+    }
+    lbStatusRT.classList.remove("is-error");
+    lbStatusRT.textContent = "Submitting…";
+    lbSubmitRT.disabled = true;
+    window.Leaderboard.submitScore({
+      game: "reaction-timer",
+      nickname: nick,
+      reactionTime: lastMs,
+    }).then(function (res) {
+      lbSubmitRT.disabled = false;
+      if (res.ok) {
+        lastSubmittedNickRT = nick;
+        lbStatusRT.classList.remove("is-error");
+        lbStatusRT.textContent = "✓ Submitted!";
+        loadLeaderboardRT();
+      } else {
+        lbStatusRT.classList.add("is-error");
+        lbStatusRT.textContent = "Couldn't submit — try again.";
+      }
+    });
   }
 
   // --- Click handling ---
@@ -263,6 +345,7 @@
       handleShare();
     });
     if (resetBestBtn) resetBestBtn.addEventListener("click", handleResetBest);
+    if (lbSubmitRT) lbSubmitRT.addEventListener("click", handleSubmitRT);
   }
 
   init();

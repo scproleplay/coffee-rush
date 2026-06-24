@@ -75,6 +75,12 @@
   const copiedToastEl   = document.getElementById("mathCopiedToast");
   const resetBestBtn    = document.getElementById("mathResetBest");
 
+  // --- Global leaderboard (Supabase) ---
+  const lbListMath       = document.getElementById("lbListMath");
+  const lbNicknameMath   = document.getElementById("lbNicknameMath");
+  const lbSubmitMath     = document.getElementById("lbSubmitMath");
+  const lbStatusMath     = document.getElementById("lbStatusMath");
+
   // --- Helpers ---
   function randInt(min, max) {
     return min + Math.floor(Math.random() * (max - min + 1));
@@ -162,6 +168,83 @@
     gameUiEl.hidden = true;
     welcomeEl.hidden = true;
     gameOverEl.hidden = false;
+
+    // Load the top-100 leaderboard for this game. Errors are shown inline
+    // and don't block the game-over screen.
+    loadLeaderboardMath();
+  }
+
+  // --- Global leaderboard helpers ---
+  function escapeHtmlMath(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c];
+    });
+  }
+
+  function renderLbRowsMath(targetEl, rows, currentNickname) {
+    if (!rows || rows.length === 0) {
+      targetEl.innerHTML = '<li class="lb-empty">No scores yet. Be the first!</li>';
+      return;
+    }
+    const parts = [];
+    const lcNick = (currentNickname || "").toLowerCase();
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      const isYou = lcNick && (r.nickname || "").toLowerCase() === lcNick;
+      const value = window.Leaderboard.formatGameValue("math-rush", r);
+      parts.push(
+        '<li class="' + (isYou ? "is-you" : "") + '">' +
+          '<span class="lb-rank">#' + (i + 1) + '</span>' +
+          '<span class="lb-name">' + escapeHtmlMath(r.nickname || "") + '</span>' +
+          '<span class="lb-value">' + escapeHtmlMath(value) + '</span>' +
+        '</li>'
+      );
+    }
+    targetEl.innerHTML = parts.join("");
+  }
+
+  let lastSubmittedNickMath = "";
+
+  function loadLeaderboardMath() {
+    lbListMath.setAttribute("aria-busy", "true");
+    lbListMath.innerHTML = '<li class="lb-empty">Loading…</li>';
+    window.Leaderboard.fetchTop100("math-rush").then(function (res) {
+      lbListMath.setAttribute("aria-busy", "false");
+      if (res.error) {
+        lbListMath.innerHTML = '<li class="lb-error">Couldn\'t load leaderboard.</li>';
+        return;
+      }
+      const currentNick = (lbNicknameMath && lbNicknameMath.value || "").trim() || lastSubmittedNickMath;
+      renderLbRowsMath(lbListMath, res.data, currentNick);
+    });
+  }
+
+  function handleSubmitMath() {
+    const nick = (lbNicknameMath.value || "").trim();
+    if (nick.length < 1 || nick.length > 12) {
+      lbStatusMath.textContent = "Nickname must be 1-12 characters.";
+      lbStatusMath.classList.add("is-error");
+      return;
+    }
+    lbStatusMath.classList.remove("is-error");
+    lbStatusMath.textContent = "Submitting…";
+    lbSubmitMath.disabled = true;
+    window.Leaderboard.submitScore({
+      game: "math-rush",
+      nickname: nick,
+      score: score,
+    }).then(function (res) {
+      lbSubmitMath.disabled = false;
+      if (res.ok) {
+        lastSubmittedNickMath = nick;
+        lbStatusMath.classList.remove("is-error");
+        lbStatusMath.textContent = "✓ Submitted!";
+        loadLeaderboardMath();
+      } else {
+        lbStatusMath.classList.add("is-error");
+        lbStatusMath.textContent = "Couldn't submit — try again.";
+      }
+    });
   }
 
   // --- Difficulty selection ---
@@ -338,6 +421,7 @@
     shareFinalBtn.addEventListener("click", handleShare);
     submitBtn.addEventListener("click", handleSubmit);
     if (resetBestBtn) resetBestBtn.addEventListener("click", handleResetBest);
+    if (lbSubmitMath) lbSubmitMath.addEventListener("click", handleSubmitMath);
 
     inputEl.addEventListener("keydown", function (e) {
       if (e.key === "Enter") {
