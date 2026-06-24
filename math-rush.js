@@ -278,24 +278,29 @@
   }
 
   // --- Keypad ---
+  // Each keypad button is a <button type="button"> and CSS sets
+  // touch-action: manipulation on it, so the browser does not impose a
+  // 300ms double-tap delay and click fires for both mouse and touch.
+  function handleKeypadTap(e) {
+    const btn = e.target.closest(".keypad-btn");
+    if (!btn) return;
+    const key = btn.getAttribute("data-key");
+    const action = btn.getAttribute("data-action");
+    if (action === "backspace") {
+      e.preventDefault();
+      inputEl.value = inputEl.value.slice(0, -1);
+      inputEl.focus();
+    } else if (action === "submit") {
+      e.preventDefault();
+      handleSubmit();
+    } else if (key != null) {
+      if (isAnswered) return; // ignore input between correct and next question
+      inputEl.value = (inputEl.value + key).slice(0, 6); // cap to 6 digits
+      inputEl.focus();
+    }
+  }
   function setupKeypad() {
-    keypadEl.addEventListener("click", function (e) {
-      const btn = e.target.closest(".keypad-btn");
-      if (!btn) return;
-      const key = btn.getAttribute("data-key");
-      const action = btn.getAttribute("data-action");
-      if (action === "backspace") {
-        inputEl.value = inputEl.value.slice(0, -1);
-        inputEl.focus();
-      } else if (action === "submit") {
-        e.preventDefault();
-        handleSubmit();
-      } else if (key != null) {
-        if (isAnswered) return; // ignore input between correct and next question
-        inputEl.value = (inputEl.value + key).slice(0, 6); // cap to 6 digits
-        inputEl.focus();
-      }
-    });
+    keypadEl.addEventListener("click", handleKeypadTap);
   }
 
   // --- Share ---

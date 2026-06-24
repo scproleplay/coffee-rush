@@ -670,10 +670,10 @@
     });
   });
 
+  // The cup is a <button> and CSS sets touch-action: manipulation on it,
+  // so the browser does not impose a 300ms double-tap delay and click
+  // fires for both mouse and touch.
   cup.addEventListener("click", handleCupClick);
-  cup.addEventListener("touchstart", function (e) {
-    if (isPlaying) e.preventDefault();
-  }, { passive: false });
 
   window.addEventListener("resize", handleResize);
   window.addEventListener("orientationchange", handleResize);

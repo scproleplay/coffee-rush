@@ -116,6 +116,9 @@
 
       card.appendChild(back);
       card.appendChild(front);
+      // Cards are <button> elements. CSS sets touch-action: manipulation
+      // on .memory-card, so the browser does not impose a 300ms
+      // double-tap delay and click fires for both mouse and touch.
       card.addEventListener("click", onCardClick);
       gridEl.appendChild(card);
     }

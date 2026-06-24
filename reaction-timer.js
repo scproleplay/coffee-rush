@@ -250,10 +250,10 @@
     renderStats();
     showIdle();
 
+    // The playArea is a <button> and CSS sets touch-action: manipulation
+    // on it, so the browser does not impose a 300ms double-tap delay and
+    // click fires for both mouse and touch.
     playArea.addEventListener("click", handlePlayAreaClick);
-    // Avoid the 300ms double-tap delay on mobile by preventing the synthetic
-    // mouse event that follows a touch on some browsers.
-    playArea.addEventListener("touchstart", function (e) { e.preventDefault(); }, { passive: false });
     tryAgainBtn.addEventListener("click", function (e) {
       e.preventDefault();
       handleTryAgain();
