@@ -185,11 +185,26 @@
     cutsceneTimers = [];
   }
 
+  // Force-hide the cutscene by combining the `hidden` attribute with an
+  // explicit `display: none` style. This prevents any stale subtitle
+  // from leaking through after Skip / Start Run.
+  function hideCutscene() {
+    CUTSCENE.hidden = true;
+    CUTSCENE.style.display = 'none';
+    // Clear all active scene classes so no leftover subtitle shows.
+    CUTSCENE.querySelectorAll('.ce-scene').forEach(s => s.classList.remove('active'));
+    SCENE_DOTS.forEach(d => d.classList.remove('on'));
+  }
+
   // The cutscene drives a single shared timer schedule so it can be
   // cleanly cancelled. Each scene lasts SCENE_DURATION_MS; on the last
-  // scene the Start Run button is revealed.
+  // scene the Start Run button is revealed, and after a short pause
+  // the cutscene auto-advances to the start screen so the user is
+  // never left staring at a frozen "RUN!" frame.
   function playCutscene() {
     clearCutsceneTimers();
+    // Make sure the cutscene is fully reset and visible.
+    CUTSCENE.style.display = '';
     CUTSCENE.hidden = false;
     START_OVERLAY.hidden = true;
     GAME_OVER_OVERLAY.hidden = true;
@@ -213,17 +228,24 @@
         }
       }, i * SCENE_DURATION_MS));
     }
+    // After the last scene plays, auto-dismiss the cutscene and go to
+    // the start screen. The user can still click Skip or Start Run
+    // before this fires to act sooner.
+    cutsceneTimers.push(setTimeout(() => {
+      hideCutscene();
+      showStart();
+    }, TOTAL_SCENES * SCENE_DURATION_MS + 600));
   }
 
   function skipCutscene() {
     clearCutsceneTimers();
-    CUTSCENE.hidden = true;
+    hideCutscene();
     showStart();
   }
 
   function endCutscene() {
     clearCutsceneTimers();
-    CUTSCENE.hidden = true;
+    hideCutscene();
     beginRun();
   }
 
