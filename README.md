@@ -8,6 +8,7 @@ A small collection of browser games by CodeCup Studio.
 - [Reaction Timer ⚡](https://codecup-coffee-rush.netlify.app/reaction-timer.html) — Wait for green, then click as fast as you can.
 - [Memory Match 🧠](https://codecup-coffee-rush.netlify.app/memory-match.html) — Match all 8 pairs in as few moves and as little time as possible.
 - [Math Rush ➕](https://codecup-coffee-rush.netlify.app/math-rush.html) — Solve as many problems as you can in 60 seconds.
+- [Coffee Escape ☕🏃](https://codecup-coffee-rush.netlify.app/coffee-escape.html) — A freshly poured cup sprints through a house to escape a tired man who wants his coffee.
 
 Arcade homepage:
 https://codecup-coffee-rush.netlify.app/
@@ -130,6 +131,37 @@ Click or tap the coffee cup before it disappears.
 - Support button
 - On-screen numeric keypad for mobile
 
+## Coffee Escape
+
+A 2D endless runner set inside a house. You play a freshly poured cup of
+coffee that has to sprint away from a tired man who just walked in
+looking for his caffeine.
+
+### How to play
+
+- The cup runs automatically from left to right.
+- Press **Space** or **↑** on desktop to jump.
+- Tap anywhere on the play area (or use the on-screen JUMP button) on
+  mobile.
+- Jump over chairs, tables, sofas, lamps, and boxes that scroll in from
+  the right.
+- Speed slowly increases the longer you survive.
+- Best score is saved in your browser.
+
+### Features
+
+- Original 2D endless runner
+- House-themed background (wallpaper, window, picture, clock, wood floor)
+- Five furniture obstacle types
+- Tired man chases the player in the background
+- Story intro screen ("You were just poured into a cup...")
+- Start screen, HUD, and game over screen
+- Best score saving
+- Try Again and Back to Arcade buttons
+- Support CodeCup Studio button
+- Mobile-friendly with on-screen JUMP button
+- Reset best score button
+
 ## Support
 
 If you enjoy these games, you can support CodeCup Studio here:
@@ -140,9 +172,10 @@ Support helps future games and updates.
 
 ## Versions
 
-- CodeCup Arcade v1.0
+- CodeCup Arcade v1.1
 - Coffee Rush v1.1
 - Reaction Timer v1.0
 - Memory Match v1.0
 - Math Rush v1.0
+- Coffee Escape v1.0
 - Leaderboard v1.0
