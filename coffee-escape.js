@@ -294,6 +294,12 @@
   function beginRun() {
     resetWorld();
     state.running = true;
+    // Hide all overlays so the play area is fully visible.
+    START_OVERLAY.hidden = true;
+    CUTSCENE.hidden = true;
+    CUTSCENE.style.display = 'none';
+    CUTSCENE.querySelectorAll('.ce-scene').forEach(s => s.classList.remove('active'));
+    GAME_OVER_OVERLAY.hidden = true;
     HUD.hidden = false;
     HINT && (HINT.hidden = false);
     state.lastTs = performance.now();
