@@ -151,13 +151,23 @@ looking for his caffeine.
 ### Features
 
 - Original 2D endless runner
-- House-themed background (wallpaper, window, picture, clock, wood floor)
+- Animated 5-scene cartoon intro cutscene (HTML/CSS/JS shapes — no
+  external video, no copyrighted assets)
+- Coffee cup with stick arms, stick legs, and four facial expressions:
+  normal (menus), scared (running), shocked (near obstacles, game
+  over), and happy (after the man trips)
+- Tired middle-aged man chases in the background with a real running
+  animation, expressive eyes, and a reaching hand
+- The man sometimes trips on a chair/table the player just dodged
+  — he shows X-eyes, a tilted body, an "Oof!" speech bubble, and
+  stars around his head; the cup is happy for a moment, gets a
+  small score bonus, and the next 2 obstacles arrive later
+- House-themed background (wallpaper, window, picture, clock, wood
+  floor)
 - Five furniture obstacle types
-- Tired man chases the player in the background
-- Story intro screen ("You were just poured into a cup...")
 - Start screen, HUD, and game over screen
 - Best score saving
-- Try Again and Back to Arcade buttons
+- Try Again, Back to Arcade, Play Intro, and Skip Intro buttons
 - Support CodeCup Studio button
 - Mobile-friendly with on-screen JUMP button
 - Reset best score button
@@ -177,5 +187,5 @@ Support helps future games and updates.
 - Reaction Timer v1.0
 - Memory Match v1.0
 - Math Rush v1.0
-- Coffee Escape v1.0
+- Coffee Escape v1.1
 - Leaderboard v1.0

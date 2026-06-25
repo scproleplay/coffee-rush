@@ -97,23 +97,6 @@
       line-height: 1.45;
     }
 
-    .ce-story-line {
-      opacity: 0;
-      transform: translateY(8px);
-      transition: opacity 0.35s ease, transform 0.35s ease;
-      font-size: 1.05rem;
-      min-height: 1.6em;
-    }
-    .ce-story-line.show {
-      opacity: 1;
-      transform: translateY(0);
-    }
-    .ce-story-line.run {
-      font-size: 1.4rem;
-      font-weight: 800;
-      color: #c0392b;
-    }
-
     .ce-actions {
       display: flex;
       gap: 10px;
@@ -154,6 +137,11 @@
     .ce-hud-item .ce-hud-value {
       font-size: 1.1rem;
       color: #6b3a0a;
+      transition: color 0.2s, transform 0.2s;
+    }
+    .ce-hud-item .ce-hud-value.flash {
+      color: #ff8800;
+      transform: scale(1.18);
     }
     .ce-hud-best .ce-hud-value {
       color: #c0392b;
@@ -220,6 +208,498 @@
       0%, 100% { opacity: 0.55; }
       50% { opacity: 1; }
     }
+
+    /* Floating +5 / +N popups spawned when the man trips or dodges */
+    .ce-popup {
+      position: absolute;
+      font-weight: 800;
+      font-size: 1.4rem;
+      color: #ff8800;
+      text-shadow: 0 2px 0 #fff, 0 0 8px rgba(255, 136, 0, 0.5);
+      pointer-events: none;
+      z-index: 4;
+      animation: ce-pop 1.1s ease-out forwards;
+    }
+    @keyframes ce-pop {
+      0%   { transform: translate(-50%, 0)    scale(0.6); opacity: 0; }
+      20%  { transform: translate(-50%, -8px) scale(1.2); opacity: 1; }
+      100% { transform: translate(-50%, -54px) scale(1);  opacity: 0; }
+    }
+
+    /* ---------- Animated cutscene ---------- */
+    .ce-cutscene {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, #fff1d6 0%, #ffd9a8 60%, #c08650 100%);
+      z-index: 6;
+      overflow: hidden;
+    }
+    .ce-cutscene[hidden] { display: none; }
+
+    .ce-scene {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+      pointer-events: none;
+    }
+    .ce-scene.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* Subtitle ribbon */
+    .ce-subtitle {
+      position: absolute;
+      left: 50%;
+      bottom: 12%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.6);
+      color: #fff;
+      font-weight: 700;
+      font-size: clamp(0.95rem, 2.2vw, 1.25rem);
+      padding: 8px 18px;
+      border-radius: 999px;
+      letter-spacing: 0.02em;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+      white-space: nowrap;
+      max-width: 92%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .ce-cutscene-actions {
+      position: absolute;
+      bottom: 4%;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+      z-index: 7;
+    }
+
+    /* Scene dots (one per scene) */
+    .ce-scene-dots {
+      position: absolute;
+      top: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 8px;
+      z-index: 7;
+    }
+    .ce-scene-dots .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.5);
+      transition: background 0.3s, transform 0.3s;
+    }
+    .ce-scene-dots .dot.on {
+      background: #ff8800;
+      transform: scale(1.4);
+    }
+
+    /* ---- Cutscene character base styles (pure CSS) ---- */
+    .ce-char {
+      position: absolute;
+      transform-origin: center bottom;
+    }
+
+    /* Kettle (Scene 1) */
+    .ce-kettle {
+      left: 8%;
+      bottom: 18%;
+      width: 16%;
+      aspect-ratio: 5 / 4;
+      background: #c0392b;
+      border-radius: 14% 14% 18% 18% / 18% 18% 24% 24%;
+      box-shadow: inset -6% -8% 0 rgba(0, 0, 0, 0.18);
+    }
+    .ce-kettle::before {
+      /* spout */
+      content: '';
+      position: absolute;
+      right: -28%;
+      top: 12%;
+      width: 36%;
+      height: 18%;
+      background: #c0392b;
+      border-radius: 50% 50% 60% 30% / 50% 50% 50% 50%;
+      transform: rotate(-15deg);
+    }
+    .ce-kettle::after {
+      /* handle */
+      content: '';
+      position: absolute;
+      left: -16%;
+      top: 18%;
+      width: 18%;
+      height: 50%;
+      border: 4px solid #c0392b;
+      border-right: none;
+      border-radius: 50% 0 0 50%;
+      background: transparent;
+    }
+    /* Coffee stream */
+    .ce-stream {
+      left: 22%;
+      top: 22%;
+      width: 4px;
+      height: 38%;
+      background: linear-gradient(180deg, transparent 0%, #4a2a10 30%, #4a2a10 100%);
+      transform-origin: top center;
+      transform: rotate(8deg);
+      opacity: 0;
+    }
+    .ce-scene.scene-1.active .ce-stream { animation: ce-stream 1.6s 0.4s ease-in forwards; }
+    @keyframes ce-stream {
+      0%   { opacity: 0; height: 0; }
+      20%  { opacity: 1; height: 38%; }
+      100% { opacity: 1; height: 38%; }
+    }
+
+    /* Counter */
+    .ce-counter {
+      left: 5%;
+      right: 5%;
+      bottom: 12%;
+      height: 9%;
+      background: linear-gradient(180deg, #8a4a1f, #5a2d12);
+      border-radius: 8px 8px 0 0;
+      box-shadow: inset 0 4px 0 rgba(255, 255, 255, 0.08);
+    }
+
+    /* Cup on counter (cutscene version — same shape as the canvas cup) */
+    .ce-cup {
+      width: 8%;
+      aspect-ratio: 1 / 1.1;
+      bottom: 21%;
+      background: #fff;
+      border: 3px solid #5a3a14;
+      border-radius: 8% 8% 24% 24% / 6% 6% 30% 30%;
+      transform-origin: center bottom;
+      position: absolute;
+      overflow: visible;
+    }
+    .ce-cup::before {
+      /* coffee surface */
+      content: '';
+      position: absolute;
+      left: 12%;
+      right: 12%;
+      top: 6%;
+      height: 8%;
+      background: #4a2a10;
+      border-radius: 50%;
+    }
+    .ce-cup::after {
+      /* handle */
+      content: '';
+      position: absolute;
+      right: -28%;
+      top: 22%;
+      width: 38%;
+      height: 38%;
+      border: 4px solid #5a3a14;
+      border-left: none;
+      border-radius: 0 50% 50% 0 / 0 50% 50% 0;
+      background: transparent;
+    }
+
+    /* Cup face — base eyes/mouth on the cup */
+    .ce-cup-face {
+      position: absolute;
+      left: 18%;
+      right: 18%;
+      top: 32%;
+      bottom: 14%;
+      pointer-events: none;
+    }
+    .ce-cup-face .eye {
+      position: absolute;
+      top: 18%;
+      width: 18%;
+      aspect-ratio: 1 / 1;
+      background: #fff;
+      border-radius: 50%;
+      border: 2px solid #5a3a14;
+    }
+    .ce-cup-face .eye.l { left: 8%; }
+    .ce-cup-face .eye.r { right: 8%; }
+    .ce-cup-face .pupil {
+      position: absolute;
+      left: 25%;
+      top: 25%;
+      width: 50%;
+      aspect-ratio: 1 / 1;
+      background: #222;
+      border-radius: 50%;
+    }
+    .ce-cup-face .mouth {
+      position: absolute;
+      left: 30%;
+      right: 30%;
+      bottom: 12%;
+      height: 12%;
+      border-bottom: 3px solid #5a3a14;
+      border-radius: 0 0 50% 50% / 0 0 100% 100%;
+    }
+    /* Expression variants — toggled by .expr-* on the .ce-cup element */
+    .ce-cup-face .brow {
+      position: absolute;
+      top: 6%;
+      width: 22%;
+      height: 4px;
+      background: #5a3a14;
+      border-radius: 4px;
+      display: none;
+    }
+    .ce-cup-face .brow.l { left: 4%;  transform: rotate(15deg); }
+    .ce-cup-face .brow.r { right: 4%; transform: rotate(-15deg); }
+    .ce-cup-face .sweat {
+      position: absolute;
+      right: 4%;
+      top: 0;
+      width: 14%;
+      aspect-ratio: 1 / 1.3;
+      background: #6ec6ff;
+      border-radius: 50% 50% 50% 50% / 30% 30% 70% 70%;
+      display: none;
+    }
+    /* expression: normal (default) */
+    /* expression: scared */
+    .ce-cup.expr-scared .ce-cup-face .eye    { transform: scale(1.4); }
+    .ce-cup.expr-scared .ce-cup-face .brow   { display: block; }
+    .ce-cup.expr-scared .ce-cup-face .mouth  {
+      height: 18%;
+      border: 3px solid #5a3a14;
+      background: #5a3a14;
+      border-radius: 50%;
+    }
+    .ce-cup.expr-scared .ce-cup-face .sweat  { display: block; }
+    /* expression: shocked */
+    .ce-cup.expr-shocked .ce-cup-face .pupil { left: 35%; top: 30%; }
+    .ce-cup.expr-shocked .ce-cup-face .mouth {
+      height: 22%;
+      border: 3px solid #5a3a14;
+      background: #5a3a14;
+      border-radius: 50%;
+    }
+    /* expression: happy */
+    .ce-cup.expr-happy .ce-cup-face .eye {
+      height: 4px;
+      background: #5a3a14;
+      border: none;
+      border-radius: 0 0 50% 50% / 0 0 100% 100%;
+      top: 30%;
+    }
+    .ce-cup.expr-happy .ce-cup-face .pupil { display: none; }
+    .ce-cup.expr-happy .ce-cup-face .mouth  {
+      height: 14%;
+      border-bottom-width: 4px;
+      border-radius: 0 0 50% 50% / 0 0 100% 100%;
+    }
+
+    /* Cup arms (stick) */
+    .ce-cup-arm {
+      position: absolute;
+      width: 30%;
+      height: 8%;
+      background: #5a3a14;
+      border-radius: 50%;
+      bottom: 22%;
+      transform-origin: 0 50%;
+      transform: scaleX(0);
+    }
+    .ce-cup-arm.l { left: -14%; }
+    .ce-cup-arm.r { right: -14%; transform-origin: 100% 50%; transform: scaleX(0); }
+
+    /* Cup legs (stick) */
+    .ce-cup-leg {
+      position: absolute;
+      width: 24%;
+      height: 14%;
+      background: #5a3a14;
+      border-radius: 50%;
+      bottom: -8%;
+      transform-origin: 50% 0;
+      transform: scaleY(0);
+    }
+    .ce-cup-leg.l { left: 12%; }
+    .ce-cup-leg.r { right: 12%; }
+
+    /* Cup positioning per scene */
+    .ce-scene.scene-1 .ce-cup { left: 56%; bottom: 21%; }
+    .ce-scene.scene-1.active .ce-cup { animation: ce-cup-fill 1.6s 0.4s ease-out forwards; }
+    @keyframes ce-cup-fill {
+      0%   { transform: translateY(0) rotate(0); }
+      30%  { transform: translateY(-2px) rotate(-3deg); }
+      100% { transform: translateY(0) rotate(0); }
+    }
+
+    .ce-scene.scene-2 .ce-cup { left: 42%; bottom: 21%; }
+    .ce-scene.scene-2.active .ce-cup-arm { animation: ce-pop-arm 0.45s ease-out forwards; }
+    .ce-scene.scene-2.active .ce-cup-leg { animation: ce-pop-leg 0.45s ease-out forwards; }
+    .ce-scene.scene-2.active .ce-cup-arm.l { animation-delay: 0.5s; }
+    .ce-scene.scene-2.active .ce-cup-arm.r { animation-delay: 0.7s; }
+    .ce-scene.scene-2.active .ce-cup-leg.l { animation-delay: 0.9s; }
+    .ce-scene.scene-2.active .ce-cup-leg.r { animation-delay: 1.1s; }
+    .ce-scene.scene-2.active .ce-cup { animation: ce-cup-celebrate 1.6s ease-in-out infinite; }
+    @keyframes ce-pop-arm { 0% { transform: scaleX(0); } 100% { transform: scaleX(1); } }
+    @keyframes ce-pop-leg { 0% { transform: scaleY(0); } 100% { transform: scaleY(1); } }
+    .ce-cup-arm.r { animation-name: ce-pop-arm-r; }
+    @keyframes ce-pop-arm-r {
+      0%   { transform: scaleX(0); }
+      100% { transform: scaleX(1); }
+    }
+    @keyframes ce-cup-celebrate {
+      0%, 100% { transform: rotate(-4deg) translateY(0); }
+      50%      { transform: rotate(4deg) translateY(-4px); }
+    }
+
+    /* Cup position in scene 3 + 4 */
+    .ce-scene.scene-3 .ce-cup { left: 24%; bottom: 21%; }
+    .ce-scene.scene-4 .ce-cup { left: 30%; bottom: 21%; }
+    .ce-scene.scene-5 .ce-cup { left: 22%; bottom: 21%; }
+
+    /* Cup runs off in scene 5 */
+    .ce-scene.scene-5.active .ce-cup { animation: ce-cup-run 1.6s ease-in forwards; }
+    @keyframes ce-cup-run {
+      0%   { transform: translateX(0) rotate(0); }
+      100% { transform: translateX(120%) rotate(8deg); }
+    }
+    .ce-scene.scene-5.active .ce-cup-arm.l { animation: ce-pump-l 0.4s infinite; }
+    .ce-scene.scene-5.active .ce-cup-arm.r { animation: ce-pump-r 0.4s infinite; }
+    .ce-scene.scene-5.active .ce-cup-leg.l { animation: ce-swing-l 0.4s infinite; }
+    .ce-scene.scene-5.active .ce-cup-leg.r { animation: ce-swing-r 0.4s infinite; }
+    @keyframes ce-pump-l { 0%, 100% { transform: scaleX(0.6) rotate(20deg); } 50% { transform: scaleX(1.0) rotate(-20deg); } }
+    @keyframes ce-pump-r { 0%, 100% { transform: scaleX(0.6) rotate(-20deg); } 50% { transform: scaleX(1.0) rotate(20deg); } }
+    @keyframes ce-swing-l { 0%, 100% { transform: scaleY(0.6) rotate(15deg); } 50% { transform: scaleY(1.0) rotate(-15deg); } }
+    @keyframes ce-swing-r { 0%, 100% { transform: scaleY(0.6) rotate(-15deg); } 50% { transform: scaleY(1.0) rotate(15deg); } }
+
+    /* Man (cutscene) */
+    .ce-man {
+      width: 12%;
+      aspect-ratio: 1 / 1.8;
+      position: absolute;
+      bottom: 12%;
+    }
+    /* man parts built with child divs (head, body, legs) */
+    .ce-man .head {
+      position: absolute;
+      top: 0;
+      left: 18%;
+      right: 18%;
+      aspect-ratio: 1 / 1;
+      background: #e7b78f;
+      border-radius: 50%;
+      border: 2px solid #5a3a14;
+    }
+    .ce-man .hair {
+      position: absolute;
+      top: -2%;
+      left: 22%;
+      right: 22%;
+      height: 18%;
+      background: #3a2a1a;
+      border-radius: 50% 50% 30% 30% / 80% 80% 30% 30%;
+    }
+    .ce-man .eye {
+      position: absolute;
+      top: 36%;
+      width: 22%;
+      aspect-ratio: 1 / 1;
+      background: #fff;
+      border: 2px solid #5a3a14;
+      border-radius: 50%;
+    }
+    .ce-man .eye.l { left: 18%; }
+    .ce-man .eye.r { right: 18%; }
+    .ce-man .pupil {
+      position: absolute;
+      left: 30%; top: 30%;
+      width: 40%; aspect-ratio: 1 / 1;
+      background: #222;
+      border-radius: 50%;
+    }
+    .ce-man .mouth {
+      position: absolute;
+      left: 30%; right: 30%; top: 64%;
+      height: 10%;
+      border-bottom: 3px solid #5a3a14;
+      border-radius: 0 0 50% 50% / 0 0 100% 100%;
+    }
+    .ce-man .body {
+      position: absolute;
+      top: 28%;
+      left: 14%;
+      right: 14%;
+      bottom: 26%;
+      background: #a04a2a;
+      border-radius: 18% 18% 8% 8% / 12% 12% 4% 4%;
+    }
+    .ce-man .arm {
+      position: absolute;
+      top: 30%;
+      width: 18%;
+      height: 32%;
+      background: #a04a2a;
+      border-radius: 30%;
+    }
+    .ce-man .arm.l { left: 4%; transform-origin: 100% 0; }
+    .ce-man .arm.r { right: 4%; transform-origin: 0 0; }
+    .ce-man .leg {
+      position: absolute;
+      bottom: 0;
+      width: 22%;
+      height: 30%;
+      background: #2b3a55;
+      border-radius: 18% 18% 6% 6% / 24% 24% 6% 6%;
+    }
+    .ce-man .leg.l { left: 22%; transform-origin: 50% 0; }
+    .ce-man .leg.r { right: 22%; transform-origin: 50% 0; }
+    .ce-man .shoe {
+      position: absolute;
+      bottom: 0;
+      width: 110%;
+      height: 18%;
+      background: #1a1a1a;
+      border-radius: 50%;
+    }
+
+    /* Scene 3 — man walks in from the right */
+    .ce-scene.scene-3 .ce-man { right: -15%; }
+    .ce-scene.scene-3.active .ce-man { animation: ce-man-walk 2.4s ease-out forwards; }
+    .ce-scene.scene-3.active .ce-man .leg.l { animation: ce-swing-l 0.6s infinite; }
+    .ce-scene.scene-3.active .ce-man .leg.r { animation: ce-swing-r 0.6s infinite; }
+    .ce-scene.scene-3.active .ce-man .arm.l { animation: ce-swing-r 0.6s infinite; }
+    .ce-scene.scene-3.active .ce-man .arm.r { animation: ce-swing-l 0.6s infinite; }
+    @keyframes ce-man-walk {
+      0%   { right: -15%; }
+      100% { right: 38%; }
+    }
+
+    /* Scene 4 — man steps closer, looking down at cup */
+    .ce-scene.scene-4 .ce-man { right: 38%; }
+    .ce-scene.scene-4.active .ce-man { animation: ce-man-lean 2.4s ease-in-out infinite; }
+    @keyframes ce-man-lean {
+      0%, 100% { transform: rotate(-2deg); }
+      50%      { transform: rotate(2deg); }
+    }
+
+    /* Scene 5 — man reaches out */
+    .ce-scene.scene-5 .ce-man { right: 38%; }
+    .ce-scene.scene-5.active .ce-man { animation: ce-man-reach 1.6s ease-in forwards; }
+    .ce-scene.scene-5.active .ce-man .arm.r { animation: ce-arm-reach 0.6s ease-out forwards; }
+    @keyframes ce-man-reach {
+      0%   { transform: translateX(0); }
+      100% { transform: translateX(-6%) rotate(-3deg); }
+    }
+    @keyframes ce-arm-reach {
+      0%   { transform: rotate(0); }
+      100% { transform: rotate(-60deg) translateX(20%); }
+    }
   </style>
 </head>
 <body>
@@ -248,28 +728,160 @@
         <!-- Mobile jump button (visible via media query) -->
         <button id="ceJumpBtn" class="ce-jump-btn" type="button" aria-label="Jump">JUMP</button>
 
-        <!-- Story intro overlay (3 lines + RUN) -->
-        <div id="ceStoryOverlay" class="ce-overlay" hidden>
-          <div class="ce-card">
-            <h2>☕ Coffee Escape</h2>
-            <p id="ceStory1" class="ce-story-line">You were just poured into a cup...</p>
-            <p id="ceStory2" class="ce-story-line">Then someone walked in...</p>
-            <p id="ceStory3" class="ce-story-line">He wants his coffee!</p>
-            <p id="ceStory4" class="ce-story-line run">RUN!</p>
-            <div class="ce-actions">
-              <button id="ceStorySkip" class="btn btn-secondary" type="button">Skip ▶</button>
+        <!-- Animated intro cutscene (5 scenes) -->
+        <div id="ceCutscene" class="ce-cutscene" hidden>
+          <div class="ce-scene-dots" aria-hidden="true">
+            <span class="dot on" data-i="0"></span>
+            <span class="dot" data-i="1"></span>
+            <span class="dot" data-i="2"></span>
+            <span class="dot" data-i="3"></span>
+            <span class="dot" data-i="4"></span>
+          </div>
+
+          <!-- Scene 1: pouring -->
+          <div class="ce-scene scene-1 active" data-scene="1">
+            <div class="ce-char ce-kettle" aria-hidden="true"></div>
+            <div class="ce-char ce-stream" aria-hidden="true"></div>
+            <div class="ce-char ce-counter" aria-hidden="true"></div>
+            <div class="ce-char ce-cup" aria-hidden="true">
+              <div class="ce-cup-face">
+                <div class="brow l"></div>
+                <div class="brow r"></div>
+                <div class="eye l"><div class="pupil"></div></div>
+                <div class="eye r"><div class="pupil"></div></div>
+                <div class="sweat"></div>
+                <div class="mouth"></div>
+              </div>
             </div>
+            <div class="ce-subtitle">You were just poured...</div>
+          </div>
+
+          <!-- Scene 2: cup comes alive -->
+          <div class="ce-scene scene-2" data-scene="2">
+            <div class="ce-char ce-counter" aria-hidden="true"></div>
+            <div class="ce-char ce-cup expr-happy" aria-hidden="true">
+              <div class="ce-cup-arm l"></div>
+              <div class="ce-cup-arm r"></div>
+              <div class="ce-cup-leg l"></div>
+              <div class="ce-cup-leg r"></div>
+              <div class="ce-cup-face">
+                <div class="brow l"></div>
+                <div class="brow r"></div>
+                <div class="eye l"><div class="pupil"></div></div>
+                <div class="eye r"><div class="pupil"></div></div>
+                <div class="sweat"></div>
+                <div class="mouth"></div>
+              </div>
+            </div>
+            <div class="ce-subtitle">Then you came alive.</div>
+          </div>
+
+          <!-- Scene 3: man walks in -->
+          <div class="ce-scene scene-3" data-scene="3">
+            <div class="ce-char ce-counter" aria-hidden="true"></div>
+            <div class="ce-char ce-cup" aria-hidden="true">
+              <div class="ce-cup-face">
+                <div class="brow l"></div>
+                <div class="brow r"></div>
+                <div class="eye l"><div class="pupil"></div></div>
+                <div class="eye r"><div class="pupil"></div></div>
+                <div class="sweat"></div>
+                <div class="mouth"></div>
+              </div>
+            </div>
+            <div class="ce-char ce-man" aria-hidden="true">
+              <div class="head">
+                <div class="hair"></div>
+                <div class="eye l"><div class="pupil"></div></div>
+                <div class="eye r"><div class="pupil"></div></div>
+                <div class="mouth"></div>
+              </div>
+              <div class="arm l"></div>
+              <div class="arm r"></div>
+              <div class="body"></div>
+              <div class="leg l"><div class="shoe"></div></div>
+              <div class="leg r"><div class="shoe"></div></div>
+            </div>
+            <div class="ce-subtitle">He needs coffee.</div>
+          </div>
+
+          <!-- Scene 4: cup scared -->
+          <div class="ce-scene scene-4" data-scene="4">
+            <div class="ce-char ce-counter" aria-hidden="true"></div>
+            <div class="ce-char ce-cup expr-scared" aria-hidden="true">
+              <div class="ce-cup-face">
+                <div class="brow l"></div>
+                <div class="brow r"></div>
+                <div class="eye l"><div class="pupil"></div></div>
+                <div class="eye r"><div class="pupil"></div></div>
+                <div class="sweat"></div>
+                <div class="mouth"></div>
+              </div>
+            </div>
+            <div class="ce-char ce-man" aria-hidden="true">
+              <div class="head">
+                <div class="hair"></div>
+                <div class="eye l"><div class="pupil"></div></div>
+                <div class="eye r"><div class="pupil"></div></div>
+                <div class="mouth"></div>
+              </div>
+              <div class="arm l"></div>
+              <div class="arm r"></div>
+              <div class="body"></div>
+              <div class="leg l"><div class="shoe"></div></div>
+              <div class="leg r"><div class="shoe"></div></div>
+            </div>
+            <div class="ce-subtitle">But you don't want to be drunk.</div>
+          </div>
+
+          <!-- Scene 5: man reaches + cup runs -->
+          <div class="ce-scene scene-5" data-scene="5">
+            <div class="ce-char ce-counter" aria-hidden="true"></div>
+            <div class="ce-char ce-cup expr-scared" aria-hidden="true">
+              <div class="ce-cup-arm l"></div>
+              <div class="ce-cup-arm r"></div>
+              <div class="ce-cup-leg l"></div>
+              <div class="ce-cup-leg r"></div>
+              <div class="ce-cup-face">
+                <div class="brow l"></div>
+                <div class="brow r"></div>
+                <div class="eye l"><div class="pupil"></div></div>
+                <div class="eye r"><div class="pupil"></div></div>
+                <div class="sweat"></div>
+                <div class="mouth"></div>
+              </div>
+            </div>
+            <div class="ce-char ce-man" aria-hidden="true">
+              <div class="head">
+                <div class="hair"></div>
+                <div class="eye l"><div class="pupil"></div></div>
+                <div class="eye r"><div class="pupil"></div></div>
+                <div class="mouth"></div>
+              </div>
+              <div class="arm l"></div>
+              <div class="arm r"></div>
+              <div class="body"></div>
+              <div class="leg l"><div class="shoe"></div></div>
+              <div class="leg r"><div class="shoe"></div></div>
+            </div>
+            <div class="ce-subtitle">RUN!</div>
+          </div>
+
+          <div class="ce-cutscene-actions">
+            <button id="ceCutsceneSkip" class="btn btn-secondary" type="button">Skip Intro ▶</button>
+            <button id="ceCutsceneStart" class="btn btn-primary" type="button" hidden>Start Run</button>
           </div>
         </div>
 
         <!-- Start screen -->
-        <div id="ceStartOverlay" class="ce-overlay">
+        <div id="ceStartOverlay" class="ce-overlay" hidden>
           <div class="ce-card">
             <h2>☕ Coffee Escape</h2>
             <p>A tired man just walked in.<br />He wants his coffee. Make a run for it!</p>
             <p style="font-size: 0.9rem;">Press <strong>Space</strong> / <strong>↑</strong> to jump.<br />On mobile, tap the JUMP button.</p>
             <div class="ce-actions">
               <button id="ceStartBtn" class="btn btn-primary btn-large" type="button">Start Running ☕</button>
+              <button id="cePlayIntroBtn" class="btn btn-secondary" type="button">▶ Play Intro</button>
             </div>
             <div class="best-row" style="margin-top: 14px;">
               <span class="best-label">Best Score:</span>
@@ -308,7 +920,7 @@
       <a href="https://www.buymeacoffee.com/sunboys" class="bmc-btn" target="_blank" rel="noopener noreferrer" aria-label="Support CodeCup Studio">☕ Support CodeCup Studio</a>
       <p class="footer-note">Made with love and caffeine.</p>
       <p class="arcade-back-line"><a class="arcade-back-pill" href="index.html" aria-label="Back to CodeCup Arcade">← Back to Arcade</a></p>
-      <p class="footer-version">Coffee Escape v1.0</p>
+      <p class="footer-version">Coffee Escape v1.1</p>
       <button id="ceResetBest" class="btn-reset" type="button" aria-label="Reset best score">Reset Best</button>
     </footer>
   </div>

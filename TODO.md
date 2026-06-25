@@ -24,17 +24,19 @@
 - Per-difficulty leaderboard tabs on the leaderboard page
 
 ## Coffee Escape — future ideas
-- Power-ups: espresso shot (speed boost), cinnamon (slo-mo), sugar cube (shield for one hit)
-- Coins / collectibles floating in the air for bonus score
-- Day/night cycle in the house background
-- More rooms to escape through (kitchen, hallway, front door) as speed tiers
-- Obstacle variety: dog, sleeping cat, rolling vacuum, rug that slides
-- Different "chasers" the player picks from (tired man, sleepy teen, boss)
-- Sound effects (footsteps, crash, jump) with mute toggle
-- Distance-based and score-based achievements (e.g., "100 m", "Survived 60 s")
-- Animated finish line / "Made it to the kitchen!" end-of-run celebration
-- Mobile tilt control as an alternative to tapping
-- Cloud save best score (Supabase) for cross-device leaderboard
+- v1.2 polish:
+  - Sound effects (footsteps, crash, jump, "Oof!") with mute toggle
+  - Distance-based and score-based achievements (e.g., "100 m", "Survived 60 s")
+  - Different "chasers" the player picks from (tired man, sleepy teen, boss)
+  - More rooms to escape through (kitchen, hallway, front door) as speed tiers
+  - Day/night cycle in the house background
+- v1.3 systems:
+  - Power-ups: espresso shot (speed boost), cinnamon (slo-mo), sugar cube (shield for one hit)
+  - Coins / collectibles floating in the air for bonus score
+  - Obstacle variety: dog, sleeping cat, rolling vacuum, rug that slides
+  - Animated finish line / "Made it to the kitchen!" end-of-run celebration
+  - Mobile tilt control as an alternative to tapping
+  - Cloud save best score (Supabase) for cross-device leaderboard
 
 ## Completed tasks
 - Built Coffee Rush
@@ -54,6 +56,7 @@
 - Built Memory Match
 - Built Math Rush
 - Built Coffee Escape (endless runner)
+- Coffee Escape v1.1 — animated 5-scene cutscene, cup arms/legs, four facial expressions, man running animation, "Oof!" trip gag
 - Restructured into CodeCup Arcade
 - Added arcade homepage with game cards
 - Added cross-game links and "Back to Arcade" buttons
