@@ -5,6 +5,75 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CodeCup Arcade ☕⚡</title>
   <link rel="stylesheet" href="style.css" />
+  <style>
+    /* Account banner + Coffee Escape "Coming soon" tile. */
+    .auth-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      background: #fff7e6;
+      border: 2px solid #ffb347;
+      border-radius: 14px;
+      padding: 12px 18px;
+      margin: 0 auto 18px;
+      max-width: 860px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+    }
+    .auth-banner-text {
+      color: #5a3a14;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+    .auth-banner-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .auth-banner-actions .btn {
+      padding: 6px 14px;
+      font-size: 0.9rem;
+    }
+
+    /* Disabled card variant for unreleased games. */
+    .game-card--coming-soon {
+      opacity: 0.78;
+      background: #fdf3e1;
+    }
+    .game-card--coming-soon .game-card-emoji {
+      filter: grayscale(0.6);
+    }
+    .game-card--coming-soon .game-card-desc {
+      color: #8a5a2c;
+    }
+    .coming-soon-badge {
+      display: inline-block;
+      background: #b25e00;
+      color: #fff;
+      font-weight: 800;
+      font-size: 0.8rem;
+      letter-spacing: 0.05em;
+      padding: 4px 12px;
+      border-radius: 999px;
+      text-transform: uppercase;
+    }
+    .game-card--dev {
+      border-color: #2e7d32;
+    }
+    .game-card-dev-badge {
+      display: inline-block;
+      background: #2e7d32;
+      color: #fff;
+      font-weight: 800;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+      padding: 3px 10px;
+      border-radius: 999px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+  </style>
 </head>
 <body>
   <div class="app">
@@ -12,6 +81,15 @@
       <h1 class="title">CodeCup Arcade ☕⚡</h1>
       <p class="subtitle">Small browser games by CodeCup Studio</p>
     </header>
+
+    <!-- Account banner. Replaced by auth-gate.js based on session. -->
+    <div id="authBanner" class="auth-banner" aria-live="polite">
+      <span class="auth-banner-text">Make an account to save scores across devices.</span>
+      <div class="auth-banner-actions">
+        <a class="btn btn-primary" href="account.html">Sign Up</a>
+        <a class="btn btn-secondary" href="account.html">Log In</a>
+      </div>
+    </div>
 
     <main class="arcade-main" aria-label="Game library">
       <ul class="arcade-grid" role="list">
@@ -43,11 +121,14 @@
           <a class="btn btn-primary" href="math-rush.html" aria-label="Play Math Rush">Play Math Rush</a>
         </li>
 
-        <li class="game-card">
+        <!-- Coffee Escape: starts as "Coming soon" for everyone. auth-gate.js
+             upgrades this to a playable card only if the signed-in user is
+             in the dev list (window.AUTH_DEV_EMAILS). -->
+        <li id="ceCardSlot" class="game-card game-card--coming-soon">
           <div class="game-card-emoji" aria-hidden="true">☕🏃</div>
           <h2 class="game-card-name">Coffee Escape</h2>
           <p class="game-card-desc">Run through the house and jump over furniture before the tired man catches you.</p>
-          <a class="btn btn-primary" href="coffee-escape.html" aria-label="Play Coffee Escape">Play Coffee Escape</a>
+          <span class="coming-soon-badge" aria-label="Status: Coming soon">Coming soon</span>
         </li>
       </ul>
     </main>
@@ -56,8 +137,14 @@
       <a href="https://www.buymeacoffee.com/sunboys" class="bmc-btn" target="_blank" rel="noopener noreferrer" aria-label="Support CodeCup Studio">☕ Support CodeCup Studio</a>
       <p class="footer-note">Made with love and caffeine.</p>
       <a class="cr-more-games" href="leaderboard.html" aria-label="View global leaderboard">🌍 Global Leaderboard</a>
-      <p class="footer-version">CodeCup Arcade v1.1</p>
+      <p class="footer-version">CodeCup Arcade v1.2</p>
     </footer>
   </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script src="auth-config.js"></script>
+  <script src="auth-client.js"></script>
+  <script src="auth-gate.js"></script>
 </body>
 </html>
