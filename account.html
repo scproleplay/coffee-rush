@@ -186,8 +186,13 @@
             upStatus.textContent = (res.error && res.error.message) || "Sign up failed.";
             return;
           }
-          // Email confirmation is turned off in Supabase, so the user is
-          // signed in immediately. Bounce to the arcade.
+          if (res.needsConfirm) {
+            upStatus.classList.remove("auth-error");
+            upStatus.classList.add("auth-success");
+            upStatus.textContent = "Account created. Check your email to confirm, then log in.";
+            return;
+          }
+          // Signed in immediately — bounce to arcade.
           window.location.href = "index.html";
         });
       });
