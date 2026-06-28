@@ -120,6 +120,16 @@
       duration: 1.5,      // seconds the boost lasts per use
       cost: 30,           // minimum meter required to start a boost
     },
+    // Coffee bean collectibles floating in the air. +5 score when
+    // collected (you have to jump to reach them).
+    beans: [],
+    nextBean: 4,         // seconds until next bean spawn
+    // Ambient particles — drifting motes for depth.
+    motes: [],
+    // Boost particle trail — short-lived blue particles emitted
+    // while the boost is active.
+    boostParticles: [],
+    nextBoostParticle: 0,
   };
 
   // -----------------------------------------------------------------------
@@ -132,10 +142,14 @@
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0xfff1d6);
-  scene.fog = new THREE.Fog(0xfff1d6, 30, 95);
+  // Warm fog for depth — closer near, fading to a deep warm color in
+  // the distance. Boosts the "long hallway" feel.
+  scene.fog = new THREE.Fog(0xffd9a8, 22, 90);
 
   const camera = new THREE.PerspectiveCamera(70, 16 / 9, 0.1, 200);
-  camera.position.set(0, 2.6, 4.5);
+  const cameraBaseY = 2.6;
+  const cameraBaseZ = 4.5;
+  camera.position.set(0, cameraBaseY, cameraBaseZ);
   camera.lookAt(0, 1.0, -8);
 
   const renderer = new THREE.WebGLRenderer({
@@ -145,13 +159,26 @@
   });
   renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
   renderer.setClearColor(0xfff1d6, 1);
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-  // Lighting
-  const hemi = new THREE.HemisphereLight(0xfff1d6, 0xb87333, 0.65);
+  // Lighting — three lights for depth:
+  //  - Hemi: ambient sky/ground bounce (cream / warm tan)
+  //  - Sun: warm key light from the front-right
+  //  - Fill: a cooler fill from the back-left so the cup doesn't go
+  //    pitch-black on the side facing away from the sun
+  const hemi = new THREE.HemisphereLight(0xfff1d6, 0xb87333, 0.70);
   scene.add(hemi);
-  const sun = new THREE.DirectionalLight(0xffe5b0, 0.7);
+  const sun = new THREE.DirectionalLight(0xffe5b0, 0.95);
   sun.position.set(4, 10, -3);
   scene.add(sun);
+  const fill = new THREE.DirectionalLight(0xc8d8ff, 0.30);
+  fill.position.set(-5, 6, 2);
+  scene.add(fill);
+  // Subtle warm rim from the floor — a soft point light near the
+  // cup so the underside of the cup catches a hint of warm bounce.
+  const rim = new THREE.PointLight(0xffb070, 0.4, 8, 2);
+  rim.position.set(0, 0.5, 2);
+  scene.add(rim);
 
   // -----------------------------------------------------------------------
   // Textures (canvas-generated at startup, no external assets)
@@ -723,6 +750,20 @@
   cup.position.set(LANE_X[1], 0, 0);
   scene.add(cup);
 
+  // Soft contact shadow under the cup. A flat dark disc that
+  // follows the cup, shrinks when the cup is in the air, and fades
+  // out. Cheap fake — no shadow maps.
+  const contactShadow = new THREE.Mesh(
+    new THREE.CircleGeometry(0.42, 24),
+    new THREE.MeshBasicMaterial({
+      color: 0x000000, transparent: true, opacity: 0.32, depthWrite: false,
+    })
+  );
+  contactShadow.rotation.x = -Math.PI / 2;
+  contactShadow.position.set(LANE_X[1], 0.012, 0);
+  contactShadow.renderOrder = 1; // draw after the floor
+  scene.add(contactShadow);
+
   // -----------------------------------------------------------------------
   // Tired man (chaser)
   // -----------------------------------------------------------------------
@@ -773,6 +814,197 @@
 
   man.position.set(LANE_X[0] - 0.6, 0, 4.0);
   scene.add(man);
+
+  // -----------------------------------------------------------------------
+  // Coffee bean collectibles
+  // -----------------------------------------------------------------------
+  // Floating beans that the cup can collect by jumping into. Each
+  // bean is a small group: an oval (scaled sphere) + a darker line
+  // down the middle. They rotate slowly and bob in place.
+  const BEAN_POOL_SIZE = 8;
+  const beans = [];
+  function makeBean() {
+    const group = new THREE.Group();
+    const body = new THREE.Mesh(
+      new THREE.SphereGeometry(0.13, 10, 8),
+      new THREE.MeshLambertMaterial({ color: 0x4a2a10 })
+    );
+    body.scale.set(1, 0.6, 0.7);
+    group.add(body);
+    // The center line — a thinner sphere, slightly larger in z, lighter
+    // color, so it looks like a coffee bean crease.
+    const crease = new THREE.Mesh(
+      new THREE.SphereGeometry(0.135, 10, 6),
+      new THREE.MeshBasicMaterial({ color: 0x8a5a2c })
+    );
+    crease.scale.set(0.4, 0.6, 0.72);
+    group.add(crease);
+    // Subtle glow ring under the bean (small bright sphere).
+    const halo = new THREE.Mesh(
+      new THREE.SphereGeometry(0.20, 8, 6),
+      new THREE.MeshBasicMaterial({ color: 0xffe5b0, transparent: true, opacity: 0.30 })
+    );
+    group.add(halo);
+    return {
+      mesh: group,
+      lane: 1,
+      z: -50,
+      y: 1.0,             // floats at jump height
+      rot: 0,             // accumulated rotation
+      active: false,
+    };
+  }
+  for (let i = 0; i < BEAN_POOL_SIZE; i++) {
+    const b = makeBean();
+    b.mesh.visible = false;
+    scene.add(b.mesh);
+    beans.push(b);
+  }
+  state.beans = beans;
+
+  // -----------------------------------------------------------------------
+  // Ambient motes (dust / coffee aroma in the air)
+  // -----------------------------------------------------------------------
+  // 16 small semi-transparent spheres scattered in a wide volume
+  // around the cup. Each has a slow drift (its own sin-based
+  // motion) and recycles when it drifts past the camera. Adds depth
+  // to the hallway without being noticeable as "particles."
+  const MOTE_COUNT = 16;
+  const motes = [];
+  for (let i = 0; i < MOTE_COUNT; i++) {
+    const m = new THREE.Mesh(
+      new THREE.SphereGeometry(0.05, 6, 6),
+      new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.45 })
+    );
+    m.position.set(
+      (Math.random() - 0.5) * 6,
+      1.5 + Math.random() * 4,
+      -10 - Math.random() * 70
+    );
+    m.userData.phase = Math.random() * Math.PI * 2;
+    m.userData.driftY = 0.4 + Math.random() * 0.4;
+    scene.add(m);
+    motes.push(m);
+  }
+  state.motes = motes;
+
+  // -----------------------------------------------------------------------
+  // Dust / burst particle pool
+  // -----------------------------------------------------------------------
+  // Short-lived colored spheres used for bean-collect bursts and
+  // future effects. Each entry has a mesh + a physics record.
+  const DUST_POOL_SIZE = 32;
+  const dustPool = [];
+  for (let i = 0; i < DUST_POOL_SIZE; i++) {
+    const m = new THREE.Mesh(
+      new THREE.SphereGeometry(0.10, 6, 6),
+      new THREE.MeshBasicMaterial({ color: 0xffd24a, transparent: true, opacity: 0.9 })
+    );
+    m.visible = false;
+    scene.add(m);
+    dustPool.push({
+      mesh: m,
+      life: 0,
+      maxLife: 0.5,
+      x: 0, y: 0, z: 0,
+      vx: 0, vy: 0, vz: 0,
+      r: 0.18,
+      color: '#ffd24a',
+    });
+  }
+
+  // -----------------------------------------------------------------------
+  // Boost particle pool
+  // -----------------------------------------------------------------------
+  // Small blue particles emitted behind the cup while boost is
+  // active. Each particle drifts up and fades out.
+  const BOOST_PARTICLE_POOL = 24;
+  const boostParticles = [];
+  for (let i = 0; i < BOOST_PARTICLE_POOL; i++) {
+    const p = new THREE.Mesh(
+      new THREE.SphereGeometry(0.10, 6, 6),
+      new THREE.MeshBasicMaterial({ color: 0x6ec6ff, transparent: true, opacity: 0.8 })
+    );
+    p.visible = false;
+    scene.add(p);
+    boostParticles.push({
+      mesh: p,
+      life: 0,
+      maxLife: 0.5,
+      vy: 0,
+    });
+  }
+  state.boostParticles = boostParticles;
+
+  // Boost glow — a soft transparent sphere around the cup that's
+  // visible while boost is active. Pulses slightly.
+  const boostGlow = new THREE.Mesh(
+    new THREE.SphereGeometry(0.7, 12, 10),
+    new THREE.MeshBasicMaterial({ color: 0x6ec6ff, transparent: true, opacity: 0 })
+  );
+  boostGlow.position.set(0, 0.5, 0);
+  scene.add(boostGlow);
+
+  // Bean spawn — pick a free bean from the pool and put it in a
+  // random lane at a far z. Floats at jump height with a slow bob.
+  function spawnBean() {
+    const b = state.beans.find(x => !x.active);
+    if (!b) return;
+    b.lane = Math.floor(Math.random() * 3);
+    b.z = -55 - Math.random() * 10;
+    b.y = 0.9 + Math.random() * 0.4;
+    b.rot = Math.random() * Math.PI * 2;
+    b.active = true;
+    b.mesh.visible = true;
+  }
+
+  // Bean collected — score + small burst, free the bean back to the
+  // pool. The "floating +N popup" is reused via spawnPopup, which
+  // projects the bean's world position to screen pixels.
+  function collectBean(b) {
+    b.active = false;
+    b.mesh.visible = false;
+    state.score += 5;
+    state.flash = 0.10;
+    // Small gold particle burst
+    for (let i = 0; i < 6; i++) {
+      const dust = dustPool.find(d => d.life <= 0);
+      if (!dust) break;
+      dust.life = 0.5;
+      dust.maxLife = 0.5;
+      dust.x = b.mesh.position.x;
+      dust.y = b.mesh.position.y;
+      dust.z = b.mesh.position.z;
+      const a = Math.random() * Math.PI * 2;
+      const s = 1.5 + Math.random() * 1.5;
+      dust.vx = Math.cos(a) * s;
+      dust.vy = 1.5 + Math.random() * 1.5;
+      dust.vz = Math.sin(a) * s;
+      dust.r = 0.18;
+      dust.color = '#ffd24a';
+      dust.mesh.visible = true;
+    }
+    // Screen-space +5 popup
+    const screen = worldToScreen(b.mesh.position);
+    spawnPopup('+5', screen.x, screen.y - 20, '#ffb000');
+  }
+
+  // Boost particle emission — pick a dead particle, set it just
+  // behind the cup, give it upward + slight forward velocity.
+  function emitBoostParticle() {
+    const p = state.boostParticles.find(x => x.life <= 0);
+    if (!p) return;
+    p.life = p.maxLife;
+    p.mesh.position.set(
+      cup.position.x + (Math.random() - 0.5) * 0.2,
+      0.4 + Math.random() * 0.4,
+      0.3 + Math.random() * 0.2
+    );
+    p.vy = 1.2 + Math.random() * 0.8;
+    p.mesh.material.opacity = 0.8;
+    p.mesh.scale.setScalar(0.8);
+    p.mesh.visible = true;
+  }
 
   // -----------------------------------------------------------------------
   // Obstacle factory — coffee/office themed obstacles
@@ -1477,6 +1709,14 @@
     state.boost.meter = 0;
     state.boost.active = false;
     state.boost.timer = 0;
+    // Reset beans, boost particles, dust particles.
+    for (const b of state.beans) { b.active = false; b.mesh.visible = false; }
+    state.nextBean = 4;
+    for (const p of state.boostParticles) { p.life = 0; p.mesh.visible = false; }
+    for (const d of dustPool) { d.life = 0; d.mesh.visible = false; }
+    // Reset camera FOV.
+    camera.fov = 70;
+    camera.updateProjectionMatrix();
     SCORE_EL.textContent = '0';
   }
 
@@ -1725,12 +1965,21 @@
       }
     }
 
-    // Camera follows the cup with a slight x lag.
+    // Camera follows the cup with a slight x lag and a vertical bob
+    // (subtle, ~3 cm) for a "running" feel. The bob is faster when
+    // boost is active.
+    const bobAmp = state.boost.active ? 0.10 : 0.035;
+    const bobFreq = state.boost.active ? 14 : 9;
+    const camBob = Math.sin(state.worldTime * bobFreq) * bobAmp;
     camera.position.x += (p.laneX * 0.45 - camera.position.x) * Math.min(1, dt * 8);
-    camera.position.y = 2.6 + p.y * 0.3;
-    camera.position.z = 4.5;
-    _tmpVec.set(p.laneX * 0.2, 1.0 + p.y * 0.2, -8);
+    camera.position.y = cameraBaseY + p.y * 0.4 + camBob;
+    camera.position.z = cameraBaseZ;
+    _tmpVec.set(p.laneX * 0.2, 1.0 + p.y * 0.2 + camBob, -8);
     camera.lookAt(_tmpVec);
+    // FOV punch on boost (slight zoom-out for a sense of speed)
+    const targetFov = state.boost.active ? 78 : 70;
+    camera.fov += (targetFov - camera.fov) * Math.min(1, dt * 4);
+    camera.updateProjectionMatrix();
 
     // Screen shake
     if (state.shake > 0) {
@@ -1740,6 +1989,100 @@
 
     state.shake = Math.max(0, state.shake - dt * 2.2);
     state.flash = Math.max(0, state.flash - dt * 3);
+
+    // Contact shadow under the cup. Shrinks and fades as the cup
+    // rises (when jumping), grows back on landing. Stays at the
+    // cup's lane x.
+    const shadowScale = Math.max(0.4, 1 - p.y * 0.4);
+    contactShadow.scale.set(shadowScale, shadowScale, 1);
+    contactShadow.material.opacity = 0.32 * shadowScale;
+    contactShadow.position.x = p.laneX;
+    contactShadow.position.z = 0;
+
+    // Boost glow around the cup. Pulses opacity in/out, follows the
+    // cup position. Hidden when not active.
+    boostGlow.position.set(p.laneX, 0.5 + p.y, 0);
+    const glowTarget = state.boost.active ? 0.28 + 0.07 * Math.sin(state.worldTime * 8) : 0;
+    boostGlow.material.opacity += (glowTarget - boostGlow.material.opacity) * Math.min(1, dt * 6);
+    // Also tint the fog slightly blue when boost is active.
+    if (state.boost.active) {
+      scene.fog.color.lerp(new THREE.Color(0x9ed5ff), Math.min(1, dt * 3));
+    } else {
+      scene.fog.color.lerp(new THREE.Color(0xffd9a8), Math.min(1, dt * 3));
+    }
+
+    // Bean spawn + collision
+    state.nextBean -= dt;
+    if (state.nextBean <= 0) {
+      spawnBean();
+      state.nextBean = 3.5 + Math.random() * 2.5;
+    }
+    for (const b of state.beans) {
+      if (!b.active) continue;
+      b.z += state.speed * dt;
+      b.rot += dt * 1.5;
+      b.mesh.position.z = b.z;
+      b.mesh.position.x = LANE_X[b.lane];
+      b.mesh.position.y = b.y + Math.sin(b.rot * 1.2) * 0.06;
+      b.mesh.rotation.y = b.rot;
+      // Recycle when past camera
+      if (b.z > 6) {
+        b.active = false;
+        b.mesh.visible = false;
+        continue;
+      }
+      // Collision with cup. Cup must be in the same lane, near the
+      // bean's z, and above the floor (in the air or on the ground).
+      if (b.lane === p.lane) {
+        const dz = b.z - 0;
+        if (Math.abs(dz) < 0.5 && p.y > 0.2) {
+          collectBean(b);
+        }
+      }
+    }
+
+    // Ambient motes: gentle drift in y, recycle when past camera.
+    for (const m of state.motes) {
+      m.position.y += Math.sin(state.worldTime * 0.7 + m.userData.phase) * 0.002;
+      m.position.z += state.speed * dt * 0.6; // motes drift toward camera slower than the floor
+      if (m.position.z > 8) {
+        m.position.z = -80 - Math.random() * 10;
+        m.position.x = (Math.random() - 0.5) * 6;
+      }
+    }
+
+    // Boost particles: emit while active, update positions.
+    if (state.boost.active) {
+      state.nextBoostParticle -= dt;
+      if (state.nextBoostParticle <= 0) {
+        emitBoostParticle();
+        state.nextBoostParticle = 0.04;
+      }
+    }
+    for (const p of state.boostParticles) {
+      if (p.life <= 0) continue;
+      p.life -= dt;
+      p.mesh.position.y += p.vy * dt;
+      p.mesh.position.z += state.speed * dt * 0.3;
+      p.mesh.material.opacity = Math.max(0, (p.life / p.maxLife) * 0.8);
+      p.mesh.scale.setScalar(0.5 + (1 - p.life / p.maxLife) * 0.6);
+      if (p.life <= 0) p.mesh.visible = false;
+    }
+
+    // Dust particles (bean bursts, future use). Simple Verlet-ish
+    // update with gravity, no rotation, no collision.
+    for (const d of dustPool) {
+      if (d.life <= 0) continue;
+      d.life -= dt;
+      d.vy -= 5 * dt;            // mild gravity
+      d.x += d.vx * dt;
+      d.y += d.vy * dt;
+      d.z += d.vz * dt;
+      d.mesh.position.set(d.x, d.y, d.z);
+      d.mesh.material.opacity = Math.max(0, d.life / d.maxLife);
+      d.mesh.scale.setScalar(0.5 + (1 - d.life / d.maxLife) * 0.6);
+      if (d.life <= 0) d.mesh.visible = false;
+    }
 
     // Boost meter: fills while running, freezes while active,
     // drops to 0 the instant the boost ends.
