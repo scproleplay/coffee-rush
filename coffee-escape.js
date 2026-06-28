@@ -1726,6 +1726,15 @@
   function beginRun() {
     resetWorld();
     state.running = true;
+    // Hide all overlays so the play area is fully visible. The
+    // cutscene path hides them via playCutscene; the direct
+    // "Start Running" path needs to do it here. The mobile-polish
+    // pass rewrote this function and accidentally dropped the
+    // START_OVERLAY hidden line — re-adding it here.
+    START_OVERLAY.hidden = true;
+    CUTSCENE.hidden = true;
+    CUTSCENE.style.display = 'none';
+    GAME_OVER_OVERLAY.hidden = true;
     HUD.hidden = false;
     if (HINT) HINT.hidden = false;
     state.lastTs = performance.now();
