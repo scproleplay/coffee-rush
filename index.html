@@ -33,6 +33,33 @@
       border: 1px solid rgba(178, 94, 0, 0.25);
     }
 
+    /* Featured / highlighted game card. Currently applied to Coffee
+       Rush for an hour (auto-revert scheduled). */
+    .game-card--featured {
+      border-color: #ff5a1f;
+      box-shadow:
+        var(--shadow-card),
+        0 0 0 3px rgba(255, 90, 31, 0.18);
+      background: linear-gradient(180deg, #fff7e6 0%, #fff0d4 100%);
+    }
+    .featured-badge {
+      display: inline-block;
+      background: linear-gradient(135deg, #ff5a1f 0%, #ffb000 100%);
+      color: #fff;
+      font-weight: 800;
+      font-size: 0.7rem;
+      letter-spacing: 0.10em;
+      padding: 4px 10px;
+      border-radius: var(--r-pill);
+      text-transform: uppercase;
+      box-shadow: 0 2px 6px rgba(255, 90, 31, 0.45);
+      animation: ce-featured-pulse 1.6s ease-in-out infinite;
+    }
+    @keyframes ce-featured-pulse {
+      0%, 100% { transform: scale(1); box-shadow: 0 2px 6px rgba(255, 90, 31, 0.45); }
+      50%      { transform: scale(1.06); box-shadow: 0 4px 12px rgba(255, 90, 31, 0.7); }
+    }
+
     /* Tighter footer on mobile. */
     .footer {
       display: flex;
@@ -53,10 +80,11 @@
 
     <main class="arcade-main" aria-label="Game library">
       <ul class="arcade-grid" role="list">
-        <li class="game-card">
+        <li class="game-card game-card--featured">
           <div class="game-card-emoji" aria-hidden="true">☕</div>
           <h2 class="game-card-name">Coffee Rush</h2>
           <p class="game-card-desc">Catch coffee cups before time runs out.</p>
+          <span class="featured-badge" aria-label="Featured game">⭐ Featured</span>
           <a class="btn btn-primary" href="coffee-rush.html" aria-label="Play Coffee Rush">Play Coffee Rush</a>
         </li>
 
@@ -95,7 +123,7 @@
       <a href="https://www.buymeacoffee.com/sunboys" class="bmc-btn" target="_blank" rel="noopener noreferrer" aria-label="Support CodeCup Studio">☕ Support CodeCup Studio</a>
       <a class="cr-more-games" href="leaderboard.html" aria-label="View global leaderboard">🌍 Global Leaderboard</a>
       <p class="footer-note">Made with love and caffeine.</p>
-      <p class="footer-version">CodeCup Arcade v1.3</p>
+      <p class="footer-version">CodeCup Arcade v1.3 (Coffee Rush featured)</p>
     </footer>
   </div>
 </body>
