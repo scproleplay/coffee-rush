@@ -37,6 +37,9 @@
   const CUTSCENE_START_BTN = document.getElementById('ceCutsceneStart');
   const RESET_BEST_BTN = document.getElementById('ceResetBest');
   const JUMP_BTN = document.getElementById('ceJumpBtn');
+  const BOOST_BTN = document.getElementById('ceBoostBtn');
+  const BOOST_FILL = document.getElementById('ceBoostFill');
+  const BOOST_HUD_FILL = document.getElementById('ceBoostHudFill');
   const HINT = document.getElementById('ceHint');
   const SCENE_DOTS = CUTSCENE.querySelectorAll('.ce-scene-dots .dot');
 
@@ -103,7 +106,20 @@
     lastTs: 0,
     pointerStartX: null,  // for swipe detection
     pointerStartT: 0,
+    pointerStartY: null,
     pointerActive: false,
+    pointerDidMove: false,
+    // Boost: meter fills while running, tap the button (or press
+    // Shift) to drain it for ~1.5s. While active, the cup passes
+    // through obstacles without game-over.
+    boost: {
+      meter: 0,           // 0..100
+      max: 100,
+      active: false,
+      timer: 0,           // seconds remaining while active
+      duration: 1.5,      // seconds the boost lasts per use
+      cost: 30,           // minimum meter required to start a boost
+    },
   };
 
   // -----------------------------------------------------------------------
@@ -1243,6 +1259,11 @@
   // -----------------------------------------------------------------------
   // Input
   // -----------------------------------------------------------------------
+  // Swipe / tap detection thresholds.
+  const SWIPE_MIN_PX = 24;        // minimum drag to count as a swipe
+  const SWIPE_MAX_MS = 600;       // longer than this = drag, not swipe
+  const TAP_MAX_MS = 250;         // quick tap (used for zone-based taps)
+
   function tryJump() {
     if (!state.running || state.gameOver) return;
     if (state.player.onGround) {
@@ -1261,6 +1282,17 @@
     state.player.laneSwitchT = 0;
   }
 
+  function tryBoost() {
+    if (!state.running || state.gameOver) return;
+    if (state.boost.active) return;
+    if (state.boost.meter < state.boost.cost) return;
+    state.boost.active = true;
+    state.boost.timer = state.boost.duration;
+    // Lock the meter at its current level during the boost (visually
+    // the bar stays full while boost is active). It'll drop to 0
+    // when the boost ends.
+  }
+
   function onKeyDown(e) {
     if (e.code === 'Space' || e.code === 'ArrowUp' || e.key === ' ') {
       e.preventDefault();
@@ -1271,6 +1303,9 @@
     } else if (e.code === 'ArrowRight' || e.code === 'KeyD') {
       e.preventDefault();
       tryLane(state.player.targetLane + 1);
+    } else if (e.code === 'ShiftLeft' || e.code === 'ShiftRight' || e.key === 'Shift') {
+      e.preventDefault();
+      tryBoost();
     } else if (e.code === 'Enter') {
       if (!state.running && !state.gameOver && !START_OVERLAY.hidden) {
         e.preventDefault();
@@ -1282,39 +1317,78 @@
     }
   }
 
-  // Tap zones on the canvas: left third = lane left, right third = lane
-  // right, center third = jump. Pointer down also starts a swipe; a
-  // quick horizontal drag counts as a lane change too.
+  // Pointer handling on the stage canvas. We support:
+  //   - tap on the left/right third of the canvas = lane change
+  //   - tap on the center third = jump
+  //   - quick swipe left/right = lane change (the tap fires first, so
+  //     a quick swipe is the same as a tap in that direction)
+  //   - swipe UP = jump
+  //   - swipe DOWN = ignored (don't accidentally jump)
+  // Tap on the action buttons (JUMP / BOOST) is handled by their own
+  // click handlers.
   function onStagePointerDown(e) {
     if (e.target.closest('button, a')) return;
     if (!state.running || state.gameOver) return;
     const rect = CANVAS.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    const third = rect.width / 3;
-    if (x < third) {
-      tryLane(state.player.targetLane - 1);
-    } else if (x > 2 * third) {
-      tryLane(state.player.targetLane + 1);
-    } else {
-      tryJump();
-    }
+    // Tap zone: only act on quick taps (zone-based). Defer swipe
+    // resolution to pointerup so a quick tap in a zone doesn't fire
+    // the wrong action if the user actually meant to swipe.
     state.pointerStartX = e.clientX;
+    state.pointerStartY = e.clientY;
     state.pointerStartT = performance.now();
     state.pointerActive = true;
+    state.pointerDidMove = false;
+    // If the touch is in the bottom-right corner area where the
+    // BOOST button sits, treat it as a boost tap. (The button itself
+    // catches the touch first when visible, but for accessibility
+    // we add this fallback so even if the button is hidden by
+    // a layout shift, tapping the boost area still works.)
+    // We skip this — the action button is the canonical way.
   }
+
+  function onStagePointerMove(e) {
+    if (!state.pointerActive) return;
+    const dx = (e.clientX || 0) - (state.pointerStartX || 0);
+    const dy = (e.clientY || 0) - (state.pointerStartY || 0);
+    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) state.pointerDidMove = true;
+  }
+
   function onStagePointerUp(e) {
     if (!state.pointerActive) return;
     state.pointerActive = false;
     const dx = (e.clientX || 0) - (state.pointerStartX || 0);
+    const dy = (e.clientY || 0) - (state.pointerStartY || 0);
     const dt = performance.now() - (state.pointerStartT || 0);
-    if (dt < 250 && Math.abs(dx) > 30) {
-      if (dx < -30) tryLane(state.player.targetLane - 1);
-      else if (dx > 30) tryLane(state.player.targetLane + 1);
+
+    if (state.pointerDidMove && dt < SWIPE_MAX_MS) {
+      // It's a swipe. Horizontal → lane. Vertical up → jump.
+      if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > SWIPE_MIN_PX) {
+        if (dx < 0) tryLane(state.player.targetLane - 1);
+        else tryLane(state.player.targetLane + 1);
+        return;
+      }
+      if (dy < -SWIPE_MIN_PX) {
+        tryJump();
+        return;
+      }
+      return;
+    }
+
+    // It's a quick tap. Use the zone system on the canvas.
+    if (dt < TAP_MAX_MS && Math.abs(dx) < 6 && Math.abs(dy) < 6) {
+      const rect = CANVAS.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const third = rect.width / 3;
+      if (x < third) tryLane(state.player.targetLane - 1);
+      else if (x > 2 * third) tryLane(state.player.targetLane + 1);
+      else tryJump();
     }
   }
 
   JUMP_BTN.addEventListener('click', e => { e.preventDefault(); tryJump(); });
+  if (BOOST_BTN) BOOST_BTN.addEventListener('click', e => { e.preventDefault(); tryBoost(); });
 
   // -----------------------------------------------------------------------
   // Cutscene (unchanged from v1.x)
@@ -1399,6 +1473,10 @@
     state.player.airT = 0;
     // Hide every pooled obstacle.
     for (const o of state.obstacles) o.mesh.visible = false;
+    // Reset boost.
+    state.boost.meter = 0;
+    state.boost.active = false;
+    state.boost.timer = 0;
     SCORE_EL.textContent = '0';
   }
 
@@ -1614,6 +1692,16 @@
       }
       _obBox.setFromObject(o.mesh);
       if (_playerBox.intersectsBox(_obBox)) {
+        // Boost mode: pass through obstacles. The cup still dodges
+        // (gets +1 score and a small flash), but no game over.
+        if (state.boost.active) {
+          state.score += 1;
+          state.flash = 0.15;
+          // Briefly push the obstacle off to the side so the
+          // player doesn't re-collide with the same one next frame.
+          o.lane = -1;
+          continue;
+        }
         // Crash!
         state.shake = 0.45;
         state.flash = 0.25;
@@ -1653,6 +1741,30 @@
     state.shake = Math.max(0, state.shake - dt * 2.2);
     state.flash = Math.max(0, state.flash - dt * 3);
 
+    // Boost meter: fills while running, freezes while active,
+    // drops to 0 the instant the boost ends.
+    if (state.boost.active) {
+      state.boost.timer -= dt;
+      if (state.boost.timer <= 0) {
+        state.boost.active = false;
+        state.boost.meter = 0;
+      }
+      // While active, the meter reads as the "cost" threshold
+      // (so the bar visually stays at the level it was at when
+      // boost was triggered). This avoids the bar jumping to 100
+      // mid-boost and gives a "you've used it" feel.
+      if (state.boost.meter < state.boost.cost) {
+        state.boost.meter = state.boost.cost;
+      }
+    } else {
+      // Fill over ~7 seconds to a full meter.
+      state.boost.meter = Math.min(state.boost.max, state.boost.meter + dt * (100 / 7));
+    }
+    // Update visual fills
+    if (BOOST_FILL) BOOST_FILL.style.height = (state.boost.meter / state.boost.max * 100) + '%';
+    if (BOOST_HUD_FILL) BOOST_HUD_FILL.style.width = (state.boost.meter / state.boost.max * 100) + '%';
+    if (BOOST_BTN) BOOST_BTN.classList.toggle('is-active', state.boost.active);
+
     SCORE_EL.textContent = String(state.score);
   }
 
@@ -1679,6 +1791,7 @@
     updateBestDisplays();
     document.addEventListener('keydown', onKeyDown);
     STAGE.addEventListener('pointerdown', onStagePointerDown);
+    STAGE.addEventListener('pointermove', onStagePointerMove);
     STAGE.addEventListener('pointerup', onStagePointerUp);
     STAGE.addEventListener('pointercancel', onStagePointerUp);
     START_BTN.addEventListener('click', beginRun);
