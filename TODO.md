@@ -57,8 +57,7 @@
 - Built Math Rush
 - Built Coffee Escape (endless runner)
 - Coffee Escape v1.1 — animated 5-scene cutscene, cup arms/legs, four facial expressions, man running animation, "Oof!" trip gag
-- Coffee Escape v1.2 — "Coming soon" gate on the arcade homepage, signed-in dev bypass
-- Added Supabase-backed accounts (email + password, nickname 1–12 chars)
+- Coffee Escape — "Coming soon" gate on the arcade homepage
 - Restructured into CodeCup Arcade
 - Added arcade homepage with game cards
 - Added cross-game links and "Back to Arcade" buttons
