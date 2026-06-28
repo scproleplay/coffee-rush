@@ -177,36 +177,89 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background: rgba(255, 247, 230, 0.92);
+      /* Slightly transparent so the 3D world is faintly visible
+         behind the card. Vignette around the edges to focus. */
+      background: linear-gradient(180deg,
+        rgba(255, 247, 230, 0.78) 0%,
+        rgba(255, 235, 200, 0.84) 100%);
+      backdrop-filter: blur(1.5px);
+      -webkit-backdrop-filter: blur(1.5px);
       z-index: 5;
       padding: 18px;
+      animation: ce-overlay-fade 0.4s ease-out;
+    }
+    @keyframes ce-overlay-fade {
+      from { opacity: 0; }
+      to   { opacity: 1; }
     }
     .ce-overlay[hidden] { display: none; }
 
     .ce-card {
-      background: #fff;
-      border-radius: 16px;
-      padding: 22px 22px 20px;
+      background: linear-gradient(180deg, #ffffff 0%, #fffaf0 100%);
+      border-radius: 18px;
+      padding: 24px 22px 22px;
       max-width: 460px;
       width: 100%;
       text-align: center;
-      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.15);
-      border: 3px solid #ffb347;
+      box-shadow:
+        0 1px 3px rgba(180, 90, 0, 0.18),
+        0 12px 32px rgba(180, 90, 0, 0.22);
+      border: 2px solid #ffb347;
+      animation: ce-card-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes ce-card-in {
+      from { transform: scale(0.85) translateY(20px); opacity: 0; }
+      to   { transform: scale(1) translateY(0); opacity: 1; }
     }
     .ce-card h2 {
       margin: 0 0 8px;
       color: #b25e00;
-      font-size: 1.5rem;
+      font-size: 1.75rem;
+      font-weight: 800;
+      letter-spacing: -0.01em;
     }
     .ce-card p {
       margin: 6px 0;
       color: #5a3a14;
       line-height: 1.45;
     }
+    .ce-card .ce-tagline {
+      color: #8a5a2c;
+      font-size: 0.95rem;
+      font-style: italic;
+      margin: 0 0 10px;
+    }
     @media (max-width: 380px) {
-      .ce-card { padding: 16px 14px 14px; }
-      .ce-card h2 { font-size: 1.25rem; }
+      .ce-card { padding: 18px 16px 16px; }
+      .ce-card h2 { font-size: 1.4rem; }
       .ce-card p { font-size: 0.92rem; }
+      .ce-card .ce-tagline { font-size: 0.88rem; }
+    }
+
+    /* "RUN!" stamp — appears briefly on the first run, animates in
+       and out. Set on a child of the start overlay. */
+    .ce-run-stamp {
+      position: absolute;
+      top: 18%;
+      left: 50%;
+      transform: translateX(-50%) rotate(-6deg) scale(0.6);
+      font-size: clamp(2.2rem, 8vw, 3.6rem);
+      font-weight: 900;
+      color: #c0392b;
+      text-shadow: 4px 4px 0 #fff, 6px 6px 0 rgba(0, 0, 0, 0.15);
+      letter-spacing: 0.02em;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 6;
+    }
+    .ce-run-stamp.is-show {
+      animation: ce-run-stamp 1.0s ease-out forwards;
+    }
+    @keyframes ce-run-stamp {
+      0%   { transform: translateX(-50%) rotate(-6deg) scale(0.6); opacity: 0; }
+      15%  { transform: translateX(-50%) rotate(-6deg) scale(1.2); opacity: 1; }
+      60%  { transform: translateX(-50%) rotate(-6deg) scale(1.0); opacity: 1; }
+      100% { transform: translateX(-50%) rotate(-6deg) scale(1.0); opacity: 0; }
     }
 
     .ce-actions {
@@ -229,25 +282,28 @@
       pointer-events: none;
     }
     .ce-hud-item {
-      background: rgba(255, 255, 255, 0.85);
-      border: 2px solid #ffb347;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 250, 240, 0.92) 100%);
+      border: 1.5px solid #ffb347;
       border-radius: 12px;
-      padding: 6px 12px;
+      padding: 7px 14px;
       font-weight: 700;
       color: #6b3a0a;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 2px 6px rgba(180, 90, 0, 0.18);
       display: flex;
       align-items: center;
       gap: 8px;
+      font-variant-numeric: tabular-nums;
     }
     .ce-hud-item .ce-hud-label {
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       color: #b25e00;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.06em;
+      font-weight: 800;
     }
     .ce-hud-item .ce-hud-value {
-      font-size: 1.1rem;
+      font-size: 1.2rem;
+      font-weight: 800;
       color: #6b3a0a;
       transition: color 0.2s, transform 0.2s;
     }
@@ -259,50 +315,74 @@
       color: #c0392b;
     }
     @media (max-width: 380px) {
-      .ce-hud-item { padding: 4px 8px; gap: 4px; }
-      .ce-hud-item .ce-hud-label { font-size: 0.65rem; }
-      .ce-hud-item .ce-hud-value { font-size: 0.95rem; }
+      .ce-hud-item { padding: 5px 10px; gap: 4px; }
+      .ce-hud-item .ce-hud-label { font-size: 0.62rem; }
+      .ce-hud-item .ce-hud-value { font-size: 1rem; }
     }
 
     .ce-result-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 10px;
-      margin: 12px 0 4px;
+      margin: 14px 0 6px;
     }
     .ce-result-item {
-      background: #fff7e6;
-      border: 2px solid #ffb347;
+      background: linear-gradient(180deg, #fff7e6 0%, #fff0d4 100%);
+      border: 1.5px solid #ffb347;
       border-radius: 12px;
-      padding: 8px 10px;
+      padding: 10px 12px;
+      position: relative;
+    }
+    .ce-result-item.is-best {
+      background: linear-gradient(180deg, #fff4c2 0%, #ffd24a 100%);
+      border-color: #b25e00;
+      box-shadow: 0 0 16px rgba(255, 178, 0, 0.45);
+      animation: ce-best-glow 1.6s ease-in-out infinite;
+    }
+    @keyframes ce-best-glow {
+      0%, 100% { box-shadow: 0 0 16px rgba(255, 178, 0, 0.45); }
+      50%      { box-shadow: 0 0 24px rgba(255, 178, 0, 0.75); }
     }
     .ce-result-label {
       display: block;
-      font-size: 0.75rem;
+      font-size: 0.7rem;
       color: #b25e00;
       text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 800;
     }
     .ce-result-value {
       display: block;
-      font-size: 1.3rem;
-      font-weight: 800;
+      font-size: 1.6rem;
+      font-weight: 900;
       color: #6b3a0a;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.02em;
     }
     .ce-result-value.final { color: #c0392b; }
+    .ce-result-value.is-best { color: #b25e00; }
     @media (max-width: 380px) {
       .ce-result-grid { gap: 6px; }
-      .ce-result-value { font-size: 1.1rem; }
+      .ce-result-value { font-size: 1.3rem; }
     }
 
     .ce-new-best {
       display: inline-block;
-      background: #ffb347;
+      background: linear-gradient(135deg, #ffd24a 0%, #ff8800 100%);
       color: #fff;
       font-weight: 800;
-      padding: 4px 10px;
+      font-size: 0.78rem;
+      letter-spacing: 0.08em;
+      padding: 5px 14px;
       border-radius: 999px;
-      margin: 4px 0 8px;
-      animation: ce-pulse 1.2s infinite;
+      margin: 2px 0 10px;
+      box-shadow: 0 2px 8px rgba(255, 136, 0, 0.45);
+      animation: ce-new-best-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1),
+                 ce-pulse 1.2s 0.6s infinite;
+    }
+    @keyframes ce-new-best-pop {
+      0%   { transform: scale(0) rotate(-15deg); opacity: 0; }
+      100% { transform: scale(1) rotate(0deg);   opacity: 1; }
     }
     @keyframes ce-pulse {
       0%, 100% { transform: scale(1); }
@@ -1022,8 +1102,8 @@
         <div id="ceStartOverlay" class="ce-overlay" hidden>
           <div class="ce-card">
             <h2>☕ Coffee Escape</h2>
-            <p>A tired man just walked in.<br />He wants his coffee. Make a run for it!</p>
-            <p style="font-size: 0.9rem;">Press <strong>Space</strong> / <strong>↑</strong> to jump.<br />On mobile, tap the JUMP button.</p>
+            <p class="ce-tagline">A tired man walked in. He wants his coffee. Run.</p>
+            <p style="font-size: 0.88rem; color: #8a5a2c;">Jump over furniture. Collect coffee beans.<br />Drain your boost to dash through obstacles.</p>
             <div class="ce-actions">
               <button id="ceStartBtn" class="btn btn-primary btn-large" type="button">Start Running ☕</button>
               <button id="cePlayIntroBtn" class="btn btn-secondary" type="button">▶ Play Intro</button>
@@ -1041,11 +1121,11 @@
             <h2 id="ceOverTitle">Caught! ☕😱</h2>
             <div id="ceNewBest" class="ce-new-best" hidden>NEW BEST!</div>
             <div class="ce-result-grid">
-              <div class="ce-result-item">
+              <div class="ce-result-item" id="ceFinalScoreItem">
                 <span class="ce-result-label">Score</span>
                 <span id="ceFinalScore" class="ce-result-value final">0</span>
               </div>
-              <div class="ce-result-item">
+              <div class="ce-result-item" id="ceFinalBestItem">
                 <span class="ce-result-label">Best</span>
                 <span id="ceFinalBest" class="ce-result-value">0</span>
               </div>
@@ -1057,6 +1137,9 @@
           </div>
         </div>
 
+        <!-- "RUN!" stamp that flashes briefly when the run starts. -->
+        <div id="ceRunStamp" class="ce-run-stamp" aria-hidden="true">RUN!</div>
+
         <div id="ceHint" class="ce-floating-cta" hidden>SPACE / ↑ jump · A / D lanes · SHIFT boost</div>
       </div>
     </main>
@@ -1065,7 +1148,7 @@
       <a href="https://www.buymeacoffee.com/sunboys" class="bmc-btn" target="_blank" rel="noopener noreferrer" aria-label="Support CodeCup Studio">☕ Support CodeCup Studio</a>
       <p class="footer-note">Made with love and caffeine.</p>
       <p class="arcade-back-line"><a class="arcade-back-pill" href="index.html" aria-label="Back to CodeCup Arcade">← Back to Arcade</a></p>
-      <p class="footer-version">Coffee Escape v2.2 (3D)</p>
+      <p class="footer-version">Coffee Escape v2.3 (3D)</p>
       <button id="ceResetBest" class="btn-reset" type="button" aria-label="Reset best score">Reset Best</button>
     </footer>
   </div>

@@ -27,6 +27,9 @@
   const FINAL_BEST_EL = document.getElementById('ceFinalBest');
   const OVER_TITLE_EL = document.getElementById('ceOverTitle');
   const NEW_BEST_EL = document.getElementById('ceNewBest');
+  const FINAL_SCORE_ITEM = document.getElementById('ceFinalScoreItem');
+  const FINAL_BEST_ITEM = document.getElementById('ceFinalBestItem');
+  const RUN_STAMP = document.getElementById('ceRunStamp');
   const START_OVERLAY = document.getElementById('ceStartOverlay');
   const CUTSCENE = document.getElementById('ceCutscene');
   const GAME_OVER_OVERLAY = document.getElementById('ceGameOverOverlay');
@@ -1726,6 +1729,14 @@
     HUD.hidden = false;
     if (HINT) HINT.hidden = false;
     state.lastTs = performance.now();
+    // Show the "RUN!" stamp briefly when the run starts.
+    if (RUN_STAMP) {
+      RUN_STAMP.classList.remove('is-show');
+      // Force a reflow so the animation restarts cleanly.
+      void RUN_STAMP.offsetWidth;
+      RUN_STAMP.classList.add('is-show');
+      setTimeout(() => RUN_STAMP.classList.remove('is-show'), 1100);
+    }
     requestAnimationFrame(loop);
   }
 
@@ -1739,11 +1750,41 @@
       saveBest(state.best);
     }
     updateBestDisplays();
-    FINAL_SCORE_EL.textContent = String(state.score);
-    FINAL_BEST_EL.textContent = String(state.best);
+    // Reset the highlighted-best styles; the count-up animation
+    // re-applies them at the end.
+    if (FINAL_SCORE_ITEM) FINAL_SCORE_ITEM.classList.remove('is-best');
+    if (FINAL_BEST_ITEM) FINAL_BEST_ITEM.classList.remove('is-best');
+    FINAL_SCORE_EL.textContent = '0';
+    FINAL_BEST_EL.textContent = '0';
     NEW_BEST_EL.hidden = !isNewBest;
     OVER_TITLE_EL.textContent = pickGameOverTitle(state.score);
     GAME_OVER_OVERLAY.hidden = false;
+    // Count-up animation: the displayed score ramps from 0 to the
+    // final value over ~700ms with an ease-out.
+    const finalScore = state.score;
+    const finalBest = state.best;
+    const startT = performance.now();
+    const dur = 700;
+    function tick() {
+      const t = Math.min(1, (performance.now() - startT) / dur);
+      const e = 1 - Math.pow(1 - t, 3);
+      FINAL_SCORE_EL.textContent = String(Math.floor(finalScore * e));
+      FINAL_BEST_EL.textContent = String(Math.floor(finalBest * e));
+      if (t < 1) requestAnimationFrame(tick);
+      else {
+        FINAL_SCORE_EL.textContent = String(finalScore);
+        FINAL_BEST_EL.textContent = String(finalBest);
+        // Highlight the best box if the player set a new record.
+        if (isNewBest) {
+          if (FINAL_BEST_ITEM) FINAL_BEST_ITEM.classList.add('is-best');
+          if (FINAL_SCORE_EL) {
+            FINAL_SCORE_EL.classList.add('is-best');
+            FINAL_SCORE_EL.classList.remove('final');
+          }
+        }
+      }
+    }
+    requestAnimationFrame(tick);
   }
 
   function pickGameOverTitle(score) {
