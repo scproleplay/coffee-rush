@@ -6,28 +6,42 @@
   <title>CodeCup Arcade ☕⚡</title>
   <link rel="stylesheet" href="style.css" />
   <style>
-    /* Coffee Escape "Coming soon" tile. Visible to everyone. */
+    /* "Coming soon" tile for unreleased games. Currently Coffee Escape
+       is temporarily published; the scheduled revert at 18:30 UTC
+       re-applies the .game-card--coming-soon class via the index.html
+       change in that commit. */
     .game-card--coming-soon {
-      opacity: 0.78;
-      background: #fdf3e1;
+      background: var(--c-cream);
     }
     .game-card--coming-soon .game-card-emoji {
-      filter: grayscale(0.6);
+      filter: grayscale(0.4);
+      opacity: 0.85;
     }
     .game-card--coming-soon .game-card-desc {
-      color: #8a5a2c;
+      color: var(--c-text-soft);
     }
     .coming-soon-badge {
       display: inline-block;
-      background: #b25e00;
-      color: #fff;
-      font-weight: 800;
-      font-size: 0.8rem;
-      letter-spacing: 0.05em;
+      background: rgba(178, 94, 0, 0.12);
+      color: var(--c-orange-3);
+      font-weight: 700;
+      font-size: 0.75rem;
+      letter-spacing: 0.06em;
       padding: 4px 12px;
-      border-radius: 999px;
+      border-radius: var(--r-pill);
       text-transform: uppercase;
+      border: 1px solid rgba(178, 94, 0, 0.25);
     }
+
+    /* Tighter footer on mobile. */
+    .footer {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+    .footer .bmc-btn { margin-bottom: 2px; }
+    .footer .cr-more-games { margin-top: 4px; }
   </style>
 </head>
 <body>
@@ -79,9 +93,9 @@
 
     <footer class="footer">
       <a href="https://www.buymeacoffee.com/sunboys" class="bmc-btn" target="_blank" rel="noopener noreferrer" aria-label="Support CodeCup Studio">☕ Support CodeCup Studio</a>
-      <p class="footer-note">Made with love and caffeine.</p>
       <a class="cr-more-games" href="leaderboard.html" aria-label="View global leaderboard">🌍 Global Leaderboard</a>
-      <p class="footer-version">CodeCup Arcade v1.2</p>
+      <p class="footer-note">Made with love and caffeine.</p>
+      <p class="footer-version">CodeCup Arcade v1.3</p>
     </footer>
   </div>
 </body>
