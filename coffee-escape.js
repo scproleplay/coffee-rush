@@ -565,7 +565,7 @@
   const cup = new THREE.Group();
 
   // Materials reused across the cup
-  const matCupBody  = new THREE.MeshLambertMaterial({ color: 0xfaf3e3 }); // warm cream
+  const matCupBody  = new THREE.MeshLambertMaterial({ color: 0xffffff }); // pure white cup so it pops on the warm wood floor
   const matRim      = new THREE.MeshLambertMaterial({ color: 0xe8d8b8 }); // darker cream
   const matCoffee   = new THREE.MeshLambertMaterial({ color: 0x3a1f08 }); // very dark brown
   const matCrema    = new THREE.MeshLambertMaterial({ color: 0x8a5a2c }); // light brown ring
@@ -755,11 +755,12 @@
 
   // Soft contact shadow under the cup. A flat dark disc that
   // follows the cup, shrinks when the cup is in the air, and fades
-  // out. Cheap fake — no shadow maps.
+  // out. Slightly larger and darker than v2.3 so the cup reads as
+  // grounded against the warm wood floor.
   const contactShadow = new THREE.Mesh(
-    new THREE.CircleGeometry(0.42, 24),
+    new THREE.CircleGeometry(0.48, 24),
     new THREE.MeshBasicMaterial({
-      color: 0x000000, transparent: true, opacity: 0.32, depthWrite: false,
+      color: 0x000000, transparent: true, opacity: 0.42, depthWrite: false,
     })
   );
   contactShadow.rotation.x = -Math.PI / 2;
@@ -2045,7 +2046,7 @@
     // cup's lane x.
     const shadowScale = Math.max(0.4, 1 - p.y * 0.4);
     contactShadow.scale.set(shadowScale, shadowScale, 1);
-    contactShadow.material.opacity = 0.32 * shadowScale;
+    contactShadow.material.opacity = 0.42 * shadowScale;
     contactShadow.position.x = p.laneX;
     contactShadow.position.z = 0;
 

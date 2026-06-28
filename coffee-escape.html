@@ -17,10 +17,10 @@
     }
 
     /* The stage is the 3D canvas. It fills the page width up to 860px.
-       On portrait phones, we override the aspect ratio so the canvas
-       actually fills the phone screen instead of becoming a tiny
-       strip. The Three.js renderer reads the rendered size to set its
-       aspect ratio, so the camera always matches. */
+       On portrait phones, we use a fixed height in vh so the entire
+       page (header + stage + footer) fits in the viewport on a single
+       screen without scrolling. The Three.js renderer reads the
+       rendered size to set its camera aspect ratio. */
     .ce-stage {
       position: relative;
       width: 100%;
@@ -28,36 +28,65 @@
       margin: 0 auto;
       aspect-ratio: 16 / 9;
       background: #fff7e6;
-      border-radius: 18px;
+      border-radius: 20px;
       overflow: hidden;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+      /* Polished frame: warm shadow that matches the theme, plus a
+         subtle 1px orange-tinted border to read as a "viewport." */
+      border: 1px solid rgba(178, 94, 0, 0.18);
+      box-shadow:
+        0 1px 2px rgba(180, 90, 0, 0.10),
+        0 8px 24px rgba(180, 90, 0, 0.22),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.4);
       touch-action: none;
       user-select: none;
       -webkit-user-select: none;
     }
     @media (max-aspect-ratio: 1/1) {
-      /* Portrait phones and tablets. */
+      /* Portrait phones: keep the stage short so the page (header +
+         stage + footer) fits in the viewport. ~52vh leaves room for
+         the header, footer, and any browser chrome. */
       .ce-stage {
         aspect-ratio: auto;
-        height: 70vh;
-        max-height: 720px;
-        min-height: 380px;
+        height: 52vh;
+        max-height: 560px;
+        min-height: 320px;
       }
     }
     @media (max-aspect-ratio: 1/1) and (max-width: 380px) {
-      /* Very small portrait phones (iPhone SE 1st gen): fill
-         almost the whole screen. */
-      .ce-stage { height: 78vh; }
+      /* Very small portrait phones: slightly more height to keep the
+         cup readable, but still leaves room for the rest of the page. */
+      .ce-stage { height: 58vh; }
+    }
+    @media (max-aspect-ratio: 1/1) and (min-height: 700px) {
+      /* Tablets in portrait (iPad, etc): cap so the page fits without
+         scrolling. */
+      .ce-stage { max-height: 520px; }
     }
     @media (min-width: 1024px) and (min-aspect-ratio: 4/3) {
-      /* Desktop / landscape: cap the height. */
-      .ce-stage { aspect-ratio: 16 / 9; height: auto; max-height: 540px; }
+      /* Desktop / landscape: cap the height so the stage doesn't
+         dominate. */
+      .ce-stage { aspect-ratio: 16 / 9; height: auto; max-height: 560px; }
     }
 
     canvas.ce-canvas {
       display: block;
       width: 100%;
       height: 100%;
+    }
+
+    /* Header — override the shared .title / .subtitle (which are
+       white-on-warm-gradient, low contrast) with darker, warmer
+       text that reads clearly on the cream background. */
+    .ce-app .header { margin-bottom: 10px; }
+    .ce-app .title {
+      color: #3a1f00;
+      font-weight: 900;
+      letter-spacing: -0.01em;
+      text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+    }
+    .ce-app .subtitle {
+      color: #6b3a14;
+      font-weight: 600;
     }
 
     /* Action button bar — fixed at the bottom-right of the stage.
@@ -133,41 +162,45 @@
       .ce-jump-btn, .ce-boost-btn { width: 68px; height: 68px; }
     }
 
-    /* Boost meter (small bar in the bottom-left corner) */
+    /* Boost meter (bar in the bottom-left of the stage) */
     .ce-boost-hud {
       position: absolute;
-      left: 10px;
-      bottom: 14px;
-      width: 110px;
-      height: 12px;
-      background: rgba(255, 255, 255, 0.75);
+      left: 12px;
+      bottom: 16px;
+      width: 130px;
+      height: 16px;
+      background: linear-gradient(180deg, #ffffff 0%, #fff7e0 100%);
       border: 1.5px solid #4ec0ff;
       border-radius: 999px;
       overflow: hidden;
       z-index: 3;
       pointer-events: none;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+      box-shadow:
+        0 1px 2px rgba(0, 0, 0, 0.12),
+        0 3px 8px rgba(78, 192, 255, 0.18);
     }
     .ce-boost-hud-fill {
       height: 100%;
       width: 0%;
-      background: linear-gradient(90deg, #4ec0ff, #2080d0);
+      background: linear-gradient(90deg, #6ec6ff 0%, #2080d0 100%);
       transition: width 0.1s linear;
     }
     .ce-boost-hud-label {
       position: absolute;
-      left: 10px;
-      bottom: 30px;
-      font-size: 0.7rem;
-      font-weight: 700;
+      left: 12px;
+      bottom: 36px;
+      font-size: 0.75rem;
+      font-weight: 800;
       color: #2080d0;
       text-transform: uppercase;
-      letter-spacing: 0.06em;
+      letter-spacing: 0.10em;
       z-index: 3;
       pointer-events: none;
+      text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
     }
     @media (max-width: 380px) {
-      .ce-boost-hud { width: 88px; }
+      .ce-boost-hud { width: 100px; height: 14px; }
+      .ce-boost-hud-label { font-size: 0.66rem; bottom: 32px; }
     }
 
     /* Generic overlay used by intro, start, and game-over */
@@ -282,42 +315,45 @@
       pointer-events: none;
     }
     .ce-hud-item {
-      background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 250, 240, 0.92) 100%);
+      background: linear-gradient(180deg, #ffffff 0%, #fff7e0 100%);
       border: 1.5px solid #ffb347;
-      border-radius: 12px;
-      padding: 7px 14px;
+      border-radius: 14px;
+      padding: 9px 16px;
       font-weight: 700;
-      color: #6b3a0a;
-      box-shadow: 0 2px 6px rgba(180, 90, 0, 0.18);
+      color: #5a3a14;
+      box-shadow:
+        0 1px 2px rgba(180, 90, 0, 0.18),
+        0 4px 10px rgba(180, 90, 0, 0.20);
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
       font-variant-numeric: tabular-nums;
     }
     .ce-hud-item .ce-hud-label {
-      font-size: 0.72rem;
+      font-size: 0.78rem;
       color: #b25e00;
       text-transform: uppercase;
-      letter-spacing: 0.06em;
+      letter-spacing: 0.08em;
       font-weight: 800;
     }
     .ce-hud-item .ce-hud-value {
-      font-size: 1.2rem;
-      font-weight: 800;
-      color: #6b3a0a;
+      font-size: 1.45rem;
+      font-weight: 900;
+      color: #3a1f00;
+      letter-spacing: -0.01em;
       transition: color 0.2s, transform 0.2s;
     }
     .ce-hud-item .ce-hud-value.flash {
       color: #ff8800;
-      transform: scale(1.18);
+      transform: scale(1.20);
     }
     .ce-hud-best .ce-hud-value {
       color: #c0392b;
     }
     @media (max-width: 380px) {
-      .ce-hud-item { padding: 5px 10px; gap: 4px; }
-      .ce-hud-item .ce-hud-label { font-size: 0.62rem; }
-      .ce-hud-item .ce-hud-value { font-size: 1rem; }
+      .ce-hud-item { padding: 6px 10px; gap: 6px; border-radius: 12px; }
+      .ce-hud-item .ce-hud-label { font-size: 0.66rem; }
+      .ce-hud-item .ce-hud-value { font-size: 1.1rem; }
     }
 
     .ce-result-grid {
@@ -389,33 +425,90 @@
       50% { transform: scale(1.06); }
     }
 
+    /* Floating control hint — shown at the top of the page (above
+       the stage) on all devices, so the controls are always visible
+       without taking up space inside the stage. */
     .ce-floating-cta {
-      position: absolute;
-      bottom: 14px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(255, 255, 255, 0.85);
-      border: 2px solid #ffb347;
+      display: inline-block;
+      background: linear-gradient(180deg, #ffffff 0%, #fff7e0 100%);
+      border: 1.5px solid #ffb347;
       border-radius: 999px;
-      padding: 6px 14px;
-      color: #6b3a0a;
+      padding: 8px 18px;
+      color: #5a3a14;
       font-weight: 700;
-      font-size: 0.85rem;
-      z-index: 2;
-      pointer-events: none;
-      animation: ce-fade 2.6s ease-in-out infinite;
-      /* The buttons at the bottom of the stage communicate the
-         controls on touch devices. Only show the long hint on
-         wider screens where there's room. */
-      display: none;
-    }
-    @media (min-width: 768px) {
-      .ce-floating-cta { display: block; }
+      font-size: 0.88rem;
+      letter-spacing: 0.01em;
+      box-shadow: 0 2px 6px rgba(180, 90, 0, 0.18);
+      margin: 0 auto 8px;
+      text-align: center;
     }
     @keyframes ce-fade {
-      0%, 100% { opacity: 0.55; }
-      50% { opacity: 1; }
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.85; }
     }
+    @media (max-width: 380px) {
+      .ce-floating-cta { font-size: 0.78rem; padding: 6px 12px; }
+    }
+
+    /* Footer — tight 2-row layout so the page feels connected to
+       the game. Tighter spacing, smaller text, row of action pills. */
+    .ce-app .ce-footer {
+      margin-top: 14px;
+      padding: 4px 0 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    .ce-app .ce-footer-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+    }
+    .ce-app .ce-footer-meta {
+      gap: 10px;
+      color: #6b3a14;
+      font-size: 0.78rem;
+    }
+    .ce-app .ce-footer-meta .footer-note {
+      margin: 0;
+      color: inherit;
+      text-shadow: none;
+      font-size: inherit;
+      font-weight: 600;
+    }
+    .ce-app .ce-footer-meta .footer-version {
+      margin: 0;
+      color: rgba(107, 58, 20, 0.65);
+      letter-spacing: 0.02em;
+      font-size: inherit;
+    }
+    .ce-app .ce-footer-pill {
+      display: inline-block;
+      background: linear-gradient(180deg, #ffffff 0%, #fff7e0 100%);
+      color: #5a3a14;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 0.82rem;
+      padding: 7px 14px;
+      border-radius: 999px;
+      border: 1.5px solid #ffb347;
+      box-shadow: 0 2px 4px rgba(180, 90, 0, 0.18);
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .ce-app .ce-footer-pill:hover { background: #fff; }
+    .ce-app .ce-footer-meta .btn-reset {
+      background: transparent;
+      color: rgba(107, 58, 20, 0.75);
+      font-size: 0.72rem;
+      padding: 2px 8px;
+      border: 1px dashed rgba(107, 58, 20, 0.35);
+      border-radius: 999px;
+    }
+    .ce-app .ce-footer .bmc-btn { margin: 0; }
 
     /* Floating +5 / +N popups spawned when the man trips or dodges */
     .ce-popup {
@@ -918,6 +1011,9 @@
     </header>
 
     <main class="arcade-main" aria-label="Coffee Escape game">
+      <!-- Control hint above the stage so the controls are visible
+           on all devices without overlapping the game. -->
+      <div id="ceHint" class="ce-floating-cta">SPACE / ↑ jump · A / D lanes · SHIFT boost</div>
       <div id="ceStage" class="ce-stage" aria-label="Game play area">
         <canvas id="ceCanvas" class="ce-canvas" aria-label="Coffee Escape play field"></canvas>
 
@@ -1139,17 +1235,20 @@
 
         <!-- "RUN!" stamp that flashes briefly when the run starts. -->
         <div id="ceRunStamp" class="ce-run-stamp" aria-hidden="true">RUN!</div>
-
-        <div id="ceHint" class="ce-floating-cta" hidden>SPACE / ↑ jump · A / D lanes · SHIFT boost</div>
       </div>
     </main>
 
-    <footer class="footer">
-      <a href="https://www.buymeacoffee.com/sunboys" class="bmc-btn" target="_blank" rel="noopener noreferrer" aria-label="Support CodeCup Studio">☕ Support CodeCup Studio</a>
-      <p class="footer-note">Made with love and caffeine.</p>
-      <p class="arcade-back-line"><a class="arcade-back-pill" href="index.html" aria-label="Back to CodeCup Arcade">← Back to Arcade</a></p>
-      <p class="footer-version">Coffee Escape v2.3 (3D)</p>
-      <button id="ceResetBest" class="btn-reset" type="button" aria-label="Reset best score">Reset Best</button>
+    <footer class="footer ce-footer">
+      <div class="ce-footer-row">
+        <a href="https://www.buymeacoffee.com/sunboys" class="bmc-btn" target="_blank" rel="noopener noreferrer" aria-label="Support CodeCup Studio">☕ Support CodeCup Studio</a>
+        <a class="ce-footer-pill" href="leaderboard.html" aria-label="View global leaderboard">🌍 Leaderboard</a>
+        <a class="ce-footer-pill" href="index.html" aria-label="Back to CodeCup Arcade">← Back to Arcade</a>
+      </div>
+      <div class="ce-footer-row ce-footer-meta">
+        <span class="footer-note">Made with love and caffeine.</span>
+        <span class="footer-version">Coffee Escape v2.3</span>
+        <button id="ceResetBest" class="btn-reset" type="button" aria-label="Reset best score">Reset Best</button>
+      </div>
     </footer>
   </div>
 
