@@ -172,6 +172,33 @@ looking for his caffeine.
 - Mobile-friendly with on-screen JUMP button
 - Reset best score button
 
+### Status
+
+Coffee Escape is currently in **"Coming soon"** mode on the arcade
+homepage. Visitors see a non-playable tile; signed-in developers
+(defined in `auth-config.js`) see a playable card with a green
+"DEV ACCESS" badge. To play it without dev access, open
+`coffee-escape.html` directly. To open up the game publicly, edit
+`auth-config.js` and remove the gate (or move the dev check to a
+Supabase table that you can toggle without a redeploy).
+
+## Accounts
+
+The arcade now has a Supabase-backed account system.
+
+- New visitors see a banner on the homepage with **Sign Up** and
+  **Log In** buttons.
+- Sign-up requires an email, a password (6+ characters), and a
+  nickname (1–12 characters). The nickname is what shows on the
+  leaderboard.
+- Sessions persist across reloads (Supabase Auth with
+  `persistSession: true`).
+- Sign out from the homepage banner.
+
+Setup instructions are in [`SUPABASE_SETUP.md`](SUPABASE_SETUP.md).
+You need to run a small SQL script in the Supabase dashboard once
+to create the `profiles` table.
+
 ## Support
 
 If you enjoy these games, you can support CodeCup Studio here:
@@ -182,10 +209,12 @@ Support helps future games and updates.
 
 ## Versions
 
-- CodeCup Arcade v1.1
+- CodeCup Arcade v1.2
 - Coffee Rush v1.1
 - Reaction Timer v1.0
 - Memory Match v1.0
 - Math Rush v1.0
-- Coffee Escape v1.1
+- Coffee Escape v1.2
+- Accounts v1.0
+- Auth gate v1.0
 - Leaderboard v1.0
