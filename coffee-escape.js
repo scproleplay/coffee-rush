@@ -1,16 +1,24 @@
-// Coffee Escape ☕🏃
-// 2D endless runner where a freshly-poured cup of coffee sprints through a
-// house to avoid a tired man who just wants his caffeine. Original game;
-// visuals are drawn on canvas (no external assets).
+// Coffee Escape v2.0 — 3D endless runner
+// Third-person camera behind and slightly above a coffee cup that sprints
+// down an office hallway. Three lanes (left / center / right). Avoid
+// furniture. Score climbs with time, speed slowly increases. Best score
+// saved in localStorage. Cutscene, start, and game-over screens stay as
+// DOM overlays; the canvas is just the play area.
+//
+// All visuals are built from Three.js primitives + a few small canvas
+// textures generated at startup. No external 3D assets, no copyrighted
+// material. The cup, the man, the furniture, and the hallway are
+// placeholder shapes for v2.0; the next pass will polish the art.
 
 (function () {
   'use strict';
 
-  // ---------- Constants & DOM references ----------
+  // -----------------------------------------------------------------------
+  // DOM references
+  // -----------------------------------------------------------------------
   const STORAGE_KEY = 'codecup-coffee-escape-best';
   const STAGE = document.getElementById('ceStage');
   const CANVAS = document.getElementById('ceCanvas');
-  const CTX = CANVAS.getContext('2d');
   const HUD = document.getElementById('ceHud');
   const SCORE_EL = document.getElementById('ceScore');
   const BEST_HUD_EL = document.getElementById('ceBestHud');
@@ -32,90 +40,452 @@
   const HINT = document.getElementById('ceHint');
   const SCENE_DOTS = CUTSCENE.querySelectorAll('.ce-scene-dots .dot');
 
-  // Cutscene configuration
-  const SCENE_DURATION_MS = 2400; // time per scene
+  // Cutscene
+  const SCENE_DURATION_MS = 2400;
   const TOTAL_SCENES = 5;
 
-  // Logical world: a virtual 16:9 stage. We scale to fit the actual canvas.
-  const WORLD_W = 1600;
-  const WORLD_H = 900;
-  const GROUND_Y = 760; // y of floor surface in world units
+  // -----------------------------------------------------------------------
+  // World constants
+  // -----------------------------------------------------------------------
+  // Three lanes indexed 0/1/2 (left/center/right). The cup's lane is
+  // laneX[currentLane] and it interpolates to laneX[targetLane].
+  const LANE_X = [-1.6, 0, 1.6];
+  const LANE_SWITCH_MS = 160;     // how long a lane change takes
+  const GROUND_Y = 0;             // cup runs on the y=0 plane
+  const JUMP_VY = 9.0;            // initial upward velocity on jump
+  const GRAVITY = 22.0;           // downward acceleration
+  const OBSTACLE_POOL_SIZE = 12;  // how many obstacles we keep alive
+  const OBSTACLE_START_Z = -70;   // far ahead
+  const OBSTACLE_END_Z = 6;      // past the cup
+  const RECYCLE_Z = -85;         // where recycled obstacles re-enter
 
-  // Trip tuning (lightweight — keeps the run from feeling unfair)
-  const TRIP_BASE_CHANCE = 0.35;   // base probability per successful dodge
-  const TRIP_CHAIR_BONUS = 0.25;  // chairs are easier to trip on
-  const TRIP_STUN_TIME = 1.0;     // seconds the man is stunned
-  const TRIP_BONUS = 5;           // score awarded when the man trips
-  const TRIP_SPAWN_DELAY = 0.7;   // extra delay added to the next 2 spawns
-  const TRIP_NUDGES = 2;          // number of upcoming spawns to delay
+  // Speed (units per second the world scrolls past the cup)
+  const BASE_SPEED = 12;
+  const MAX_SPEED = 28;
+  const SPEED_RAMP = 0.32;        // speed added per second of run time
+  const SPAWN_INTERVAL = 1.1;     // seconds between spawns
+  const SPAWN_JITTER = 0.45;      // ± fraction
+  const SCORE_PER_SECOND = 10;    // score climbs this fast
 
-  // Game state
+  // -----------------------------------------------------------------------
+  // State
+  // -----------------------------------------------------------------------
   const state = {
     running: false,
     gameOver: false,
     score: 0,
     best: 0,
-    speed: 360,
-    baseSpeed: 360,
-    maxSpeed: 760,
-    worldTime: 0,
-    nextSpawn: 0.6,
-    spawnInterval: 1.1,
-    minSpawn: 0.55,
-    pendingTripDelays: 0,           // counts down; pushes nextSpawn out
-    obstacles: [],
-    dust: [],
-    bgOffset: 0,
+    speed: BASE_SPEED,
+    worldTime: 0,         // seconds since run started
+    nextSpawn: SPAWN_INTERVAL,
+    // Player
     player: {
-      x: 220,
-      y: GROUND_Y,
+      lane: 1,            // 0/1/2
+      targetLane: 1,
+      laneX: LANE_X[1],   // current rendered x
+      laneFromX: LANE_X[1],
+      laneToX: LANE_X[1],
+      laneSwitchT: 1,     // 0..1 progress through a lane change
+      y: 0,               // vertical position (0 = ground, > 0 = air)
       vy: 0,
-      w: 90,
-      h: 100,
       onGround: true,
-      jumpCount: 0,
-      maxJumps: 2,
       runAnim: 0,
-      tilt: 0,
-      // Facial expressions
-      expression: 'scared',   // normal | scared | shocked | happy
-      expressionTimer: 0,     // when > 0, holds expression; counts down
-      shockTimer: 0,          // for full-body jolt
-      happyTimer: 0,
-      // Flash when an obstacle is close
-      nearObstacle: false,
+      // World z is always 0 — the camera follows the cup, the world
+      // scrolls past. Obstacles and floor stripes move toward the
+      // camera; the cup itself stays put.
     },
-    man: {
-      x: -260,
-      y: GROUND_Y,
-      w: 130,
-      h: 220,
-      proximity: 0,
-      targetProximity: 0,
-      // Trip / stun state
-      stunTimer: 0,
-      // Animation offsets
-      runAnim: 0,
-    },
+    obstacles: [],        // { mesh, lane, z, kind, w, h, d }
+    // Trip gag placeholder (commit A: man visible but doesn't trip)
+    man: { visible: true, z: 6, lane: 0 },
     shake: 0,
     flash: 0,
-    floorOffset: 0,
     lastTs: 0,
+    pointerStartX: null,  // for swipe detection
+    pointerStartT: 0,
+    pointerActive: false,
   };
 
-  // ---------- Setup / canvas sizing ----------
-  function fitCanvas() {
-    const rect = STAGE.getBoundingClientRect();
-    const dpr = Math.max(1, window.devicePixelRatio || 1);
-    CANVAS.width = Math.floor(rect.width * dpr);
-    CANVAS.height = Math.floor(rect.height * dpr);
-    CTX.setTransform(dpr, 0, 0, dpr, 0, 0);
-    state.viewScale = rect.width / WORLD_W;
-    state.viewW = rect.width;
-    state.viewH = rect.height;
+  // -----------------------------------------------------------------------
+  // Three.js setup
+  // -----------------------------------------------------------------------
+  if (!window.THREE) {
+    console.error('Three.js failed to load. Coffee Escape cannot start.');
+    return;
   }
 
-  // ---------- Best score persistence ----------
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xfff1d6);
+  scene.fog = new THREE.Fog(0xfff1d6, 30, 95);
+
+  const camera = new THREE.PerspectiveCamera(70, 16 / 9, 0.1, 200);
+  camera.position.set(0, 2.6, 4.5);
+  camera.lookAt(0, 1.0, -8);
+
+  const renderer = new THREE.WebGLRenderer({
+    canvas: CANVAS,
+    antialias: true,
+    alpha: false,
+  });
+  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+  renderer.setClearColor(0xfff1d6, 1);
+
+  // Lighting
+  const hemi = new THREE.HemisphereLight(0xfff1d6, 0xb87333, 0.65);
+  scene.add(hemi);
+  const sun = new THREE.DirectionalLight(0xffe5b0, 0.7);
+  sun.position.set(4, 10, -3);
+  scene.add(sun);
+
+  // -----------------------------------------------------------------------
+  // Textures (canvas-generated at startup, no external assets)
+  // -----------------------------------------------------------------------
+  function makeStripesTexture() {
+    const c = document.createElement('canvas');
+    c.width = 64; c.height = 256;
+    const g = c.getContext('2d');
+    g.fillStyle = '#c08650';
+    g.fillRect(0, 0, 64, 256);
+    g.fillStyle = '#a86d3a';
+    for (let i = 0; i < 64; i += 8) g.fillRect(0, i, 64, 2);
+    const tex = new THREE.CanvasTexture(c);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(2, 24);
+    return tex;
+  }
+
+  function makeWallTexture() {
+    const c = document.createElement('canvas');
+    c.width = 256; c.height = 256;
+    const g = c.getContext('2d');
+    g.fillStyle = '#f4d6a8';
+    g.fillRect(0, 0, 256, 256);
+    g.fillStyle = 'rgba(178, 94, 0, 0.15)';
+    for (let x = 0; x < 256; x += 32) g.fillRect(x, 0, 16, 256);
+    const tex = new THREE.CanvasTexture(c);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(8, 1);
+    return tex;
+  }
+
+  function makeCeilingTexture() {
+    const c = document.createElement('canvas');
+    c.width = 128; c.height = 128;
+    const g = c.getContext('2d');
+    g.fillStyle = '#fff7e0';
+    g.fillRect(0, 0, 128, 128);
+    g.fillStyle = '#e7c08a';
+    g.strokeStyle = '#caa274';
+    g.lineWidth = 2;
+    for (let y = 0; y < 128; y += 32) {
+      for (let x = 0; x < 128; x += 32) {
+        g.fillRect(x + 4, y + 4, 24, 24);
+        g.strokeRect(x + 4, y + 4, 24, 24);
+      }
+    }
+    const tex = new THREE.CanvasTexture(c);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(4, 16);
+    return tex;
+  }
+
+  // -----------------------------------------------------------------------
+  // Hallway
+  // -----------------------------------------------------------------------
+  // Floor: long plane, scrolled by shifting the texture's offset.
+  const floorTex = makeStripesTexture();
+  const floor = new THREE.Mesh(
+    new THREE.PlaneGeometry(12, 200),
+    new THREE.MeshLambertMaterial({ map: floorTex })
+  );
+  floor.rotation.x = -Math.PI / 2;
+  floor.position.y = 0;
+  floor.position.z = -80;
+  scene.add(floor);
+
+  // Walls: two planes on either side of the hallway.
+  const wallTex = makeWallTexture();
+  const wallMat = new THREE.MeshLambertMaterial({ map: wallTex, side: THREE.FrontSide });
+  const wallL = new THREE.Mesh(new THREE.PlaneGeometry(200, 6), wallMat);
+  wallL.rotation.y = Math.PI / 2;
+  wallL.position.set(-3, 3, -80);
+  scene.add(wallL);
+  const wallR = wallL.clone();
+  wallR.rotation.y = -Math.PI / 2;
+  wallR.position.set(3, 3, -80);
+  scene.add(wallR);
+
+  // Ceiling
+  const ceilingTex = makeCeilingTexture();
+  const ceiling = new THREE.Mesh(
+    new THREE.PlaneGeometry(12, 200),
+    new THREE.MeshLambertMaterial({ map: ceilingTex })
+  );
+  ceiling.rotation.x = Math.PI / 2;
+  ceiling.position.y = 6;
+  ceiling.position.z = -80;
+  scene.add(ceiling);
+
+  // Two side rails so the lane boundaries are visible.
+  const railMat = new THREE.MeshLambertMaterial({ color: 0xb87333 });
+  const railGeo = new THREE.BoxGeometry(0.08, 0.05, 200);
+  const railL = new THREE.Mesh(railGeo, railMat);
+  railL.position.set(-0.8, 0.025, -80);
+  scene.add(railL);
+  const railR = railL.clone();
+  railR.position.x = 0.8;
+  scene.add(railR);
+
+  // -----------------------------------------------------------------------
+  // Cup (player)
+  // -----------------------------------------------------------------------
+  const cup = new THREE.Group();
+
+  // Body: a truncated cone for the cup itself.
+  const cupBody = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.36, 0.28, 0.7, 12),
+    new THREE.MeshLambertMaterial({ color: 0xffffff })
+  );
+  cupBody.position.y = 0.45;
+  cup.add(cupBody);
+
+  // Coffee surface (dark disc on top of the cup).
+  const coffee = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.33, 0.33, 0.02, 12),
+    new THREE.MeshLambertMaterial({ color: 0x4a2a10 })
+  );
+  coffee.position.y = 0.81;
+  cup.add(coffee);
+
+  // Handle (a torus segment).
+  const handle = new THREE.Mesh(
+    new THREE.TorusGeometry(0.18, 0.04, 8, 16, Math.PI),
+    new THREE.MeshLambertMaterial({ color: 0xffffff })
+  );
+  handle.rotation.z = Math.PI / 2;
+  handle.position.set(0.36, 0.45, 0);
+  cup.add(handle);
+
+  // Arms (pivots) — two small cylinders that swing when running.
+  const armMat = new THREE.MeshLambertMaterial({ color: 0x5a3a14 });
+  const armGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.4, 6);
+  const armL = new THREE.Mesh(armGeo, armMat);
+  armL.position.set(-0.3, 0.6, 0);
+  cup.add(armL);
+  const armR = armL.clone();
+  armR.position.x = 0.3;
+  cup.add(armR);
+
+  // Legs (pivots).
+  const legGeo = new THREE.CylinderGeometry(0.06, 0.06, 0.5, 6);
+  const legL = new THREE.Mesh(legGeo, armMat);
+  legL.position.set(-0.12, 0.05, 0);
+  cup.add(legL);
+  const legR = legL.clone();
+  legR.position.x = 0.12;
+  cup.add(legR);
+
+  // Cup starts at center lane.
+  cup.position.set(LANE_X[1], 0, 0);
+  scene.add(cup);
+
+  // -----------------------------------------------------------------------
+  // Tired man (chaser)
+  // -----------------------------------------------------------------------
+  // Lives behind the cup on the left side. He runs in place relative to
+  // the camera. Commit A just makes him visible and animated; the trip
+  // gag lands in a follow-up commit.
+  const man = new THREE.Group();
+
+  const manBody = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.35, 0.35, 1.0, 10),
+    new THREE.MeshLambertMaterial({ color: 0xa04a2a })
+  );
+  manBody.position.y = 0.9;
+  man.add(manBody);
+
+  const manHead = new THREE.Mesh(
+    new THREE.SphereGeometry(0.22, 12, 10),
+    new THREE.MeshLambertMaterial({ color: 0xe7b78f })
+  );
+  manHead.position.y = 1.6;
+  man.add(manHead);
+
+  // Hair patch on top (small flattened sphere).
+  const hair = new THREE.Mesh(
+    new THREE.SphereGeometry(0.18, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2),
+    new THREE.MeshLambertMaterial({ color: 0x3a2a1a })
+  );
+  hair.position.y = 1.7;
+  man.add(hair);
+
+  // Two arms.
+  const manArmGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.7, 6);
+  const manArmL = new THREE.Mesh(manArmGeo, new THREE.MeshLambertMaterial({ color: 0xa04a2a }));
+  manArmL.position.set(-0.45, 1.0, 0);
+  man.add(manArmL);
+  const manArmR = manArmL.clone();
+  manArmR.position.x = 0.45;
+  man.add(manArmR);
+
+  // Two legs.
+  const manLegGeo = new THREE.CylinderGeometry(0.1, 0.1, 0.7, 6);
+  const manLegL = new THREE.Mesh(manLegGeo, new THREE.MeshLambertMaterial({ color: 0x2b3a55 }));
+  manLegL.position.set(-0.15, 0.25, 0);
+  man.add(manLegL);
+  const manLegR = manLegL.clone();
+  manLegR.position.x = 0.15;
+  man.add(manLegR);
+
+  man.position.set(LANE_X[0] - 0.6, 0, 4.0);
+  scene.add(man);
+
+  // -----------------------------------------------------------------------
+  // Obstacle factory
+  // -----------------------------------------------------------------------
+  const OBSTACLE_COLORS = {
+    chair: 0x7d3f1c,
+    table: 0x8a4a1f,
+    sofa: 0x9a5a2a,
+    lamp: 0xffb347,
+    box: 0xcaa274,
+  };
+
+  function makeObstacle(kind) {
+    const group = new THREE.Group();
+    const mat = new THREE.MeshLambertMaterial({ color: OBSTACLE_COLORS[kind] || 0x888888 });
+
+    if (kind === 'chair') {
+      // Seat
+      const seat = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.1, 0.6), mat);
+      seat.position.y = 0.45;
+      group.add(seat);
+      // Back
+      const back = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.8, 0.08), mat);
+      back.position.set(0, 0.9, -0.26);
+      group.add(back);
+      // Four legs
+      const legGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.45, 6);
+      const offsets = [[-0.24, 0.22], [0.24, 0.22], [-0.24, -0.22], [0.24, -0.22]];
+      for (const [x, z] of offsets) {
+        const leg = new THREE.Mesh(legGeo, mat);
+        leg.position.set(x, 0.225, z);
+        group.add(leg);
+      }
+    } else if (kind === 'table') {
+      const top = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.08, 0.7), mat);
+      top.position.y = 0.75;
+      group.add(top);
+      const legGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.75, 6);
+      const offsets = [[-0.5, 0.28], [0.5, 0.28], [-0.5, -0.28], [0.5, -0.28]];
+      for (const [x, z] of offsets) {
+        const leg = new THREE.Mesh(legGeo, mat);
+        leg.position.set(x, 0.375, z);
+        group.add(leg);
+      }
+    } else if (kind === 'sofa') {
+      // Wide — spans 2 lanes (callers should set `wide: true`).
+      const seat = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.4, 0.7), mat);
+      seat.position.y = 0.3;
+      group.add(seat);
+      const back = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.6, 0.1), mat);
+      back.position.set(0, 0.7, -0.3);
+      group.add(back);
+      const armGeo = new THREE.BoxGeometry(0.1, 0.4, 0.7);
+      const armL = new THREE.Mesh(armGeo, mat);
+      armL.position.set(-0.85, 0.4, 0);
+      group.add(armL);
+      const armR = armL.clone();
+      armR.position.x = 0.85;
+      group.add(armR);
+    } else if (kind === 'lamp') {
+      // Tall thin — must jump.
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.6, 6), mat);
+      pole.position.y = 0.8;
+      group.add(pole);
+      const shade = new THREE.Mesh(
+        new THREE.ConeGeometry(0.35, 0.4, 10, 6),
+        new THREE.MeshLambertMaterial({ color: 0xffe5b0 })
+      );
+      shade.position.y = 1.7;
+      group.add(shade);
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.06, 8), mat);
+      base.position.y = 0.03;
+      group.add(base);
+    } else if (kind === 'box') {
+      const box = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.7, 0.7), mat);
+      box.position.y = 0.35;
+      group.add(box);
+    }
+
+    // Simple hitbox metadata for the collision system.
+    return {
+      kind: kind,
+      lane: 1,
+      z: OBSTACLE_START_Z,
+      mesh: group,
+      wide: kind === 'sofa', // sofa blocks 2 adjacent lanes
+    };
+  }
+
+  // Pre-allocate a pool of obstacles so we never create/destroy mid-run.
+  function initObstaclePool() {
+    const types = ['chair', 'table', 'sofa', 'lamp', 'box'];
+    for (let i = 0; i < OBSTACLE_POOL_SIZE; i++) {
+      const kind = types[i % types.length];
+      const ob = makeObstacle(kind);
+      ob.mesh.visible = false;
+      scene.add(ob.mesh);
+      state.obstacles.push(ob);
+    }
+  }
+  initObstaclePool();
+
+  // -----------------------------------------------------------------------
+  // Spawn logic
+  // -----------------------------------------------------------------------
+  function spawnNext() {
+    // Find a free obstacle in the pool.
+    const ob = state.obstacles.find(o => !o.mesh.visible);
+    if (!ob) return;
+
+    // Pick a kind. Weights lean toward common, easy-to-jump items.
+    const types = ['chair', 'table', 'sofa', 'lamp', 'box'];
+    const weights = [4, 2, 2, 2, 3];
+    let total = weights.reduce((a, b) => a + b, 0);
+    let r = Math.random() * total;
+    let kind = types[0];
+    for (let i = 0; i < types.length; i++) {
+      if (r < weights[i]) { kind = types[i]; break; }
+      r -= weights[i];
+    }
+    // Rebuild the mesh contents for the picked kind (so the pool
+    // genuinely has varied obstacles, not just 5 rotating shapes).
+    rebuildObstacle(ob, kind);
+
+    ob.lane = Math.floor(Math.random() * 3);
+    ob.z = OBSTACLE_START_Z - Math.random() * 4;
+    ob.mesh.position.set(LANE_X[ob.lane], 0, ob.z);
+    ob.mesh.visible = true;
+  }
+
+  function rebuildObstacle(ob, kind) {
+    // Clear the old group, then build a fresh one matching the new kind.
+    while (ob.mesh.children.length) {
+      const c = ob.mesh.children.pop();
+      if (c.geometry) c.geometry.dispose();
+      if (c.material) c.material.dispose();
+    }
+    ob.kind = kind;
+    ob.wide = kind === 'sofa';
+    ob.mesh.add(...makeObstacle(kind).mesh.children);
+  }
+
+  // -----------------------------------------------------------------------
+  // Best score persistence
+  // -----------------------------------------------------------------------
   function loadBest() {
     try {
       const v = parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10);
@@ -127,13 +497,14 @@
   function saveBest(v) {
     try { localStorage.setItem(STORAGE_KEY, String(v)); } catch (e) { /* ignore */ }
   }
-
   function updateBestDisplays() {
     BEST_HUD_EL.textContent = String(state.best);
     BEST_START_EL.textContent = String(state.best);
   }
 
-  // ---------- Floating +N popups (drawn as DOM nodes over the stage) ----
+  // -----------------------------------------------------------------------
+  // Floating +N popups
+  // -----------------------------------------------------------------------
   function spawnPopup(text, x, y, color) {
     const el = document.createElement('div');
     el.className = 'ce-popup';
@@ -145,23 +516,46 @@
     setTimeout(() => el.remove(), 1200);
   }
 
-  // ---------- Input handling ----------
+  function worldToScreen(worldPos) {
+    const v = worldPos.clone().project(camera);
+    const rect = STAGE.getBoundingClientRect();
+    return {
+      x: (v.x * 0.5 + 0.5) * rect.width,
+      y: (-v.y * 0.5 + 0.5) * rect.height,
+    };
+  }
+
+  // -----------------------------------------------------------------------
+  // Input
+  // -----------------------------------------------------------------------
   function tryJump() {
     if (!state.running || state.gameOver) return;
-    const p = state.player;
-    if (p.jumpCount < p.maxJumps) {
-      p.vy = p.jumpCount === 0 ? -780 : -680;
-      p.onGround = false;
-      p.jumpCount += 1;
-      p.tilt = -0.18;
-      HINT && (HINT.hidden = true);
+    if (state.player.onGround) {
+      state.player.vy = JUMP_VY;
+      state.player.onGround = false;
     }
+  }
+
+  function tryLane(target) {
+    if (!state.running || state.gameOver) return;
+    if (target < 0 || target > 2) return;
+    if (state.player.targetLane === target) return;
+    state.player.targetLane = target;
+    state.player.laneFromX = state.player.laneX;
+    state.player.laneToX = LANE_X[target];
+    state.player.laneSwitchT = 0;
   }
 
   function onKeyDown(e) {
     if (e.code === 'Space' || e.code === 'ArrowUp' || e.key === ' ') {
       e.preventDefault();
       tryJump();
+    } else if (e.code === 'ArrowLeft' || e.code === 'KeyA') {
+      e.preventDefault();
+      tryLane(state.player.targetLane - 1);
+    } else if (e.code === 'ArrowRight' || e.code === 'KeyD') {
+      e.preventDefault();
+      tryLane(state.player.targetLane + 1);
     } else if (e.code === 'Enter') {
       if (!state.running && !state.gameOver && !START_OVERLAY.hidden) {
         e.preventDefault();
@@ -173,44 +567,62 @@
     }
   }
 
+  // Tap zones on the canvas: left third = lane left, right third = lane
+  // right, center third = jump. Pointer down also starts a swipe; a
+  // quick horizontal drag counts as a lane change too.
   function onStagePointerDown(e) {
     if (e.target.closest('button, a')) return;
-    tryJump();
+    if (!state.running || state.gameOver) return;
+    const rect = CANVAS.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const third = rect.width / 3;
+    if (x < third) {
+      tryLane(state.player.targetLane - 1);
+    } else if (x > 2 * third) {
+      tryLane(state.player.targetLane + 1);
+    } else {
+      tryJump();
+    }
+    state.pointerStartX = e.clientX;
+    state.pointerStartT = performance.now();
+    state.pointerActive = true;
+  }
+  function onStagePointerUp(e) {
+    if (!state.pointerActive) return;
+    state.pointerActive = false;
+    const dx = (e.clientX || 0) - (state.pointerStartX || 0);
+    const dt = performance.now() - (state.pointerStartT || 0);
+    if (dt < 250 && Math.abs(dx) > 30) {
+      if (dx < -30) tryLane(state.player.targetLane - 1);
+      else if (dx > 30) tryLane(state.player.targetLane + 1);
+    }
   }
 
-  // ---------- Cutscene ----------
+  JUMP_BTN.addEventListener('click', e => { e.preventDefault(); tryJump(); });
+
+  // -----------------------------------------------------------------------
+  // Cutscene (unchanged from v1.x)
+  // -----------------------------------------------------------------------
   let cutsceneTimers = [];
   function clearCutsceneTimers() {
     cutsceneTimers.forEach(t => clearTimeout(t));
     cutsceneTimers = [];
   }
-
-  // Force-hide the cutscene by combining the `hidden` attribute with an
-  // explicit `display: none` style. This prevents any stale subtitle
-  // from leaking through after Skip / Start Run.
   function hideCutscene() {
     CUTSCENE.hidden = true;
     CUTSCENE.style.display = 'none';
-    // Clear all active scene classes so no leftover subtitle shows.
     CUTSCENE.querySelectorAll('.ce-scene').forEach(s => s.classList.remove('active'));
     SCENE_DOTS.forEach(d => d.classList.remove('on'));
   }
-
-  // The cutscene drives a single shared timer schedule so it can be
-  // cleanly cancelled. Each scene lasts SCENE_DURATION_MS; on the last
-  // scene the Start Run button is revealed, and after a short pause
-  // the cutscene auto-advances to the start screen so the user is
-  // never left staring at a frozen "RUN!" frame.
   function playCutscene() {
     clearCutsceneTimers();
-    // Make sure the cutscene is fully reset and visible.
     CUTSCENE.style.display = '';
     CUTSCENE.hidden = false;
     START_OVERLAY.hidden = true;
     GAME_OVER_OVERLAY.hidden = true;
     CUTSCENE_START_BTN.hidden = true;
 
-    // Reset scene state
     const scenes = CUTSCENE.querySelectorAll('.ce-scene');
     scenes.forEach(s => s.classList.remove('active'));
     scenes[0].classList.add('active');
@@ -222,34 +634,28 @@
         scenes.forEach(s => s.classList.remove('active'));
         scenes[i].classList.add('active');
         SCENE_DOTS.forEach((d, j) => d.classList.toggle('on', j === i));
-        if (isLast) {
-          // Reveal Start Run on the last scene so the user can act
-          CUTSCENE_START_BTN.hidden = false;
-        }
+        if (isLast) CUTSCENE_START_BTN.hidden = false;
       }, i * SCENE_DURATION_MS));
     }
-    // After the last scene plays, auto-dismiss the cutscene and go to
-    // the start screen. The user can still click Skip or Start Run
-    // before this fires to act sooner.
     cutsceneTimers.push(setTimeout(() => {
       hideCutscene();
-      showStart();
+      beginRun();
     }, TOTAL_SCENES * SCENE_DURATION_MS + 600));
   }
-
   function skipCutscene() {
     clearCutsceneTimers();
     hideCutscene();
-    showStart();
+    beginRun();
   }
-
   function endCutscene() {
     clearCutsceneTimers();
     hideCutscene();
     beginRun();
   }
 
-  // ---------- Run lifecycle ----------
+  // -----------------------------------------------------------------------
+  // Run lifecycle
+  // -----------------------------------------------------------------------
   function showStart() {
     START_OVERLAY.hidden = false;
     CUTSCENE.hidden = true;
@@ -261,47 +667,30 @@
     state.gameOver = false;
     state.score = 0;
     state.worldTime = 0;
-    state.speed = state.baseSpeed;
-    state.spawnInterval = 1.1;
-    state.nextSpawn = 0.6;
-    state.pendingTripDelays = 0;
-    state.obstacles = [];
-    state.dust = [];
+    state.speed = BASE_SPEED;
+    state.nextSpawn = SPAWN_INTERVAL;
     state.shake = 0;
     state.flash = 0;
-    state.floorOffset = 0;
-    const p = state.player;
-    p.x = 220;
-    p.y = GROUND_Y;
-    p.vy = 0;
-    p.onGround = true;
-    p.jumpCount = 0;
-    p.runAnim = 0;
-    p.tilt = 0;
-    p.expression = 'scared';
-    p.expressionTimer = 0;
-    p.shockTimer = 0;
-    p.happyTimer = 0;
-    p.nearObstacle = false;
-    const m = state.man;
-    m.proximity = 0;
-    m.targetProximity = 0;
-    m.stunTimer = 0;
-    m.runAnim = 0;
+    state.player.lane = 1;
+    state.player.targetLane = 1;
+    state.player.laneX = LANE_X[1];
+    state.player.laneFromX = LANE_X[1];
+    state.player.laneToX = LANE_X[1];
+    state.player.laneSwitchT = 1;
+    state.player.y = 0;
+    state.player.vy = 0;
+    state.player.onGround = true;
+    state.player.runAnim = 0;
+    // Hide every pooled obstacle.
+    for (const o of state.obstacles) o.mesh.visible = false;
     SCORE_EL.textContent = '0';
   }
 
   function beginRun() {
     resetWorld();
     state.running = true;
-    // Hide all overlays so the play area is fully visible.
-    START_OVERLAY.hidden = true;
-    CUTSCENE.hidden = true;
-    CUTSCENE.style.display = 'none';
-    CUTSCENE.querySelectorAll('.ce-scene').forEach(s => s.classList.remove('active'));
-    GAME_OVER_OVERLAY.hidden = true;
     HUD.hidden = false;
-    HINT && (HINT.hidden = false);
+    if (HINT) HINT.hidden = false;
     state.lastTs = performance.now();
     requestAnimationFrame(loop);
   }
@@ -335,1007 +724,196 @@
     playCutscene();
   }
 
-  // ---------- Spawning obstacles ----------
-  function spawnObstacle() {
-    const types = ['chair', 'table', 'sofa', 'lamp', 'box'];
-    const weights = [3, 2, 2, 2, 3];
-    let total = 0;
-    for (const w of weights) total += w;
-    let r = Math.random() * total;
-    let kind = types[0];
-    for (let i = 0; i < types.length; i++) {
-      if (r < weights[i]) { kind = types[i]; break; }
-      r -= weights[i];
-    }
-
-    if (Math.random() < 0.18 && kind !== 'lamp') {
-      const a = makeObstacle(kind);
-      const b = makeObstacle(types[Math.floor(Math.random() * types.length)]);
-      b.x = a.x + 220 + Math.random() * 80;
-      state.obstacles.push(a, b);
-    } else {
-      state.obstacles.push(makeObstacle(kind));
-    }
+  // -----------------------------------------------------------------------
+  // Main loop
+  // -----------------------------------------------------------------------
+  function fitCanvas() {
+    const rect = STAGE.getBoundingClientRect();
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    renderer.setPixelRatio(dpr);
+    renderer.setSize(rect.width, rect.height, false);
+    camera.aspect = rect.width / Math.max(1, rect.height);
+    camera.updateProjectionMatrix();
   }
+  fitCanvas();
+  window.addEventListener('resize', fitCanvas);
 
-  function makeObstacle(kind) {
-    const base = {
-      x: WORLD_W + 80,
-      y: GROUND_Y,
-      vx: 0,
-      kind,
-      // Per-obstacle tracking used by the trip system
-      dodged: false,         // player has successfully passed it
-      clearedAt: 0,          // time when it left the play area after a dodge
-      tripResolved: false,   // we've already tried to make the man trip on it
-    };
-    if (kind === 'chair') return Object.assign(base, { w: 70,  h: 110 });
-    if (kind === 'table') return Object.assign(base, { w: 160, h: 90,  y: GROUND_Y - 10 });
-    if (kind === 'sofa')  return Object.assign(base, { w: 200, h: 120 });
-    if (kind === 'lamp')  return Object.assign(base, { w: 50,  h: 220, y: GROUND_Y - 60 });
-    if (kind === 'box')   return Object.assign(base, { w: 90,  h: 80 });
-    return Object.assign(base, { w: 80, h: 80 });
-  }
-
-  // ---------- Trip system ----------
-  // Called when the player has cleared an obstacle. With a small chance
-  // the man trips on the trailing edge of the furniture.
-  function tryTripMan(ob) {
-    if (ob.tripResolved) return;
-    ob.tripResolved = true;
-    if (state.man.stunTimer > 0) return; // already stunned
-
-    // The man has to be close enough to plausibly hit the obstacle.
-    // ob.x is the obstacle's left edge in world units; the man's x is
-    // his left edge. The man is far off-screen left during normal play,
-    // so we only trip when the obstacle is far past the player (i.e.
-    // they've both moved past it) and the man is somewhat close.
-    const m = state.man;
-    if (m.x > -100) return;
-
-    let chance = TRIP_BASE_CHANCE;
-    if (ob.kind === 'chair') chance += TRIP_CHAIR_BONUS;
-    if (Math.random() < chance) {
-      m.stunTimer = TRIP_STUN_TIME;
-      // Stun pushes the man further back — slightly increases
-      // his distance from the player (the "you got away" feel)
-      m.targetProximity = Math.max(0, m.targetProximity - 0.2);
-      // Apply spawn delays so the next couple of obstacles arrive late
-      state.pendingTripDelays = TRIP_NUDGES;
-      // Reward
-      state.score += TRIP_BONUS;
-      // Cup is happy briefly
-      const p = state.player;
-      p.expression = 'happy';
-      p.happyTimer = 0.8;
-      // Floating +5 at the obstacle
-      const sx = (ob.x + ob.w / 2) * state.viewScale;
-      const sy = (ob.y - ob.h / 2) * state.viewScale;
-      spawnPopup(`+${TRIP_BONUS}`, sx, sy - 12, '#ff8800');
-      // Oof! is shown on the canvas inside drawMan()
-    }
-  }
-
-  // ---------- Main loop ----------
   function loop(ts) {
     if (!state.running && !state.gameOver) return;
     if (!state.running) return;
     const dtRaw = (ts - state.lastTs) / 1000;
     const dt = Math.min(dtRaw, 1 / 30);
     state.lastTs = ts;
-
     update(dt);
     render();
-
     requestAnimationFrame(loop);
   }
 
+  // -----------------------------------------------------------------------
+  // Update
+  // -----------------------------------------------------------------------
+  const _playerBox = new THREE.Box3();
+  const _obBox = new THREE.Box3();
+  const _tmpVec = new THREE.Vector3();
+
   function update(dt) {
     state.worldTime += dt;
+    // Difficulty: speed slowly rises.
+    state.speed = Math.min(MAX_SPEED, BASE_SPEED + state.worldTime * SPEED_RAMP);
+    // Score climbs with time.
+    state.score = Math.floor(state.worldTime * SCORE_PER_SECOND);
 
-    state.speed = Math.min(state.maxSpeed, state.baseSpeed + state.worldTime * 4.2);
-    state.score = Math.floor(state.worldTime * 10);
-
-    // Spawning (with optional extra delay if the man just tripped)
-    state.nextSpawn -= dt;
-    if (state.nextSpawn <= 0) {
-      spawnObstacle();
-      state.spawnInterval = Math.max(state.minSpawn, 1.1 - state.worldTime * 0.01);
-      let next = state.spawnInterval * (0.85 + Math.random() * 0.4);
-      if (state.pendingTripDelays > 0) {
-        next += TRIP_SPAWN_DELAY;
-        state.pendingTripDelays -= 1;
-      }
-      state.nextSpawn = next;
-    }
-
-    // Move obstacles left and track dodges
-    for (const o of state.obstacles) {
-      const wasPastPlayer = o.x + o.w < state.player.x;
-      o.x -= state.speed * dt;
-      // Mark dodged when the obstacle has fully passed the player
-      if (!o.dodged && wasPastPlayer && o.x + o.w < state.player.x) {
-        o.dodged = true;
-        o.clearedAt = state.worldTime;
-      }
-    }
-    // Cull off-screen
-    for (const o of state.obstacles) {
-      if (o.x + o.w < -200) {
-        // Just left the play area — give the trip system a chance
-        if (o.dodged && !o.tripResolved) tryTripMan(o);
-      }
-    }
-    state.obstacles = state.obstacles.filter(o => o.x + o.w > -200);
-
-    // Player physics
+    // Lane interpolation
     const p = state.player;
-    p.vy += 1850 * dt;
+    if (p.laneSwitchT < 1) {
+      p.laneSwitchT = Math.min(1, p.laneSwitchT + dt * 1000 / LANE_SWITCH_MS);
+      const t = p.laneSwitchT;
+      // Ease out cubic
+      const e = 1 - Math.pow(1 - t, 3);
+      p.laneX = p.laneFromX + (p.laneToX - p.laneFromX) * e;
+      if (t >= 1) p.lane = p.targetLane;
+    }
+
+    // Jump physics
+    p.vy -= GRAVITY * dt;
     p.y += p.vy * dt;
-    if (p.y >= GROUND_Y) {
-      p.y = GROUND_Y;
+    if (p.y <= 0) {
+      p.y = 0;
       p.vy = 0;
       p.onGround = true;
-      p.jumpCount = 0;
+    } else {
+      p.onGround = false;
     }
-    p.runAnim += dt * Math.max(8, state.speed / 12);
-    p.tilt *= Math.exp(-dt * 6);
+    p.runAnim += dt * Math.max(8, state.speed / 0.3);
 
-    // Expression timers
-    if (p.happyTimer > 0) {
-      p.happyTimer -= dt;
-      if (p.happyTimer <= 0) p.expression = 'scared';
+    // Cup position
+    cup.position.x = p.laneX;
+    cup.position.y = p.y;
+    cup.rotation.z = (p.laneToX - p.laneFromX) * 0.05; // slight bank on lane change
+    // Animate arms/legs: swing in alternation.
+    const swing = Math.sin(p.runAnim) * 0.9;
+    armL.rotation.x = swing;
+    armR.rotation.x = -swing;
+    legL.rotation.x = -swing;
+    legR.rotation.x = swing;
+
+    // Man runs in place (he's behind the cup, animated relative to the camera).
+    const manSwing = Math.sin(p.runAnim * 0.9) * 0.7;
+    manArmL.rotation.x = -manSwing;
+    manArmR.rotation.x = manSwing;
+    manLegL.rotation.x = manSwing;
+    manLegR.rotation.x = -manSwing;
+    man.position.y = Math.abs(Math.sin(p.runAnim * 1.8)) * 0.05;
+
+    // Spawn obstacles
+    state.nextSpawn -= dt;
+    if (state.nextSpawn <= 0) {
+      spawnNext();
+      state.nextSpawn = SPAWN_INTERVAL * (1 - SPAWN_JITTER + Math.random() * SPAWN_JITTER * 2);
     }
-    if (p.shockTimer > 0) {
-      p.shockTimer -= dt;
-      if (p.shockTimer <= 0) p.expression = p.nearObstacle ? 'scared' : 'normal';
-    }
-    if (p.expressionTimer > 0) {
-      p.expressionTimer -= dt;
-      if (p.expressionTimer <= 0) p.expression = 'scared';
-    }
 
-    // Shock jolt decay
-    p.tilt += (Math.sin(p.runAnim * 0.5) * 0.02) * (p.shockTimer > 0 ? 1 : 0);
-
-    // Man state
-    const m = state.man;
-    m.runAnim += dt * (m.stunTimer > 0 ? 0 : Math.max(7, state.speed / 18));
-    if (m.stunTimer > 0) m.stunTimer -= dt;
-    m.proximity += (m.targetProximity - m.proximity) * Math.min(1, dt * 1.4);
-    m.targetProximity = Math.max(0, m.targetProximity - dt * 0.05);
-    const baseX = -120 - m.proximity * 60;
-    m.x = baseX + Math.sin(state.worldTime * 0.6) * 6;
-
-    // Collision detection
-    const playerBox = {
-      x: p.x + 18,
-      y: p.y - p.h + 18,
-      w: p.w - 36,
-      h: p.h - 30,
-    };
-    let nearestObstacleDist = Infinity;
+    // Move obstacles toward the cup and recycle.
     for (const o of state.obstacles) {
-      const ob = {
-        x: o.x + 6,
-        y: o.y - o.h + 6,
-        w: o.w - 12,
-        h: o.h - 10,
-      };
-      if (aabb(playerBox, ob)) {
-        m.targetProximity = 1;
+      if (!o.mesh.visible) continue;
+      o.z += state.speed * dt;
+      o.mesh.position.z = o.z;
+      if (o.z > OBSTACLE_END_Z) {
+        o.mesh.visible = false;
+      }
+    }
+
+    // Collision (Axis-Aligned Bounding Box).
+    // The cup's position.y is its base; build the box so it sits on
+    // the ground (y=0) and extends up to y≈1.1.
+    _playerBox.setFromCenterAndSize(
+      new THREE.Vector3(cup.position.x, cup.position.y + 0.55, cup.position.z),
+      new THREE.Vector3(0.7, 1.1, 0.7)
+    );
+    for (const o of state.obstacles) {
+      if (!o.mesh.visible) continue;
+      // Sofas are wide; they only collide if the player is in one
+      // of the two lanes the sofa covers. Single-lane items only
+      // collide in their own lane.
+      if (o.wide) {
+        const covered = [o.lane === 0 ? 0 : o.lane - 1, o.lane === 2 ? 2 : o.lane + 1];
+        if (!covered.includes(p.lane)) continue;
+      } else {
+        if (o.lane !== p.lane) continue;
+      }
+      _obBox.setFromObject(o.mesh);
+      if (_playerBox.intersectsBox(_obBox)) {
+        // Crash!
         state.shake = 0.45;
         state.flash = 0.25;
-        spawnDustBurst(p.x + p.w / 2, p.y - p.h / 2, '#caa274');
-        p.expression = 'shocked';
         state.gameOver = true;
         setTimeout(gameOver, 0);
         return;
       }
-      // Track distance to the rightmost edge of obstacles ahead of the player
-      const dx = ob.x - (p.x + p.w);
-      if (dx > -20 && dx < nearestObstacleDist) nearestObstacleDist = dx;
     }
 
-    // Expression: "shocked" when an obstacle is close on the right
-    const wasNear = p.nearObstacle;
-    p.nearObstacle = nearestObstacleDist < 260;
-    if (p.nearObstacle) {
-      if (!wasNear) {
-        p.expression = 'shocked';
-        p.shockTimer = 0.6;
-      } else if (p.happyTimer <= 0 && p.shockTimer <= 0) {
-        p.expression = 'scared';
-      }
-    } else if (!wasNear && p.happyTimer <= 0 && p.shockTimer <= 0) {
-      p.expression = 'scared';
-    }
+    // Scroll the floor / walls / ceiling by moving their offset.
+    floorTex.offset.y = (state.worldTime * state.speed) / 4;
+    wallTex.offset.x = (state.worldTime * state.speed) / 6;
+    ceilingTex.offset.y = (state.worldTime * state.speed) / 6;
 
-    // Dust trail
-    if (p.onGround && state.worldTime % 0.05 < dt) {
-      spawnDust(p.x + 10, GROUND_Y - 4, '#d9c6a8');
-    }
-    for (const d of state.dust) {
-      if (d.vx !== undefined) {
-        d.x += d.vx * dt;
-        d.y += d.vy * dt;
-        d.vy += 600 * dt;
-        d.vx *= Math.exp(-dt * 1.2);
-      } else {
-        d.x -= state.speed * dt * 0.6;
-      }
-      d.life -= dt;
-    }
-    state.dust = state.dust.filter(d => d.life > 0);
+    // Camera follows the cup with a slight x lag.
+    camera.position.x += (p.laneX * 0.45 - camera.position.x) * Math.min(1, dt * 8);
+    camera.position.y = 2.6 + p.y * 0.3;
+    camera.position.z = 4.5;
+    _tmpVec.set(p.laneX * 0.2, 1.0 + p.y * 0.2, -8);
+    camera.lookAt(_tmpVec);
 
-    state.floorOffset = (state.floorOffset + state.speed * dt) % 200;
-    state.bgOffset = (state.bgOffset + state.speed * dt * 0.25) % 1000;
+    // Screen shake
+    if (state.shake > 0) {
+      camera.position.x += (Math.random() - 0.5) * state.shake;
+      camera.position.y += (Math.random() - 0.5) * state.shake;
+    }
 
     state.shake = Math.max(0, state.shake - dt * 2.2);
     state.flash = Math.max(0, state.flash - dt * 3);
 
-    // HUD
     SCORE_EL.textContent = String(state.score);
   }
 
-  function aabb(a, b) {
-    return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
-  }
-
-  function spawnDust(x, y, color) {
-    state.dust.push({ x, y, color, life: 0.45, r: 6 + Math.random() * 6 });
-  }
-  function spawnDustBurst(x, y, color) {
-    for (let i = 0; i < 18; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = 80 + Math.random() * 220;
-      state.dust.push({
-        x, y, color,
-        life: 0.55 + Math.random() * 0.45,
-        r: 7 + Math.random() * 9,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed - 80,
-      });
-    }
-  }
-
-  // ---------- Rendering ----------
+  // -----------------------------------------------------------------------
+  // Render
+  // -----------------------------------------------------------------------
   function render() {
-    const ctx = CTX;
-    const W = state.viewW;
-    const H = state.viewH;
-    ctx.save();
-
-    if (state.shake > 0) {
-      const s = state.shake * 14;
-      ctx.translate((Math.random() - 0.5) * s, (Math.random() - 0.5) * s);
-    }
-
-    drawHouseBackground(ctx, W, H);
-    drawFloor(ctx, W, H);
-
-    const drawables = state.obstacles.slice().sort((a, b) => b.h - a.h);
-    for (const o of drawables) drawObstacle(ctx, o);
-
-    drawPlayer(ctx, state.player);
-    drawMan(ctx, state.man);
-    drawDust(ctx);
-
+    renderer.render(scene, camera);
     if (state.flash > 0) {
-      ctx.fillStyle = `rgba(255, 255, 255, ${state.flash * 1.2})`;
-      ctx.fillRect(0, 0, W, H);
-    }
-
-    ctx.restore();
-  }
-
-  function scale(v) { return v * state.viewScale; }
-
-  function drawHouseBackground(ctx, W, H) {
-    const wallGrad = ctx.createLinearGradient(0, 0, 0, H);
-    wallGrad.addColorStop(0, '#fff1d6');
-    wallGrad.addColorStop(1, '#ffd9a8');
-    ctx.fillStyle = wallGrad;
-    ctx.fillRect(0, 0, W, H);
-
-    ctx.save();
-    ctx.globalAlpha = 0.10;
-    ctx.fillStyle = '#c97a2b';
-    const stripeW = 60;
-    const off = (state.bgOffset * 0.4) % (stripeW * 2);
-    for (let x = -off; x < W; x += stripeW * 2) {
-      ctx.fillRect(x, 0, stripeW, H);
-    }
-    ctx.restore();
-
-    const moldH = Math.max(8, scale(18));
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(0, 0, W, moldH);
-    ctx.fillStyle = '#d3a16a';
-    ctx.fillRect(0, moldH, W, 2);
-
-    const winX = W * 0.05;
-    const winY = H * 0.08;
-    const winW = W * 0.22;
-    const winH = H * 0.28;
-    drawWindow(ctx, winX, winY, winW, winH);
-
-    const picX = W * 0.62;
-    const picY = H * 0.10;
-    const picW = W * 0.18;
-    const picH = H * 0.18;
-    drawPicture(ctx, picX, picY, picW, picH);
-
-    const clkX = W * 0.40;
-    const clkY = H * 0.18;
-    const clkR = Math.min(W, H) * 0.045;
-    drawClock(ctx, clkX, clkY, clkR);
-  }
-
-  function drawWindow(ctx, x, y, w, h) {
-    ctx.fillStyle = '#8b5a2b';
-    ctx.fillRect(x - 6, y - 6, w + 12, h + 12);
-    const sky = ctx.createLinearGradient(x, y, x, y + h);
-    sky.addColorStop(0, '#aee0ff');
-    sky.addColorStop(1, '#fbeac1');
-    ctx.fillStyle = sky;
-    ctx.fillRect(x, y, w, h);
-    ctx.fillStyle = '#8b5a2b';
-    ctx.fillRect(x + w / 2 - 3, y, 6, h);
-    ctx.fillRect(x, y + h / 2 - 3, w, 6);
-    ctx.fillStyle = '#ffd76a';
-    ctx.beginPath();
-    ctx.arc(x + w * 0.78, y + h * 0.3, Math.min(w, h) * 0.10, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#9bc77a';
-    ctx.beginPath();
-    ctx.moveTo(x, y + h);
-    ctx.quadraticCurveTo(x + w * 0.5, y + h * 0.7, x + w, y + h);
-    ctx.closePath();
-    ctx.fill();
-  }
-
-  function drawPicture(ctx, x, y, w, h) {
-    ctx.fillStyle = '#6b3a0a';
-    ctx.fillRect(x - 5, y - 5, w + 10, h + 10);
-    const g = ctx.createLinearGradient(x, y, x, y + h);
-    g.addColorStop(0, '#f4b572');
-    g.addColorStop(1, '#c46a1e');
-    ctx.fillStyle = g;
-    ctx.fillRect(x, y, w, h);
-    ctx.strokeStyle = 'rgba(255,255,255,0.6)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(x + w * 0.3, y + h * 0.7);
-    ctx.bezierCurveTo(x + w * 0.1, y + h * 0.4, x + w * 0.6, y + h * 0.4, x + w * 0.7, y + h * 0.2);
-    ctx.stroke();
-  }
-
-  function drawClock(ctx, cx, cy, r) {
-    ctx.fillStyle = '#fff';
-    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = '#6b3a0a';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.lineTo(cx + r * 0.55, cy + r * 0.15);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.lineTo(cx - r * 0.1, cy - r * 0.55);
-    ctx.stroke();
-    ctx.fillStyle = '#6b3a0a';
-    ctx.beginPath(); ctx.arc(cx, cy, 2, 0, Math.PI * 2); ctx.fill();
-  }
-
-  function drawFloor(ctx, W, H) {
-    const floorTop = H * 0.84;
-    const wood = ctx.createLinearGradient(0, floorTop, 0, H);
-    wood.addColorStop(0, '#c08650');
-    wood.addColorStop(1, '#8a5a2c');
-    ctx.fillStyle = wood;
-    ctx.fillRect(0, floorTop, W, H - floorTop);
-    ctx.save();
-    ctx.strokeStyle = 'rgba(60, 30, 10, 0.35)';
-    ctx.lineWidth = 1.5;
-    const plankH = Math.max(20, scale(36));
-    const off = state.floorOffset;
-    for (let y = floorTop + off % plankH; y < H; y += plankH) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(W, y);
-      ctx.stroke();
-    }
-    ctx.strokeStyle = 'rgba(60, 30, 10, 0.18)';
-    const seamW = Math.max(60, scale(110));
-    const offX = state.floorOffset * 1.4;
-    for (let x = -offX % seamW; x < W; x += seamW) {
-      ctx.beginPath();
-      ctx.moveTo(x, floorTop);
-      ctx.lineTo(x, H);
-      ctx.stroke();
-    }
-    ctx.restore();
-    ctx.fillStyle = '#f3d8a8';
-    ctx.fillRect(0, floorTop - 6, W, 6);
-  }
-
-  function drawObstacle(ctx, o) {
-    const s = state.viewScale;
-    const x = o.x * s;
-    const y = (o.y - o.h) * s;
-    const w = o.w * s;
-    const h = o.h * s;
-    if (o.kind === 'chair') drawChair(ctx, x, y, w, h);
-    else if (o.kind === 'table') drawTable(ctx, x, y, w, h);
-    else if (o.kind === 'sofa') drawSofa(ctx, x, y, w, h);
-    else if (o.kind === 'lamp') drawLamp(ctx, x, y, w, h);
-    else if (o.kind === 'box') drawBox(ctx, x, y, w, h);
-  }
-
-  function drawChair(ctx, x, y, w, h) {
-    ctx.fillStyle = '#a85a2a';
-    ctx.fillRect(x, y + h * 0.55, w, h * 0.18);
-    ctx.fillStyle = '#7d3f1c';
-    ctx.fillRect(x, y, w * 0.12, h * 0.7);
-    ctx.fillRect(x + w * 0.88, y, w * 0.12, h * 0.7);
-    ctx.fillRect(x, y, w, h * 0.12);
-    ctx.fillStyle = '#5a2d12';
-    ctx.fillRect(x + 4, y + h * 0.73, 6, h * 0.27);
-    ctx.fillRect(x + w - 10, y + h * 0.73, 6, h * 0.27);
-    ctx.fillRect(x + 4, y + h * 0.85, w - 8, 4);
-  }
-
-  function drawTable(ctx, x, y, w, h) {
-    ctx.fillStyle = '#8a4a1f';
-    ctx.fillRect(x, y, w, h * 0.18);
-    ctx.fillStyle = '#6e3a17';
-    ctx.fillRect(x, y + h * 0.16, w, 4);
-    ctx.fillStyle = '#5a2d12';
-    ctx.fillRect(x + 4, y + h * 0.18, 6, h * 0.82);
-    ctx.fillRect(x + w - 10, y + h * 0.18, 6, h * 0.82);
-    ctx.fillRect(x + w * 0.5 - 3, y + h * 0.18, 6, h * 0.82);
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(x + w * 0.65, y - 14, 14, 12);
-    ctx.fillStyle = '#6b3a14';
-    ctx.fillRect(x + w * 0.65 + 2, y - 12, 10, 6);
-  }
-
-  function drawSofa(ctx, x, y, w, h) {
-    ctx.fillStyle = '#9a5a2a';
-    ctx.fillRect(x, y + h * 0.35, w, h * 0.5);
-    ctx.fillStyle = '#7d4218';
-    ctx.fillRect(x, y, w, h * 0.45);
-    ctx.fillStyle = '#6c3712';
-    ctx.fillRect(x, y + h * 0.2, w * 0.12, h * 0.65);
-    ctx.fillRect(x + w * 0.88, y + h * 0.2, w * 0.12, h * 0.65);
-    ctx.fillStyle = '#f3c98a';
-    ctx.fillRect(x + w * 0.18, y + h * 0.18, w * 0.2, h * 0.2);
-    ctx.fillStyle = '#3a1c08';
-    ctx.fillRect(x + 6, y + h * 0.85, 8, h * 0.15);
-    ctx.fillRect(x + w - 14, y + h * 0.85, 8, h * 0.15);
-  }
-
-  function drawLamp(ctx, x, y, w, h) {
-    ctx.fillStyle = '#ffb347';
-    ctx.beginPath();
-    ctx.moveTo(x - w * 0.1, y);
-    ctx.lineTo(x + w * 1.1, y);
-    ctx.lineTo(x + w * 0.85, y + h * 0.18);
-    ctx.lineTo(x + w * 0.15, y + h * 0.18);
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = '#5a3a14';
-    ctx.fillRect(x + w * 0.5 - 2, y + h * 0.18, 4, h * 0.7);
-    ctx.fillStyle = '#3a1c08';
-    ctx.fillRect(x + w * 0.25, y + h * 0.85, w * 0.5, h * 0.1);
-    const g = ctx.createRadialGradient(x + w * 0.5, y + h * 0.05, 4, x + w * 0.5, y + h * 0.05, h * 0.5);
-    g.addColorStop(0, 'rgba(255, 230, 160, 0.55)');
-    g.addColorStop(1, 'rgba(255, 230, 160, 0)');
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.arc(x + w * 0.5, y + h * 0.05, h * 0.5, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  function drawBox(ctx, x, y, w, h) {
-    ctx.fillStyle = '#caa274';
-    ctx.fillRect(x, y, w, h);
-    ctx.fillStyle = '#a07d4d';
-    ctx.fillRect(x, y + h * 0.5, w, 4);
-    ctx.fillRect(x + w * 0.5, y, 4, h);
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(x + w * 0.18, y + h * 0.18, w * 0.64, h * 0.22);
-    ctx.fillStyle = '#5a3a14';
-    ctx.font = `${Math.max(10, h * 0.18)}px sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('JAVA', x + w * 0.5, y + h * 0.29);
-  }
-
-  // ---------- Player (cup) ----------
-  function drawPlayer(ctx, p) {
-    const s = state.viewScale;
-    const cx = (p.x + p.w / 2) * s;
-    const baseY = p.y * s;
-
-    const steamY = baseY - p.h * s;
-    drawSteam(ctx, cx, steamY, 1);
-
-    ctx.save();
-    ctx.translate(cx, baseY);
-    ctx.rotate(p.tilt);
-    const cupW = p.w * s;
-    const cupH = p.h * s;
-
-    // Saucer shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.18)';
-    ctx.beginPath();
-    ctx.ellipse(0, 0, cupW * 0.55, cupW * 0.10, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Legs (drawn first so they sit behind the cup body)
-    drawCupLegs(ctx, p, cupW, cupH);
-
-    // Arms (drawn behind the body too, but extending out the sides)
-    drawCupArms(ctx, p, cupW, cupH);
-
-    // Cup body
-    ctx.beginPath();
-    ctx.moveTo(-cupW * 0.45, 0);
-    ctx.lineTo(-cupW * 0.36, -cupH * 0.95);
-    ctx.lineTo(cupW * 0.36, -cupH * 0.95);
-    ctx.lineTo(cupW * 0.45, 0);
-    ctx.closePath();
-    const bodyGrad = ctx.createLinearGradient(0, -cupH, 0, 0);
-    bodyGrad.addColorStop(0, '#ffffff');
-    bodyGrad.addColorStop(1, '#e7d3b3');
-    ctx.fillStyle = bodyGrad;
-    ctx.fill();
-    ctx.strokeStyle = '#5a3a14';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    // Coffee surface
-    ctx.beginPath();
-    ctx.ellipse(0, -cupH * 0.95, cupW * 0.36, cupH * 0.06, 0, 0, Math.PI * 2);
-    ctx.fillStyle = '#4a2a10';
-    ctx.fill();
-
-    // Handle
-    ctx.beginPath();
-    ctx.lineWidth = Math.max(4, cupW * 0.08);
-    ctx.strokeStyle = '#ffffff';
-    ctx.arc(cupW * 0.55, -cupH * 0.55, cupH * 0.18, -Math.PI / 2, Math.PI / 2);
-    ctx.stroke();
-    ctx.strokeStyle = '#5a3a14';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-
-    // Face
-    drawFace(ctx, p, cupW, cupH);
-
-    ctx.restore();
-  }
-
-  function drawCupLegs(ctx, p, cupW, cupH) {
-    const swing = Math.sin(p.runAnim) * (p.onGround ? 1 : 0.2);
-    const liftY = p.onGround ? 0 : -cupH * 0.05;
-    ctx.save();
-    ctx.strokeStyle = '#5a3a14';
-    ctx.lineWidth = Math.max(4, cupW * 0.08);
-    ctx.lineCap = 'round';
-    // Left leg
-    ctx.save();
-    ctx.translate(-cupW * 0.18, -cupH * 0.06);
-    ctx.rotate(swing * 0.7);
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(0, cupH * 0.14 + liftY);
-    ctx.stroke();
-    // Shoe
-    ctx.fillStyle = '#1a1a1a';
-    ctx.beginPath();
-    ctx.ellipse(0, cupH * 0.14 + liftY, cupW * 0.08, cupH * 0.03, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-    // Right leg
-    ctx.save();
-    ctx.translate(cupW * 0.18, -cupH * 0.06);
-    ctx.rotate(-swing * 0.7);
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(0, cupH * 0.14 + liftY);
-    ctx.stroke();
-    ctx.fillStyle = '#1a1a1a';
-    ctx.beginPath();
-    ctx.ellipse(0, cupH * 0.14 + liftY, cupW * 0.08, cupH * 0.03, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-    ctx.restore();
-  }
-
-  function drawCupArms(ctx, p, cupW, cupH) {
-    const swing = Math.sin(p.runAnim) * (p.onGround ? 1 : 0.2);
-    ctx.save();
-    ctx.strokeStyle = '#5a3a14';
-    ctx.lineWidth = Math.max(4, cupW * 0.08);
-    ctx.lineCap = 'round';
-    // Left arm
-    ctx.save();
-    ctx.translate(-cupW * 0.42, -cupH * 0.55);
-    ctx.rotate(-0.3 + swing * 0.6);
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(cupW * 0.25, 0);
-    ctx.stroke();
-    // Hand
-    ctx.fillStyle = '#e7b78f';
-    ctx.beginPath();
-    ctx.arc(cupW * 0.25, 0, cupW * 0.05, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-    // Right arm
-    ctx.save();
-    ctx.translate(cupW * 0.42, -cupH * 0.55);
-    ctx.rotate(0.3 - swing * 0.6);
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(-cupW * 0.25, 0);
-    ctx.stroke();
-    ctx.fillStyle = '#e7b78f';
-    ctx.beginPath();
-    ctx.arc(-cupW * 0.25, 0, cupW * 0.05, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-    ctx.restore();
-  }
-
-  function drawFace(ctx, p, cupW, cupH) {
-    const eyeY = -cupH * 0.6;
-    const mouthY = -cupH * 0.42;
-    const expr = p.expression;
-    ctx.save();
-
-    if (expr === 'happy') {
-      // Closed smiling eyes (upward arcs)
-      ctx.strokeStyle = '#5a3a14';
-      ctx.lineWidth = Math.max(2, cupW * 0.04);
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.arc(-cupW * 0.12, eyeY, cupH * 0.04, Math.PI, 2 * Math.PI);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(cupW * 0.14, eyeY, cupH * 0.04, Math.PI, 2 * Math.PI);
-      ctx.stroke();
-      // Big smile
-      ctx.beginPath();
-      ctx.lineWidth = Math.max(2, cupW * 0.04);
-      ctx.arc(0, -cupH * 0.46, cupH * 0.08, 0.1 * Math.PI, 0.9 * Math.PI);
-      ctx.stroke();
-      // Small tongue
-      ctx.fillStyle = '#e57373';
-      ctx.beginPath();
-      ctx.ellipse(0, -cupH * 0.40, cupW * 0.05, cupH * 0.025, 0, 0, Math.PI * 2);
-      ctx.fill();
-    } else if (expr === 'shocked') {
-      // Big round eyes
-      ctx.fillStyle = '#fff';
-      ctx.beginPath(); ctx.arc(-cupW * 0.12, eyeY, cupH * 0.08, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(cupW * 0.14, eyeY, cupH * 0.08, 0, Math.PI * 2); ctx.fill();
-      // Tiny pupils
-      ctx.fillStyle = '#222';
-      ctx.beginPath(); ctx.arc(-cupW * 0.12, eyeY, cupH * 0.035, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(cupW * 0.14, eyeY, cupH * 0.035, 0, Math.PI * 2); ctx.fill();
-      // Raised brows
-      ctx.strokeStyle = '#5a3a14';
-      ctx.lineWidth = Math.max(2, cupW * 0.04);
-      ctx.lineCap = 'round';
-      ctx.beginPath(); ctx.moveTo(-cupW * 0.20, eyeY - cupH * 0.10); ctx.lineTo(-cupW * 0.04, eyeY - cupH * 0.13); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(cupW * 0.04, eyeY - cupH * 0.13); ctx.lineTo(cupW * 0.22, eyeY - cupH * 0.10); ctx.stroke();
-      // Open O mouth
-      ctx.fillStyle = '#5a3a14';
-      ctx.beginPath();
-      ctx.ellipse(0, -cupH * 0.42, cupW * 0.07, cupH * 0.07, 0, 0, Math.PI * 2);
-      ctx.fill();
-    } else if (expr === 'normal') {
-      // Calm eyes
-      ctx.fillStyle = '#fff';
-      ctx.beginPath(); ctx.arc(-cupW * 0.12, eyeY, cupH * 0.05, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(cupW * 0.14, eyeY, cupH * 0.05, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#222';
-      ctx.beginPath(); ctx.arc(-cupW * 0.12, eyeY, cupH * 0.025, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(cupW * 0.14, eyeY, cupH * 0.025, 0, Math.PI * 2); ctx.fill();
-      // Soft smile
-      ctx.beginPath();
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = '#5a3a14';
-      ctx.arc(0, -cupH * 0.46, cupH * 0.05, 0.1 * Math.PI, 0.9 * Math.PI);
-      ctx.stroke();
-    } else {
-      // Scared (default during run)
-      ctx.fillStyle = '#fff';
-      ctx.beginPath(); ctx.arc(-cupW * 0.12, eyeY, cupH * 0.07, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(cupW * 0.14, eyeY, cupH * 0.07, 0, Math.PI * 2); ctx.fill();
-      // Pupils darting
-      const offset = Math.sin(p.runAnim * 0.7) * cupW * 0.01;
-      ctx.fillStyle = '#222';
-      ctx.beginPath(); ctx.arc(-cupW * 0.12 + offset, eyeY, cupH * 0.035, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(cupW * 0.14 + offset, eyeY, cupH * 0.035, 0, Math.PI * 2); ctx.fill();
-      // Worried brows (tilted)
-      ctx.strokeStyle = '#5a3a14';
-      ctx.lineWidth = Math.max(2, cupW * 0.04);
-      ctx.lineCap = 'round';
-      ctx.beginPath(); ctx.moveTo(-cupW * 0.20, eyeY - cupH * 0.08); ctx.lineTo(-cupW * 0.04, eyeY - cupH * 0.05); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(cupW * 0.04, eyeY - cupH * 0.05); ctx.lineTo(cupW * 0.22, eyeY - cupH * 0.08); ctx.stroke();
-      // Open worried mouth (small O)
-      ctx.beginPath();
-      ctx.arc(0, -cupH * 0.42, cupH * 0.04, 0, 2 * Math.PI);
-      ctx.stroke();
-      // Sweat drop on the right
-      ctx.fillStyle = '#6ec6ff';
-      ctx.beginPath();
-      ctx.ellipse(cupW * 0.25, eyeY - cupH * 0.06, cupW * 0.025, cupH * 0.04, 0, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.restore();
-  }
-
-  function drawSteam(ctx, cx, topY, intensity) {
-    ctx.save();
-    ctx.translate(cx, topY);
-    const t = performance.now() / 600;
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
-    for (let i = 0; i < 3; i++) {
-      const phase = t + i * 0.7;
-      const x = Math.sin(phase) * 8;
-      const y = -((phase * 14) % 36) - 4;
-      const r = 5 + (phase * 2) % 4;
-      ctx.globalAlpha = Math.max(0, 0.5 - y / 60) * intensity;
-      ctx.beginPath();
-      ctx.arc(x, y, r, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.restore();
-  }
-
-  // ---------- Man (chaser) ----------
-  function drawMan(ctx, m) {
-    const s = state.viewScale;
-    const x = m.x * s;
-    const y = (m.y - m.h) * s;
-    const w = m.w * s;
-    const h = m.h * s;
-    if (x + w < -50) return;
-
-    const stunned = m.stunTimer > 0;
-    ctx.save();
-    ctx.translate(x, y);
-    if (stunned) ctx.rotate(-0.18);
-
-    // Legs (animated by sin unless stunned)
-    const stride = stunned ? 0 : Math.sin(m.runAnim) * 12;
-    ctx.fillStyle = '#2b3a55';
-    ctx.fillRect(w * 0.20, h * 0.7, w * 0.18, h * 0.3 + stride);
-    ctx.fillRect(w * 0.62, h * 0.7, w * 0.18, h * 0.3 - stride);
-    // Shoes
-    ctx.fillStyle = '#1a1a1a';
-    ctx.fillRect(w * 0.18, h * 0.98, w * 0.22, h * 0.04);
-    ctx.fillRect(w * 0.60, h * 0.98, w * 0.22, h * 0.04);
-    // Body (sweater)
-    ctx.fillStyle = '#a04a2a';
-    ctx.fillRect(w * 0.12, h * 0.42, w * 0.76, h * 0.32);
-    // Belt
-    ctx.fillStyle = '#3a1a0a';
-    ctx.fillRect(w * 0.12, h * 0.72, w * 0.76, h * 0.03);
-
-    // Front arm — reaches forward
-    ctx.save();
-    ctx.translate(w * 0.82, h * 0.46);
-    if (stunned) {
-      ctx.rotate(-0.9);
-    } else {
-      ctx.rotate(-0.4 + Math.sin(m.runAnim * 0.6) * 0.15);
-    }
-    ctx.fillStyle = '#a04a2a';
-    ctx.fillRect(0, 0, w * 0.45, h * 0.10);
-    ctx.fillStyle = '#e7b78f';
-    ctx.beginPath();
-    ctx.arc(w * 0.48, h * 0.05, h * 0.06, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-
-    // Back arm — swings opposite
-    ctx.save();
-    ctx.translate(w * 0.10, h * 0.46);
-    ctx.rotate(0.4 + Math.sin(m.runAnim * 0.6 + 1) * 0.1);
-    ctx.fillStyle = '#a04a2a';
-    ctx.fillRect(-w * 0.10, 0, w * 0.10, h * 0.10);
-    ctx.restore();
-
-    // Head
-    ctx.fillStyle = '#e7b78f';
-    ctx.beginPath();
-    ctx.arc(w * 0.5, h * 0.30, h * 0.13, 0, Math.PI * 2);
-    ctx.fill();
-    // Hair
-    ctx.fillStyle = '#3a2a1a';
-    ctx.beginPath();
-    ctx.ellipse(w * 0.5, h * 0.21, h * 0.12, h * 0.05, 0, Math.PI, 2 * Math.PI);
-    ctx.fill();
-
-    // Eyes — half-closed (tired) unless stunned (X eyes)
-    if (stunned) {
-      ctx.strokeStyle = '#222';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(w * 0.40 - 3, h * 0.30 - 3);
-      ctx.lineTo(w * 0.40 + 7, h * 0.30 + 3);
-      ctx.moveTo(w * 0.40 + 7, h * 0.30 - 3);
-      ctx.lineTo(w * 0.40 - 3, h * 0.30 + 3);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(w * 0.55 - 3, h * 0.30 - 3);
-      ctx.lineTo(w * 0.55 + 7, h * 0.30 + 3);
-      ctx.moveTo(w * 0.55 + 7, h * 0.30 - 3);
-      ctx.lineTo(w * 0.55 - 3, h * 0.30 + 3);
-      ctx.stroke();
-    } else {
-      ctx.fillStyle = '#222';
-      ctx.fillRect(w * 0.40, h * 0.30, w * 0.07, h * 0.012);
-      ctx.fillRect(w * 0.55, h * 0.30, w * 0.07, h * 0.012);
-    }
-    // Frown
-    ctx.strokeStyle = '#5a3a14';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(w * 0.5, h * 0.36, w * 0.05, 1.2 * Math.PI, 1.8 * Math.PI);
-    ctx.stroke();
-    // Stubble
-    ctx.fillStyle = 'rgba(80, 50, 30, 0.35)';
-    ctx.beginPath();
-    ctx.ellipse(w * 0.5, h * 0.39, w * 0.10, h * 0.03, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Mug in the front hand
-    ctx.save();
-    ctx.translate(w * 0.82 + w * 0.45, h * 0.50);
-    ctx.rotate(stunned ? -0.6 : -0.2);
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(-h * 0.05, -h * 0.04, h * 0.10, h * 0.08);
-    ctx.fillStyle = '#5a3a14';
-    ctx.fillRect(-h * 0.045, -h * 0.035, h * 0.09, h * 0.025);
-    ctx.restore();
-
-    ctx.restore();
-
-    // "Oof!" speech bubble when stunned
-    if (stunned) {
-      const bx = x + w * 0.4;
-      const by = y - 12;
-      drawSpeechBubble(ctx, bx, by, 'Oof!');
+      // White flash overlay on top of the canvas
+      const r = STAGE.getBoundingClientRect();
+      const el = document.createElement('div');
+      el.style.cssText = `position:absolute;inset:0;background:rgba(255,255,255,${state.flash * 1.2});pointer-events:none;z-index:3;`;
+      STAGE.appendChild(el);
+      setTimeout(() => el.remove(), 60);
     }
   }
 
-  function drawSpeechBubble(ctx, x, y, text) {
-    ctx.save();
-    ctx.font = '700 16px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    const paddingX = 10;
-    const paddingY = 6;
-    const textWidth = ctx.measureText(text).width;
-    const w = textWidth + paddingX * 2;
-    const h = 28;
-    // Bubble body
-    ctx.fillStyle = '#fff';
-    ctx.strokeStyle = '#3a1a0a';
-    ctx.lineWidth = 2;
-    roundRect(ctx, x - w / 2, y - h / 2, w, h, 10);
-    ctx.fill();
-    ctx.stroke();
-    // Tail
-    ctx.beginPath();
-    ctx.moveTo(x - 6, y + h / 2);
-    ctx.lineTo(x, y + h / 2 + 12);
-    ctx.lineTo(x + 6, y + h / 2);
-    ctx.closePath();
-    ctx.fillStyle = '#fff';
-    ctx.fill();
-    ctx.stroke();
-    // Text
-    ctx.fillStyle = '#c0392b';
-    ctx.fillText(text, x, y + 1);
-    // A couple of "stars" around the head
-    ctx.fillStyle = '#ffeb3b';
-    ctx.strokeStyle = '#c0392b';
-    ctx.lineWidth = 1.5;
-    for (let i = 0; i < 3; i++) {
-      const a = (i / 3) * Math.PI * 2 + performance.now() / 600;
-      const sx = x + Math.cos(a) * 24;
-      const sy = y - 18 + Math.sin(a) * 8;
-      drawStar(ctx, sx, sy, 4);
-    }
-    ctx.restore();
-  }
-
-  function roundRect(ctx, x, y, w, h, r) {
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.lineTo(x + w - r, y);
-    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-    ctx.lineTo(x + w, y + h - r);
-    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-    ctx.lineTo(x + r, y + h);
-    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-    ctx.lineTo(x, y + r);
-    ctx.quadraticCurveTo(x, y, x + r, y);
-    ctx.closePath();
-  }
-
-  function drawStar(ctx, x, y, r) {
-    ctx.beginPath();
-    for (let i = 0; i < 5; i++) {
-      const a = (i / 5) * Math.PI * 2 - Math.PI / 2;
-      const x2 = x + Math.cos(a) * r;
-      const y2 = y + Math.sin(a) * r;
-      if (i === 0) ctx.moveTo(x2, y2); else ctx.lineTo(x2, y2);
-      const a2 = a + Math.PI / 5;
-      ctx.lineTo(x + Math.cos(a2) * r * 0.5, y + Math.sin(a2) * r * 0.5);
-    }
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-  }
-
-  function drawDust(ctx) {
-    for (const d of state.dust) {
-      ctx.fillStyle = d.color;
-      ctx.globalAlpha = Math.max(0, d.life);
-      ctx.beginPath();
-      ctx.arc(d.x * state.viewScale, d.y * state.viewScale, d.r, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-  }
-
-  // ---------- Event wiring ----------
-  function bind() {
-    fitCanvas();
-    window.addEventListener('resize', () => {
-      fitCanvas();
-      if (state.running) render();
-    });
-
+  // -----------------------------------------------------------------------
+  // Init
+  // -----------------------------------------------------------------------
+  function init() {
+    loadBest();
+    updateBestDisplays();
     document.addEventListener('keydown', onKeyDown);
     STAGE.addEventListener('pointerdown', onStagePointerDown);
-    JUMP_BTN.addEventListener('click', (e) => { e.preventDefault(); tryJump(); });
-
+    STAGE.addEventListener('pointerup', onStagePointerUp);
+    STAGE.addEventListener('pointercancel', onStagePointerUp);
     START_BTN.addEventListener('click', beginRun);
     PLAY_INTRO_BTN.addEventListener('click', playCutscene);
     TRY_AGAIN_BTN.addEventListener('click', restart);
     CUTSCENE_SKIP_BTN.addEventListener('click', skipCutscene);
     CUTSCENE_START_BTN.addEventListener('click', endCutscene);
-
     RESET_BEST_BTN.addEventListener('click', () => {
       state.best = 0;
       saveBest(0);
       updateBestDisplays();
     });
-  }
-
-  // ---------- Init ----------
-  function init() {
-    loadBest();
-    updateBestDisplays();
-    bind();
-    state.viewScale = STAGE.getBoundingClientRect().width / WORLD_W;
-    state.viewW = STAGE.getBoundingClientRect().width;
-    state.viewH = STAGE.getBoundingClientRect().height;
-    // Show the start screen on first paint (no auto-cutscene)
     showStart();
-    render();
+    // Initial paint of the 3D scene behind the start overlay so the
+    // background isn't blank.
+    renderer.render(scene, camera);
   }
 
   if (document.readyState === 'loading') {

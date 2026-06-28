@@ -912,7 +912,7 @@
           </div>
         </div>
 
-        <div id="ceHint" class="ce-floating-cta" hidden>Press SPACE / ↑ to jump</div>
+        <div id="ceHint" class="ce-floating-cta" hidden>SPACE / ↑ to jump · A/D or ←/→ to switch lanes</div>
       </div>
     </main>
 
@@ -920,11 +920,15 @@
       <a href="https://www.buymeacoffee.com/sunboys" class="bmc-btn" target="_blank" rel="noopener noreferrer" aria-label="Support CodeCup Studio">☕ Support CodeCup Studio</a>
       <p class="footer-note">Made with love and caffeine.</p>
       <p class="arcade-back-line"><a class="arcade-back-pill" href="index.html" aria-label="Back to CodeCup Arcade">← Back to Arcade</a></p>
-      <p class="footer-version">Coffee Escape v1.2</p>
+      <p class="footer-version">Coffee Escape v2.0 (3D)</p>
       <button id="ceResetBest" class="btn-reset" type="button" aria-label="Reset best score">Reset Best</button>
     </footer>
   </div>
 
+  <!-- Three.js (pinned) for the 3D scene. Loaded from jsdelivr with a
+       specific version so a CDN hiccup or API change doesn't break the
+       game on a future visit. -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
   <script src="coffee-escape.js"></script>
 </body>
 </html>
