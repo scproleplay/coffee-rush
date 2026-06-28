@@ -175,8 +175,7 @@ looking for his caffeine.
 ### Status
 
 Coffee Escape is currently in **"Coming soon"** mode on the arcade
-homepage. The tile is non-playable for everyone. To play it during
-development, open `coffee-escape.html` directly. To publish the
+homepage. The tile is non-playable for everyone. To publish the
 game, change the Coffee Escape `<li>` in `index.html` back to a
 normal playable card (remove the `game-card--coming-soon` class and
 replace the `<span class="coming-soon-badge">` with an `<a>` link
