@@ -239,55 +239,198 @@
   scene.add(railR);
 
   // -----------------------------------------------------------------------
-  // Cup (player)
+  // Cup (player) — cute takeaway coffee cup with sleeve, coffee top,
+  // face, and little running limbs. Built from primitives so the game
+  // stays lightweight and loads fast on phones.
   // -----------------------------------------------------------------------
   const cup = new THREE.Group();
 
-  // Body: a truncated cone for the cup itself.
+  // Materials reused across the cup
+  const matCupBody  = new THREE.MeshLambertMaterial({ color: 0xfaf3e3 }); // warm cream
+  const matRim      = new THREE.MeshLambertMaterial({ color: 0xe8d8b8 }); // darker cream
+  const matCoffee   = new THREE.MeshLambertMaterial({ color: 0x3a1f08 }); // very dark brown
+  const matCrema    = new THREE.MeshLambertMaterial({ color: 0x8a5a2c }); // light brown ring
+  const matSleeve   = new THREE.MeshLambertMaterial({ color: 0xc98a4d }); // cardboard tan
+  const matSleeveRim= new THREE.MeshLambertMaterial({ color: 0xa86d3a }); // darker tan (top/bottom edges of sleeve)
+  const matLogo     = new THREE.MeshLambertMaterial({ color: 0xff5a1f }); // brand orange
+  const matFace     = new THREE.MeshLambertMaterial({ color: 0x1a0a02 }); // near-black
+  const matCheek    = new THREE.MeshLambertMaterial({ color: 0xff8a6b, transparent: true, opacity: 0.55 });
+  const matLimb     = new THREE.MeshLambertMaterial({ color: 0x5a3a14 }); // dark brown
+  const matHand     = new THREE.MeshLambertMaterial({ color: 0xe7b78f }); // skin tone
+  const matShoe     = new THREE.MeshLambertMaterial({ color: 0x1a1a1a });
+  const matSteam    = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.45 });
+
+  // Body: a slightly tapered cylinder. Top is slightly wider than the
+  // bottom so the cup reads as a takeaway, not a barrel.
   const cupBody = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.36, 0.28, 0.7, 12),
-    new THREE.MeshLambertMaterial({ color: 0xffffff })
+    new THREE.CylinderGeometry(0.40, 0.34, 0.85, 16),
+    matCupBody
   );
-  cupBody.position.y = 0.45;
+  cupBody.position.y = 0.55;
   cup.add(cupBody);
 
-  // Coffee surface (dark disc on top of the cup).
-  const coffee = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.33, 0.33, 0.02, 12),
-    new THREE.MeshLambertMaterial({ color: 0x4a2a10 })
+  // Rim around the top of the cup (slightly recessed, gives the cup
+  // a "real" lip).
+  const cupRim = new THREE.Mesh(
+    new THREE.TorusGeometry(0.40, 0.04, 8, 24),
+    matRim
   );
-  coffee.position.y = 0.81;
-  cup.add(coffee);
+  cupRim.rotation.x = Math.PI / 2;
+  cupRim.position.y = 0.98;
+  cup.add(cupRim);
 
-  // Handle (a torus segment).
-  const handle = new THREE.Mesh(
-    new THREE.TorusGeometry(0.18, 0.04, 8, 16, Math.PI),
-    new THREE.MeshLambertMaterial({ color: 0xffffff })
+  // Coffee surface inside the rim (slightly lower than the rim).
+  const coffeeSurface = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.36, 0.36, 0.02, 16),
+    matCoffee
   );
-  handle.rotation.z = Math.PI / 2;
-  handle.position.set(0.36, 0.45, 0);
-  cup.add(handle);
+  coffeeSurface.position.y = 0.965;
+  cup.add(coffeeSurface);
 
-  // Arms (pivots) — two small cylinders that swing when running.
-  const armMat = new THREE.MeshLambertMaterial({ color: 0x5a3a14 });
-  const armGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.4, 6);
-  const armL = new THREE.Mesh(armGeo, armMat);
-  armL.position.set(-0.3, 0.6, 0);
-  cup.add(armL);
-  const armR = armL.clone();
-  armR.position.x = 0.3;
-  cup.add(armR);
+  // Crema ring (a tiny inner disc that suggests coffee with milk).
+  const crema = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.20, 0.20, 0.005, 12),
+    matCrema
+  );
+  crema.position.y = 0.978;
+  cup.add(crema);
 
-  // Legs (pivots).
-  const legGeo = new THREE.CylinderGeometry(0.06, 0.06, 0.5, 6);
-  const legL = new THREE.Mesh(legGeo, armMat);
-  legL.position.set(-0.12, 0.05, 0);
-  cup.add(legL);
-  const legR = legL.clone();
-  legR.position.x = 0.12;
-  cup.add(legR);
+  // Cardboard sleeve around the lower-middle of the cup. This is what
+  // makes the cup instantly read as a takeaway coffee.
+  const sleeve = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.42, 0.40, 0.32, 16, 1, true),
+    matSleeve
+  );
+  sleeve.position.y = 0.36;
+  cup.add(sleeve);
 
-  // Cup starts at center lane.
+  // Top and bottom rims of the sleeve.
+  const sleeveRimTop = new THREE.Mesh(
+    new THREE.TorusGeometry(0.42, 0.025, 6, 16),
+    matSleeveRim
+  );
+  sleeveRimTop.rotation.x = Math.PI / 2;
+  sleeveRimTop.position.y = 0.52;
+  cup.add(sleeveRimTop);
+  const sleeveRimBot = sleeveRimTop.clone();
+  sleeveRimBot.position.y = 0.20;
+  cup.add(sleeveRimBot);
+
+  // Logo on the sleeve (front-facing, toward the camera at +Z).
+  // Built as a small heart from a few primitives.
+  const logoGroup = new THREE.Group();
+  logoGroup.position.set(0, 0.36, 0.42);
+  // Two lobes of a heart (small spheres) and a small wedge at the bottom.
+  const logoLobeL = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 6), matLogo);
+  logoLobeL.position.set(-0.045, 0.02, 0);
+  logoGroup.add(logoLobeL);
+  const logoLobeR = logoLobeL.clone();
+  logoLobeR.position.x = 0.045;
+  logoGroup.add(logoLobeR);
+  const logoTip = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.10, 4), matLogo);
+  logoTip.rotation.x = Math.PI;
+  logoTip.position.set(0, -0.06, 0);
+  logoGroup.add(logoTip);
+  cup.add(logoGroup);
+
+  // Face: two eyes (spheres) + a smile (small torus segment) on the
+  // front of the cup. The cup's +Z face is what the camera sees
+  // (camera is at world +Z looking toward -Z).
+  const faceGroup = new THREE.Group();
+  faceGroup.position.set(0, 0.78, 0.41);
+
+  // Eyes
+  const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.045, 10, 8), matFace);
+  eyeL.position.set(-0.10, 0, 0);
+  faceGroup.add(eyeL);
+  const eyeR = eyeL.clone();
+  eyeR.position.x = 0.10;
+  faceGroup.add(eyeR);
+  // Tiny white highlights on the eyes for cuteness
+  const matHighlight = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  const hlL = new THREE.Mesh(new THREE.SphereGeometry(0.012, 6, 6), matHighlight);
+  hlL.position.set(-0.085, 0.018, 0.035);
+  faceGroup.add(hlL);
+  const hlR = hlL.clone();
+  hlR.position.x = 0.115;
+  faceGroup.add(hlR);
+  // Smile — half-torus on the front
+  const smile = new THREE.Mesh(
+    new THREE.TorusGeometry(0.05, 0.012, 6, 12, Math.PI),
+    matFace
+  );
+  smile.rotation.x = Math.PI / 2;
+  smile.position.set(0, -0.06, 0);
+  // Flip the smile so the open side faces up
+  smile.rotation.z = Math.PI;
+  faceGroup.add(smile);
+  // Cheek blushes
+  const cheekL = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), matCheek);
+  cheekL.position.set(-0.16, -0.04, 0.01);
+  faceGroup.add(cheekL);
+  const cheekR = cheekL.clone();
+  cheekR.position.x = 0.16;
+  faceGroup.add(cheekR);
+  cup.add(faceGroup);
+
+  // Arms — pivoted from the shoulder, so they swing cleanly. Each arm
+  // is a Group: shoulder pivot + cylinder + hand sphere.
+  const armLGroup = new THREE.Group();
+  armLGroup.position.set(-0.38, 0.66, 0);
+  const armLMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.40, 8), matLimb);
+  armLMesh.position.y = -0.20;
+  armLGroup.add(armLMesh);
+  const handL = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), matHand);
+  handL.position.y = -0.40;
+  armLGroup.add(handL);
+  cup.add(armLGroup);
+
+  const armRGroup = new THREE.Group();
+  armRGroup.position.set(0.38, 0.66, 0);
+  const armRMesh = armLMesh.clone();
+  armRMesh.position.y = -0.20;
+  armRGroup.add(armRMesh);
+  const handR = handL.clone();
+  handR.position.y = -0.40;
+  armRGroup.add(handR);
+  cup.add(armRGroup);
+
+  // Legs — pivoted from the hip, with a shoe at the end.
+  const legLGroup = new THREE.Group();
+  legLGroup.position.set(-0.14, 0.14, 0);
+  const legLMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.32, 8), matLimb);
+  legLMesh.position.y = -0.16;
+  legLGroup.add(legLMesh);
+  const shoeL = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), matShoe);
+  shoeL.scale.set(1, 0.5, 1.3);
+  shoeL.position.set(0, -0.32, 0.02);
+  legLGroup.add(shoeL);
+  cup.add(legLGroup);
+
+  const legRGroup = new THREE.Group();
+  legRGroup.position.set(0.14, 0.14, 0);
+  const legRMesh = legLMesh.clone();
+  legRMesh.position.y = -0.16;
+  legRGroup.add(legRMesh);
+  const shoeR = shoeL.clone();
+  shoeR.position.set(0, -0.32, 0.02);
+  legRGroup.add(shoeR);
+  cup.add(legRGroup);
+
+  // Steam: three small spheres that drift up from the coffee surface.
+  // They live in a Group that bobs naturally with the run animation.
+  const steamGroup = new THREE.Group();
+  steamGroup.position.set(0, 1.0, 0);
+  for (let i = 0; i < 3; i++) {
+    const s = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), matSteam);
+    s.position.set((i - 1) * 0.08, i * 0.12, 0);
+    s.userData.phase = i * 1.2;
+    steamGroup.add(s);
+  }
+  cup.add(steamGroup);
+
+  // The whole cup lives at y=0 (feet on the ground). The `cup.position.y`
+  // is offset by the player's jump height in the update loop.
   cup.position.set(LANE_X[1], 0, 0);
   scene.add(cup);
 
@@ -681,6 +824,7 @@
     state.player.vy = 0;
     state.player.onGround = true;
     state.player.runAnim = 0;
+    state.player.airT = 0;
     // Hide every pooled obstacle.
     for (const o of state.obstacles) o.mesh.visible = false;
     SCORE_EL.textContent = '0';
@@ -786,16 +930,69 @@
     }
     p.runAnim += dt * Math.max(8, state.speed / 0.3);
 
-    // Cup position
+    // -------- Cup position, orientation, and animation --------
+    // The cup is built facing the camera (face on local +Z, which is
+    // world +Z — the same direction the camera looks at). So:
+    //   cup.rotation.x = forward tilt + forward tumble (in air)
+    //   cup.rotation.z = bank on lane change
     cup.position.x = p.laneX;
     cup.position.y = p.y;
-    cup.rotation.z = (p.laneToX - p.laneFromX) * 0.05; // slight bank on lane change
-    // Animate arms/legs: swing in alternation.
-    const swing = Math.sin(p.runAnim) * 0.9;
-    armL.rotation.x = swing;
-    armR.rotation.x = -swing;
-    legL.rotation.x = -swing;
-    legR.rotation.x = swing;
+
+    // Run-cycle: swing arms and legs in alternation, plus a small
+    // vertical bob on the whole cup.
+    const swing = Math.sin(p.runAnim) * 1.0;
+    const bob = p.onGround ? Math.abs(Math.sin(p.runAnim * 2)) * 0.06 : 0;
+    armLGroup.rotation.x = swing;
+    armRGroup.rotation.x = -swing;
+    legLGroup.rotation.x = -swing * 0.7;
+    legRGroup.rotation.x = swing * 0.7;
+
+    // When airborne, tuck the legs and arms slightly (a "happy
+    // jump" pose). The cup itself does a forward tumble below.
+    if (!p.onGround) {
+      const tuck = Math.min(1, p.vy / JUMP_VY + 0.4);
+      legLGroup.rotation.x = -1.0 * tuck - 0.3;
+      legRGroup.rotation.x = -1.0 * tuck - 0.3;
+      armLGroup.rotation.x = -1.5 * tuck - 0.2;
+      armRGroup.rotation.x = 1.5 * tuck + 0.2;
+    }
+
+    // Lane-change bank: roll around the z-axis a bit during a switch.
+    let bank = 0;
+    if (p.laneSwitchT < 1) {
+      const m = p.laneSwitchT;
+      const peak = Math.sin(m * Math.PI); // 0..1..0
+      bank = (p.laneToX - p.laneFromX) * 0.5 * peak;
+    }
+
+    // Forward tilt while sprinting (slight), upright while jumping.
+    // The tumble is a forward roll, which is rotation around the
+    // local X axis. Combine tilt + tumble by adding them.
+    const runTilt = p.onGround ? 0.10 : 0;
+    let tiltX = -runTilt;
+    if (!p.onGround) {
+      if (p.airT === undefined) p.airT = 0;
+      p.airT += dt;
+      // One full forward flip per ~0.7s of air time.
+      tiltX += p.airT * (2 * Math.PI / 0.7);
+    } else {
+      p.airT = 0;
+    }
+    cup.rotation.x = tiltX;
+    cup.rotation.z = bank;
+
+    // Run bob applied to world Y after all the rotation is set.
+    cup.position.y = p.y + bob;
+
+    // Steam: each particle bobs up and slightly sideways.
+    for (const child of steamGroup.children) {
+      const ph = child.userData.phase || 0;
+      const t = state.worldTime * 2 + ph;
+      child.position.y = (t * 0.4 % 0.6) + 0.05;
+      child.position.x = (ph - 1) * 0.08 + Math.sin(t * 1.5) * 0.02;
+      const k = 1 - ((t * 0.4) % 0.6) / 0.6;
+      child.scale.setScalar(0.4 + k * 0.9);
+    }
 
     // Man runs in place (he's behind the cup, animated relative to the camera).
     const manSwing = Math.sin(p.runAnim * 0.9) * 0.7;
