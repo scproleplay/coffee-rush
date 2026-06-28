@@ -531,7 +531,10 @@
     .ce-cutscene {
       position: absolute;
       inset: 0;
-      background: linear-gradient(180deg, #fff1d6 0%, #ffd9a8 60%, #c08650 100%);
+      /* Warm cream-to-tan gradient that matches the 3D world's fog.
+         Subtler than the v2.0 cutscene so the in-scene backgrounds
+         (desks, walls) read clearly on top. */
+      background: linear-gradient(180deg, #f4d6a8 0%, #ecc18a 50%, #c98a4d 100%);
       z-index: 6;
       overflow: hidden;
     }
@@ -549,24 +552,40 @@
       pointer-events: auto;
     }
 
-    /* Subtitle ribbon */
+    /* Subtitle ribbon — warm cream pill instead of a black bar so
+       the cutscene feels lighter and on-theme. */
     .ce-subtitle {
       position: absolute;
       left: 50%;
-      bottom: 12%;
+      bottom: 9%;
       transform: translateX(-50%);
-      background: rgba(0, 0, 0, 0.6);
-      color: #fff;
+      background: linear-gradient(180deg, #ffffff 0%, #fff7e0 100%);
+      color: #5a3a14;
       font-weight: 700;
-      font-size: clamp(0.95rem, 2.2vw, 1.25rem);
-      padding: 8px 18px;
+      font-size: clamp(0.85rem, 2.2vw, 1.1rem);
+      padding: 8px 20px;
       border-radius: 999px;
-      letter-spacing: 0.02em;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-      white-space: nowrap;
-      max-width: 92%;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      letter-spacing: 0.01em;
+      box-shadow:
+        0 1px 2px rgba(180, 90, 0, 0.18),
+        0 6px 16px rgba(180, 90, 0, 0.22);
+      border: 1.5px solid #ffb347;
+      white-space: normal;
+      max-width: 88%;
+      text-align: center;
+      animation: ce-subtitle-in 0.4s ease-out;
+    }
+    @keyframes ce-subtitle-in {
+      from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+      to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+    .ce-subtitle--action {
+      font-size: clamp(1rem, 3vw, 1.4rem);
+      font-weight: 900;
+      color: #b25e00;
+      background: linear-gradient(135deg, #fff4c2 0%, #ffd24a 100%);
+      border-color: #c0392b;
+      text-shadow: 0 1px 0 #fff;
     }
 
     .ce-cutscene-actions {
@@ -1001,6 +1020,568 @@
       0%   { transform: rotate(0); }
       100% { transform: rotate(-60deg) translateX(20%); }
     }
+
+    /* ============================================================
+       Cutscene v2 — new story scenes
+       Office / hallway backgrounds, desk, monitor, clock, plant,
+       hallway perspective for the run preview, sparkles for the
+       cup waking up, thought bubbles for the worker.
+       ============================================================ */
+
+    /* Common office background (scenes 1-3): warm wall + floor
+       with a clock, a plant, and a wood floor. */
+    .ce-office-bg {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+    }
+    .ce-office-wall {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 0;
+      height: 62%;
+      background:
+        /* Faint coffee-bean motif via a small repeating gradient. */
+        radial-gradient(circle at 12% 28%, rgba(90, 50, 20, 0.06) 0 4px, transparent 6px) 0 0 / 28px 28px,
+        radial-gradient(circle at 60% 50%, rgba(90, 50, 20, 0.05) 0 3px, transparent 5px) 0 0 / 22px 22px,
+        linear-gradient(180deg, #f4d6a8 0%, #ecc18a 100%);
+    }
+    .ce-office-floor {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 38%;
+      background:
+        /* Wood-plank stripes. */
+        repeating-linear-gradient(
+          90deg,
+          #b07a48 0px, #b07a48 36px,
+          #a06d3a 36px, #a06d3a 37px,
+          #b87850 37px, #b87850 72px
+        );
+      box-shadow: inset 0 6px 12px rgba(60, 30, 10, 0.25);
+    }
+    .ce-office-clock {
+      position: absolute;
+      top: 14%;
+      right: 14%;
+      width: 11%;
+      aspect-ratio: 1;
+      background: #ffffff;
+      border: 4px solid #5a3a14;
+      border-radius: 50%;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+    }
+    .ce-office-clock::before,
+    .ce-office-clock::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      background: #3a1f00;
+      transform-origin: 50% 0;
+      border-radius: 2px;
+    }
+    .ce-office-clock::before {
+      width: 3px;
+      height: 28%;
+      transform: translate(-50%, 0) rotate(40deg);
+    }
+    .ce-office-clock::after {
+      width: 3px;
+      height: 38%;
+      transform: translate(-50%, 0) rotate(-10deg);
+    }
+    .ce-office-plant {
+      position: absolute;
+      bottom: 32%;
+      left: 6%;
+      width: 10%;
+      aspect-ratio: 1;
+      background: #b87333;
+      border-radius: 4px 4px 30% 30% / 4px 4px 25% 25%;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.18);
+    }
+    .ce-office-plant::before {
+      content: '';
+      position: absolute;
+      left: 10%;
+      right: 10%;
+      top: -45%;
+      height: 50%;
+      background:
+        radial-gradient(ellipse at 50% 80%, #4a8a3a 35%, transparent 36%),
+        radial-gradient(ellipse at 30% 60%, #4a8a3a 28%, transparent 29%),
+        radial-gradient(ellipse at 70% 60%, #4a8a3a 28%, transparent 29%);
+    }
+
+    /* Desk + monitor + keyboard (centered, scenes 1-3) */
+    .ce-desk {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 32%;
+      height: 16%;
+    }
+    .ce-desk-top {
+      position: absolute;
+      left: 12%;
+      right: 12%;
+      bottom: 0;
+      height: 14%;
+      background: linear-gradient(180deg, #8a4a1f 0%, #5a2d12 100%);
+      border-radius: 6px 6px 0 0;
+      box-shadow:
+        inset 0 2px 0 rgba(255, 255, 255, 0.18),
+        0 4px 8px rgba(0, 0, 0, 0.20);
+    }
+    .ce-monitor {
+      position: absolute;
+      left: 50%;
+      bottom: 16%;
+      transform: translateX(-50%);
+      width: 12%;
+      height: 28%;
+      background: #1a1a1a;
+      border: 3px solid #2a2a2a;
+      border-radius: 4px;
+    }
+    .ce-monitor::before {
+      content: '';
+      position: absolute;
+      inset: 8%;
+      background: linear-gradient(135deg, #2a3a4a 0%, #4a5a6a 100%);
+      border-radius: 2px;
+    }
+    .ce-monitor-stand {
+      position: absolute;
+      left: 50%;
+      bottom: 12%;
+      transform: translateX(-50%);
+      width: 3%;
+      height: 6%;
+      background: #1a1a1a;
+    }
+    .ce-keyboard {
+      position: absolute;
+      left: 50%;
+      bottom: 8%;
+      transform: translateX(-50%);
+      width: 14%;
+      height: 3%;
+      background: #2a2a2a;
+      border-radius: 2px;
+    }
+
+    /* Cup handle — a small "C" shape on the right side of the cutscene
+       cup, so the 2D cup looks more 3D. Positioned via the cutscene cup. */
+    .ce-cup-handle {
+      position: absolute;
+      right: -22%;
+      top: 22%;
+      width: 30%;
+      height: 36%;
+      border: 4px solid #5a3a14;
+      border-left: none;
+      border-radius: 0 50% 50% 0 / 0 50% 50% 0;
+      background: transparent;
+    }
+    .ce-scene.scene-1 .ce-cup {
+      /* Cup sits on the desk, calm face */
+      position: absolute;
+      left: 50%;
+      bottom: 44%;
+      transform: translateX(-50%);
+      width: 8%;
+      aspect-ratio: 1 / 1.1;
+      background: linear-gradient(180deg, #ffffff 0%, #f0e0c0 100%);
+      border: 2.5px solid #5a3a14;
+      border-radius: 8% 8% 24% 24% / 6% 6% 30% 30%;
+      transform-origin: center bottom;
+      overflow: visible;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.18);
+    }
+    /* Coffee surface inside the cutscene cup — small brown disc. */
+    .ce-scene.scene-1 .ce-cup::before {
+      content: '';
+      position: absolute;
+      left: 12%;
+      right: 12%;
+      top: 6%;
+      height: 10%;
+      background: #3a1f08;
+      border-radius: 50%;
+    }
+    /* Tiny sleeve band on the cup to match the 3D character. */
+    .ce-scene.scene-1 .ce-cup::after {
+      content: '';
+      position: absolute;
+      left: -2%;
+      right: -2%;
+      top: 50%;
+      height: 18%;
+      background: linear-gradient(180deg, #c98a4d 0%, #a86d3a 100%);
+      border-top: 1.5px solid rgba(90, 58, 20, 0.6);
+      border-bottom: 1.5px solid rgba(90, 58, 20, 0.6);
+    }
+
+    /* Scenes 2 and 3 reuse the same cup layout with different
+       positions / expressions. Override only the position bits. */
+    .ce-scene.scene-2 .ce-cup,
+    .ce-scene.scene-3 .ce-cup {
+      position: absolute;
+      left: 28%;
+      bottom: 44%;
+      transform: translateX(-50%);
+      width: 8%;
+      aspect-ratio: 1 / 1.1;
+      background: linear-gradient(180deg, #ffffff 0%, #f0e0c0 100%);
+      border: 2.5px solid #5a3a14;
+      border-radius: 8% 8% 24% 24% / 6% 6% 30% 30%;
+      transform-origin: center bottom;
+      overflow: visible;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.18);
+    }
+    .ce-scene.scene-2 .ce-cup::before,
+    .ce-scene.scene-3 .ce-cup::before {
+      content: '';
+      position: absolute;
+      left: 12%;
+      right: 12%;
+      top: 6%;
+      height: 10%;
+      background: #3a1f08;
+      border-radius: 50%;
+    }
+    .ce-scene.scene-2 .ce-cup::after,
+    .ce-scene.scene-3 .ce-cup::after {
+      content: '';
+      position: absolute;
+      left: -2%;
+      right: -2%;
+      top: 50%;
+      height: 18%;
+      background: linear-gradient(180deg, #c98a4d 0%, #a86d3a 100%);
+      border-top: 1.5px solid rgba(90, 58, 20, 0.6);
+      border-bottom: 1.5px solid rgba(90, 58, 20, 0.6);
+    }
+    /* The cup's handle in the cutscene cup. */
+    .ce-cup-handle {
+      position: absolute;
+      right: -22%;
+      top: 22%;
+      width: 30%;
+      height: 36%;
+      border: 4px solid #5a3a14;
+      border-left: none;
+      border-radius: 0 50% 50% 0 / 0 50% 50% 0;
+      background: transparent;
+    }
+    /* The existing .ce-cup-face (eyes, mouth, brows) continues to
+       work — it's defined in the character block above. */
+    /* For scene 2, position the man reaching toward the cup. */
+    .ce-scene.scene-2 .ce-man,
+    .ce-scene.scene-3 .ce-man {
+      width: 14%;
+      aspect-ratio: 1 / 1.8;
+      position: absolute;
+      right: 14%;
+      bottom: 14%;
+      transform-origin: center bottom;
+    }
+
+    /* Thought bubble — used in scenes 2 and 3. */
+    .ce-thought-bubble {
+      position: absolute;
+      top: -28%;
+      right: -10%;
+      background: #ffffff;
+      color: #5a3a14;
+      font-weight: 800;
+      font-size: clamp(0.7rem, 1.4vw, 0.9rem);
+      padding: 6px 10px;
+      border-radius: 14px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.18);
+      white-space: nowrap;
+      animation: ce-thought-bob 1.6s ease-in-out infinite;
+    }
+    .ce-thought-bubble::after {
+      content: '';
+      position: absolute;
+      bottom: -6px;
+      left: 16%;
+      width: 8px;
+      height: 8px;
+      background: #ffffff;
+      border-radius: 50%;
+      box-shadow: -8px 4px 0 -2px #ffffff;
+    }
+    .ce-thought-bubble--surprised { color: #c0392b; font-size: clamp(0.85rem, 1.7vw, 1.1rem); }
+    @keyframes ce-thought-bob {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(-3px); }
+    }
+
+    /* Sparkles around the cup when it wakes up (scene 3). */
+    .ce-sparkles {
+      position: absolute;
+      inset: -20%;
+      pointer-events: none;
+    }
+    .ce-sparkle {
+      position: absolute;
+      color: #ffd24a;
+      font-size: clamp(0.9rem, 1.8vw, 1.2rem);
+      animation: ce-sparkle 1.2s ease-in-out infinite;
+      text-shadow: 0 0 6px rgba(255, 210, 74, 0.7);
+    }
+    .ce-sparkle.s1 { top: 10%;  left: 5%;  animation-delay: 0s;   }
+    .ce-sparkle.s2 { top: 30%;  right: 0%; animation-delay: 0.3s; }
+    .ce-sparkle.s3 { bottom: 5%; left: 30%; animation-delay: 0.6s; }
+    @keyframes ce-sparkle {
+      0%, 100% { transform: scale(0.6) rotate(0deg);   opacity: 0.5; }
+      50%      { transform: scale(1.2) rotate(180deg); opacity: 1.0; }
+    }
+
+    /* ============================================================
+       Hallway perspective — used in scenes 4 and 5.
+       A pseudo-3D view of the hallway receding into the distance,
+       matching the gameplay camera angle. CSS `perspective` on
+       a container + 3D transforms on a floor + walls. Lightweight.
+       ============================================================ */
+    .ce-hallway-perspective {
+      position: absolute;
+      inset: 0;
+      perspective: 600px;
+      perspective-origin: 50% 80%;
+      overflow: hidden;
+    }
+    .ce-hallway-wall {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 0;
+      height: 60%;
+      background:
+        radial-gradient(circle at 18% 30%, rgba(90, 50, 20, 0.05) 0 3px, transparent 5px) 0 0 / 24px 24px,
+        linear-gradient(180deg, #f4d6a8 0%, #ecc18a 70%, #d0986a 100%);
+    }
+    .ce-hallway-floor {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 50%;
+      background: repeating-linear-gradient(
+        90deg,
+        #b07a48 0px, #b07a48 50px,
+        #a06d3a 50px, #a06d3a 52px,
+        #b87850 52px, #b87850 100px
+      );
+      transform-origin: 50% 0%;
+      /* Tilt the floor so it recedes into the distance. */
+      transform: rotateX(60deg);
+      transform-origin: 50% 0%;
+      box-shadow: inset 0 8px 18px rgba(60, 30, 10, 0.30);
+    }
+    .ce-hallway-lane {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: rgba(184, 116, 60, 0.55);
+      transform-origin: 50% 0%;
+      transform: rotateX(60deg);
+    }
+    .ce-hallway-lane.l { top: 0; }
+    .ce-hallway-lane.c { top: 33%; }
+    .ce-hallway-lane.r { top: 66%; }
+
+    /* Mini cup (a small "running cup" in the lower-center of the
+       perspective view). Scene 4 shows it small, scene 5 shows
+       it slightly bigger and lower (closer to the camera). */
+    .ce-cup-mini,
+    .ce-cup-runner {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      z-index: 2;
+    }
+    .ce-cup-mini {
+      bottom: 24%;
+      width: 8%;
+    }
+    .ce-cup-mini-body {
+      width: 100%;
+      aspect-ratio: 1 / 1.1;
+      background: linear-gradient(180deg, #ffffff 0%, #f0e0c0 100%);
+      border: 2.5px solid #5a3a14;
+      border-radius: 10% 10% 28% 28% / 8% 8% 30% 30%;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);
+      position: relative;
+    }
+    .ce-cup-mini-body::before {
+      content: '';
+      position: absolute;
+      left: 12%;
+      right: 12%;
+      top: 6%;
+      height: 10%;
+      background: #3a1f08;
+      border-radius: 50%;
+    }
+    .ce-cup-mini-face {
+      position: absolute;
+      left: 14%;
+      right: 14%;
+      top: 30%;
+      bottom: 14%;
+    }
+    .ce-cup-mini-face::before {
+      content: '😲';
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: clamp(0.6rem, 1.2vw, 0.9rem);
+    }
+
+    /* Scene 5 — bigger running cup with arms/legs and a scared face. */
+    .ce-cup-runner {
+      bottom: 16%;
+      width: 11%;
+    }
+    .ce-cup-runner-body {
+      width: 100%;
+      aspect-ratio: 1 / 1.1;
+      background: linear-gradient(180deg, #ffffff 0%, #f0e0c0 100%);
+      border: 2.5px solid #5a3a14;
+      border-radius: 10% 10% 28% 28% / 8% 8% 30% 30%;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.30);
+      position: relative;
+      z-index: 1;
+    }
+    .ce-cup-runner-body::before {
+      content: '';
+      position: absolute;
+      left: 12%;
+      right: 12%;
+      top: 6%;
+      height: 10%;
+      background: #3a1f08;
+      border-radius: 50%;
+    }
+    .ce-cup-runner-body::after {
+      content: '';
+      position: absolute;
+      left: -2%;
+      right: -2%;
+      top: 48%;
+      height: 20%;
+      background: linear-gradient(180deg, #c98a4d 0%, #a86d3a 100%);
+      border-top: 1.5px solid rgba(90, 58, 20, 0.6);
+      border-bottom: 1.5px solid rgba(90, 58, 20, 0.6);
+    }
+    .ce-cup-runner-face {
+      position: absolute;
+      left: 10%;
+      right: 10%;
+      top: 26%;
+      bottom: 10%;
+      z-index: 2;
+    }
+    .ce-cup-runner-face .brow { display: block; }
+    .ce-cup-runner-face .sweat { display: block; }
+    .ce-cup-runner-face .mouth {
+      position: absolute;
+      left: 30%;
+      right: 30%;
+      bottom: 8%;
+      height: 18%;
+      border: 2px solid #5a3a14;
+      background: #5a3a14;
+      border-radius: 50%;
+    }
+    /* Arms / legs for the running cup in scene 5 — quick pose. */
+    .ce-cup-runner-arm {
+      position: absolute;
+      width: 22%;
+      height: 8%;
+      background: #5a3a14;
+      border-radius: 50%;
+      top: 50%;
+    }
+    .ce-cup-runner-arm.l {
+      left: -14%;
+      transform: rotate(-30deg);
+      transform-origin: 100% 0;
+      animation: ce-runner-pump-l 0.4s ease-in-out infinite;
+    }
+    .ce-cup-runner-arm.r {
+      right: -14%;
+      transform: rotate(30deg);
+      transform-origin: 0 0;
+      animation: ce-runner-pump-r 0.4s ease-in-out infinite;
+    }
+    .ce-cup-runner-leg {
+      position: absolute;
+      width: 18%;
+      height: 10%;
+      background: #5a3a14;
+      border-radius: 50%;
+      bottom: -4%;
+    }
+    .ce-cup-runner-leg.l {
+      left: 20%;
+      transform: rotate(20deg);
+      transform-origin: 50% 0;
+      animation: ce-runner-swing-l 0.4s ease-in-out infinite;
+    }
+    .ce-cup-runner-leg.r {
+      right: 20%;
+      transform: rotate(-20deg);
+      transform-origin: 50% 0;
+      animation: ce-runner-swing-r 0.4s ease-in-out infinite;
+    }
+    @keyframes ce-runner-pump-l { 0%, 100% { transform: rotate(-30deg); } 50% { transform: rotate(20deg); } }
+    @keyframes ce-runner-pump-r { 0%, 100% { transform: rotate(30deg); }  50% { transform: rotate(-20deg); } }
+    @keyframes ce-runner-swing-l { 0%, 100% { transform: rotate(20deg); }  50% { transform: rotate(-20deg); } }
+    @keyframes ce-runner-swing-r { 0%, 100% { transform: rotate(-20deg); } 50% { transform: rotate(20deg); } }
+
+    /* Mini obstacles — small CSS-shaped (or emoji) decorations
+       scattered in the lane perspective. Positioned in lane
+       positions and depths to suggest "obstacles ahead." */
+    .ce-mini-obstacles {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      pointer-events: none;
+      z-index: 1;
+    }
+    .ce-mini-ob {
+      position: absolute;
+      font-size: clamp(0.9rem, 2vw, 1.4rem);
+      transform: translate(-50%, 0);
+      filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.25));
+    }
+    /* Position a few obstacles in the perspective. The "depth" is
+       faked by size + vertical position. */
+    .ce-scene.scene-4 .mo-1 { left: 22%; top: 18%; font-size: clamp(0.7rem, 1.5vw, 1.0rem); }
+    .ce-scene.scene-4 .mo-2 { left: 50%; top: 26%; font-size: clamp(0.85rem, 1.8vw, 1.2rem); }
+    .ce-scene.scene-4 .mo-3 { left: 78%; top: 20%; font-size: clamp(0.7rem, 1.5vw, 1.0rem); }
+    .ce-scene.scene-4 .mo-4 { left: 65%; top: 36%; font-size: clamp(0.9rem, 1.9vw, 1.3rem); }
+
+    .ce-scene.scene-5 .mo-1 { left: 28%; top: 22%; font-size: clamp(0.6rem, 1.3vw, 0.9rem); }
+    .ce-scene.scene-5 .mo-2 { left: 72%; top: 22%; font-size: clamp(0.6rem, 1.3vw, 0.9rem); }
+    .ce-scene.scene-5 .mo-3 { left: 50%; top: 38%; font-size: clamp(0.7rem, 1.5vw, 1.0rem); }
   </style>
 </head>
 <body>
@@ -1059,12 +1640,22 @@
             <span class="dot" data-i="4"></span>
           </div>
 
-          <!-- Scene 1: pouring -->
+          <!-- Scene 1 — A normal coffee cup sits peacefully in the office. -->
           <div class="ce-scene scene-1 active" data-scene="1">
-            <div class="ce-char ce-kettle" aria-hidden="true"></div>
-            <div class="ce-char ce-stream" aria-hidden="true"></div>
-            <div class="ce-char ce-counter" aria-hidden="true"></div>
+            <div class="ce-office-bg" aria-hidden="true">
+              <div class="ce-office-wall"></div>
+              <div class="ce-office-clock"></div>
+              <div class="ce-office-plant"></div>
+              <div class="ce-office-floor"></div>
+            </div>
+            <div class="ce-desk" aria-hidden="true">
+              <div class="ce-desk-top"></div>
+              <div class="ce-monitor"></div>
+              <div class="ce-monitor-stand"></div>
+              <div class="ce-keyboard"></div>
+            </div>
             <div class="ce-char ce-cup" aria-hidden="true">
+              <div class="ce-cup-handle"></div>
               <div class="ce-cup-face">
                 <div class="brow l"></div>
                 <div class="brow r"></div>
@@ -1074,17 +1665,25 @@
                 <div class="mouth"></div>
               </div>
             </div>
-            <div class="ce-subtitle">You were just poured...</div>
+            <div class="ce-subtitle">Another quiet day at CodeCup Studio...</div>
           </div>
 
-          <!-- Scene 2: cup comes alive -->
+          <!-- Scene 2 — A sleepy worker reaches for the coffee. -->
           <div class="ce-scene scene-2" data-scene="2">
-            <div class="ce-char ce-counter" aria-hidden="true"></div>
-            <div class="ce-char ce-cup expr-happy" aria-hidden="true">
-              <div class="ce-cup-arm l"></div>
-              <div class="ce-cup-arm r"></div>
-              <div class="ce-cup-leg l"></div>
-              <div class="ce-cup-leg r"></div>
+            <div class="ce-office-bg" aria-hidden="true">
+              <div class="ce-office-wall"></div>
+              <div class="ce-office-clock"></div>
+              <div class="ce-office-plant"></div>
+              <div class="ce-office-floor"></div>
+            </div>
+            <div class="ce-desk" aria-hidden="true">
+              <div class="ce-desk-top"></div>
+              <div class="ce-monitor"></div>
+              <div class="ce-monitor-stand"></div>
+              <div class="ce-keyboard"></div>
+            </div>
+            <div class="ce-char ce-cup expr-scared" aria-hidden="true">
+              <div class="ce-cup-handle"></div>
               <div class="ce-cup-face">
                 <div class="brow l"></div>
                 <div class="brow r"></div>
@@ -1094,75 +1693,48 @@
                 <div class="mouth"></div>
               </div>
             </div>
-            <div class="ce-subtitle">Then you came alive.</div>
+            <div class="ce-char ce-man" aria-hidden="true">
+              <div class="ce-thought-bubble">Zzz… ☕</div>
+              <div class="head">
+                <div class="hair"></div>
+                <div class="eye l"><div class="pupil"></div></div>
+                <div class="eye r"><div class="pupil"></div></div>
+                <div class="mouth"></div>
+              </div>
+              <div class="arm l"></div>
+              <div class="arm r"></div>
+              <div class="body"></div>
+              <div class="leg l"><div class="shoe"></div></div>
+              <div class="leg r"><div class="shoe"></div></div>
+            </div>
+            <div class="ce-subtitle">Until someone needed caffeine.</div>
           </div>
 
-          <!-- Scene 3: man walks in -->
+          <!-- Scene 3 — The coffee cup wakes up with a face. -->
           <div class="ce-scene scene-3" data-scene="3">
-            <div class="ce-char ce-counter" aria-hidden="true"></div>
-            <div class="ce-char ce-cup" aria-hidden="true">
-              <div class="ce-cup-face">
-                <div class="brow l"></div>
-                <div class="brow r"></div>
-                <div class="eye l"><div class="pupil"></div></div>
-                <div class="eye r"><div class="pupil"></div></div>
-                <div class="sweat"></div>
-                <div class="mouth"></div>
-              </div>
+            <div class="ce-office-bg" aria-hidden="true">
+              <div class="ce-office-wall"></div>
+              <div class="ce-office-clock"></div>
+              <div class="ce-office-plant"></div>
+              <div class="ce-office-floor"></div>
             </div>
-            <div class="ce-char ce-man" aria-hidden="true">
-              <div class="head">
-                <div class="hair"></div>
-                <div class="eye l"><div class="pupil"></div></div>
-                <div class="eye r"><div class="pupil"></div></div>
-                <div class="mouth"></div>
-              </div>
-              <div class="arm l"></div>
-              <div class="arm r"></div>
-              <div class="body"></div>
-              <div class="leg l"><div class="shoe"></div></div>
-              <div class="leg r"><div class="shoe"></div></div>
+            <div class="ce-desk" aria-hidden="true">
+              <div class="ce-desk-top"></div>
+              <div class="ce-monitor"></div>
+              <div class="ce-monitor-stand"></div>
+              <div class="ce-keyboard"></div>
             </div>
-            <div class="ce-subtitle">He needs coffee.</div>
-          </div>
-
-          <!-- Scene 4: cup scared -->
-          <div class="ce-scene scene-4" data-scene="4">
-            <div class="ce-char ce-counter" aria-hidden="true"></div>
-            <div class="ce-char ce-cup expr-scared" aria-hidden="true">
-              <div class="ce-cup-face">
-                <div class="brow l"></div>
-                <div class="brow r"></div>
-                <div class="eye l"><div class="pupil"></div></div>
-                <div class="eye r"><div class="pupil"></div></div>
-                <div class="sweat"></div>
-                <div class="mouth"></div>
-              </div>
-            </div>
-            <div class="ce-char ce-man" aria-hidden="true">
-              <div class="head">
-                <div class="hair"></div>
-                <div class="eye l"><div class="pupil"></div></div>
-                <div class="eye r"><div class="pupil"></div></div>
-                <div class="mouth"></div>
-              </div>
-              <div class="arm l"></div>
-              <div class="arm r"></div>
-              <div class="body"></div>
-              <div class="leg l"><div class="shoe"></div></div>
-              <div class="leg r"><div class="shoe"></div></div>
-            </div>
-            <div class="ce-subtitle">But you don't want to be drunk.</div>
-          </div>
-
-          <!-- Scene 5: man reaches + cup runs -->
-          <div class="ce-scene scene-5" data-scene="5">
-            <div class="ce-char ce-counter" aria-hidden="true"></div>
-            <div class="ce-char ce-cup expr-scared" aria-hidden="true">
+            <div class="ce-char ce-cup expr-happy" aria-hidden="true">
+              <div class="ce-cup-handle"></div>
               <div class="ce-cup-arm l"></div>
               <div class="ce-cup-arm r"></div>
               <div class="ce-cup-leg l"></div>
               <div class="ce-cup-leg r"></div>
+              <div class="ce-sparkles" aria-hidden="true">
+                <span class="ce-sparkle s1">✦</span>
+                <span class="ce-sparkle s2">✦</span>
+                <span class="ce-sparkle s3">✦</span>
+              </div>
               <div class="ce-cup-face">
                 <div class="brow l"></div>
                 <div class="brow r"></div>
@@ -1173,6 +1745,7 @@
               </div>
             </div>
             <div class="ce-char ce-man" aria-hidden="true">
+              <div class="ce-thought-bubble ce-thought-bubble--surprised">!?</div>
               <div class="head">
                 <div class="hair"></div>
                 <div class="eye l"><div class="pupil"></div></div>
@@ -1185,7 +1758,61 @@
               <div class="leg l"><div class="shoe"></div></div>
               <div class="leg r"><div class="shoe"></div></div>
             </div>
-            <div class="ce-subtitle">RUN!</div>
+            <div class="ce-subtitle">But this cup had other plans.</div>
+          </div>
+
+          <!-- Scene 4 — Office obstacles appear ahead. -->
+          <div class="ce-scene scene-4" data-scene="4">
+            <div class="ce-hallway-perspective" aria-hidden="true">
+              <div class="ce-hallway-wall"></div>
+              <div class="ce-hallway-floor"></div>
+              <div class="ce-hallway-lane l"></div>
+              <div class="ce-hallway-lane c"></div>
+              <div class="ce-hallway-lane r"></div>
+            </div>
+            <div class="ce-cup-mini" aria-hidden="true">
+              <div class="ce-cup-mini-body"></div>
+              <div class="ce-cup-mini-face"></div>
+            </div>
+            <div class="ce-mini-obstacles" aria-hidden="true">
+              <span class="ce-mini-ob mo-1">🪑</span>
+              <span class="ce-mini-ob mo-2">〰</span>
+              <span class="ce-mini-ob mo-3">☕</span>
+              <span class="ce-mini-ob mo-4">📦</span>
+            </div>
+            <div class="ce-subtitle">Now it has to escape the morning rush.</div>
+          </div>
+
+          <!-- Scene 5 — Camera points down the hallway like the game view. -->
+          <div class="ce-scene scene-5" data-scene="5">
+            <div class="ce-hallway-perspective" aria-hidden="true">
+              <div class="ce-hallway-wall"></div>
+              <div class="ce-hallway-floor"></div>
+              <div class="ce-hallway-lane l"></div>
+              <div class="ce-hallway-lane c"></div>
+              <div class="ce-hallway-lane r"></div>
+            </div>
+            <div class="ce-cup-runner" aria-hidden="true">
+              <div class="ce-cup-runner-body"></div>
+              <div class="ce-cup-runner-face">
+                <div class="brow l"></div>
+                <div class="brow r"></div>
+                <div class="eye l"><div class="pupil"></div></div>
+                <div class="eye r"><div class="pupil"></div></div>
+                <div class="sweat"></div>
+                <div class="mouth"></div>
+              </div>
+              <div class="ce-cup-runner-arm l"></div>
+              <div class="ce-cup-runner-arm r"></div>
+              <div class="ce-cup-runner-leg l"></div>
+              <div class="ce-cup-runner-leg r"></div>
+            </div>
+            <div class="ce-mini-obstacles" aria-hidden="true">
+              <span class="ce-mini-ob mo-1">🪑</span>
+              <span class="ce-mini-ob mo-2">〰</span>
+              <span class="ce-mini-ob mo-3">📦</span>
+            </div>
+            <div class="ce-subtitle ce-subtitle--action">Run. Jump. Dodge. Stay caffeinated.</div>
           </div>
 
           <div class="ce-cutscene-actions">
