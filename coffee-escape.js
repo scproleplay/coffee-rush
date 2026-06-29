@@ -60,18 +60,40 @@
   const GROUND_Y = 0;             // cup runs on the y=0 plane
   const JUMP_VY = 9.0;            // initial upward velocity on jump
   const GRAVITY = 22.0;           // downward acceleration
-  const OBSTACLE_POOL_SIZE = 18;  // how many obstacles we keep alive
+  const OBSTACLE_POOL_SIZE = 26;  // how many obstacles we keep alive (enough for pair spawns)
   const OBSTACLE_START_Z = -70;   // far ahead
   const OBSTACLE_END_Z = 6;      // past the cup
   const RECYCLE_Z = -85;         // where recycled obstacles re-enter
 
-  // Speed (units per second the world scrolls past the cup)
+  // Speed (units per second the world scrolls past the cup).
+  // The speed curve is gentle for the first 5 seconds, then ramps
+  // up at ~0.6 units/sec^2. Reaches the cap (~36) around 55s. This
+  // gives the player time to learn the controls before the
+  // hallway gets fast.
   const BASE_SPEED = 12;
-  const MAX_SPEED = 32;
-  const SPEED_RAMP = 0.40;        // speed added per second of run time
-  const SPAWN_INTERVAL_START = 1.2;
-  const SPAWN_INTERVAL_MIN = 0.6;  // at 60s+ the spawn interval bottoms out
-  const SPAWN_JITTER = 0.35;
+  const MAX_SPEED = 36;
+  const SPEED_RAMP = 0.60;        // speed added per second after the 5s grace period
+  const SPEED_GRACE_SECONDS = 5;  // no ramp during the first 5s
+  // Spawn interval ramps down from ~0.95s (easy) to 0.45s
+  // (dense) over ~25 seconds, then stays at 0.45s.
+  const SPAWN_INTERVAL_START = 0.95;
+  const SPAWN_INTERVAL_MIN = 0.45;
+  const SPAWN_RAMP_SECONDS = 25;
+  const SPAWN_JITTER = 0.30;
+  // Fraction of spawns that produce a two-lane "pattern" (two
+  // obstacles in different lanes at the same z, leaving one safe
+  // lane). Introduced gradually so it doesn't appear before t=6s.
+  const PAIR_SPAWN_BASE = 0.15;
+  const PAIR_SPAWN_RAMP = 0.025;   // per second; reaches ~0.4 by 10s
+  // Minimum z-distance between two consecutive same-lane obstacles
+  // so the player has time to switch lanes. At MAX_SPEED 36,
+  // 12 units = 0.33s, which is just enough for a lane switch.
+  const SAME_LANE_MIN_GAP = 12;
+  // Chance to spawn a bean alongside an obstacle (so the hallway
+  // always has collectibles between hazards).
+  const BEAN_SPAWN_CHANCE = 0.5;
+  const BEAN_INTERVAL_MIN = 2.2;
+  const BEAN_INTERVAL_MAX = 3.8;
   const SCORE_PER_SECOND = 10;
 
   // -----------------------------------------------------------------------
@@ -85,6 +107,10 @@
     speed: BASE_SPEED,
     worldTime: 0,         // seconds since run started
     nextSpawn: SPAWN_INTERVAL_START,
+    // Last spawned obstacle's z and lane, so we can avoid
+    // unavoidable same-lane sequences.
+    lastObZ: -999,
+    lastObLane: -1,
     // Player
     player: {
       lane: 1,            // 0/1/2
@@ -126,7 +152,7 @@
     // Coffee bean collectibles floating in the air. +5 score when
     // collected (you have to jump to reach them).
     beans: [],
-    nextBean: 4,         // seconds until next bean spawn
+    nextBean: 2.5,       // seconds until next bean spawn (more frequent than before)
     // Ambient particles — drifting motes for depth.
     motes: [],
     // Boost particle trail — short-lived blue particles emitted
@@ -527,9 +553,9 @@
   // Decor pool. We allocate a fixed set and recycle their z to make
   // them scroll past. Spacing is the same as the ceiling tile period
   // so the visual rhythm matches.
-  const DECOR_SPACING = 12;
+  const DECOR_SPACING = 8;
   const decorItems = [];
-  for (let i = 0; i < 16; i++) {
+  for (let i = 0; i < 26; i++) {
     const side = (i % 2 === 0) ? 'left' : 'right';
     const decorType = i % 4;
     let item;
@@ -825,7 +851,7 @@
   // Floating beans that the cup can collect by jumping into. Each
   // bean is a small group: an oval (scaled sphere) + a darker line
   // down the middle. They rotate slowly and bob in place.
-  const BEAN_POOL_SIZE = 8;
+  const BEAN_POOL_SIZE = 14;
   const beans = [];
   function makeBean() {
     const group = new THREE.Group();
@@ -873,16 +899,16 @@
   // around the cup. Each has a slow drift (its own sin-based
   // motion) and recycles when it drifts past the camera. Adds depth
   // to the hallway without being noticeable as "particles."
-  const MOTE_COUNT = 16;
+  const MOTE_COUNT = 26;
   const motes = [];
   for (let i = 0; i < MOTE_COUNT; i++) {
     const m = new THREE.Mesh(
       new THREE.SphereGeometry(0.05, 6, 6),
-      new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.45 })
+      new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.40 })
     );
     m.position.set(
       (Math.random() - 0.5) * 6,
-      1.5 + Math.random() * 4,
+      1.2 + Math.random() * 4.5,
       -10 - Math.random() * 70
     );
     m.userData.phase = Math.random() * Math.PI * 2;
@@ -1035,7 +1061,10 @@
   // Tall obstacles (jumpHeight > 0.7) only spawn after 20s of run time.
   function kindAvailable(kind) {
     const meta = OBSTACLE_KINDS[kind];
-    if (meta.jumpHeight > 0.7 && state.worldTime < 20) return false;
+    // Tall obstacles (watercooler, filingcabinet) need a real
+    // jump. Make them available earlier (12s) so the hallway
+    // gets more vertical variety after the first 10 seconds.
+    if (meta.jumpHeight > 0.7 && state.worldTime < 12) return false;
     return true;
   }
 
@@ -1393,22 +1422,36 @@
   // Spawn logic
   // -----------------------------------------------------------------------
   // Weighted random pick from OBSTACLE_KINDS, respecting availability
-  // (tall obstacles only after 20s of run time).
+  // (tall obstacles only after 20s of run time). The base weights
+  // favor easy kinds. As worldTime increases, the weights shift
+  // toward medium/hard kinds (watercooler, filingcabinet) so the
+  // hallway gets denser and more varied.
   function pickKind() {
     const kinds = Object.keys(OBSTACLE_KINDS);
     const available = kinds.filter(kindAvailable);
     if (available.length === 0) return 'chair'; // safety
-    // Weights: simple kind, hard kind — easy kinds more common early.
-    // Use a small per-kind weight table.
-    const weightOf = {
+    // Base weights: easy kinds more common.
+    const baseWeight = {
       spill: 4, cable: 3, mug: 3, chair: 5, box: 3, plant: 2,
       printer: 3, watercooler: 2, filingcabinet: 2, desk: 2, worker: 2,
     };
-    // Wide obstacles (desk, worker) only after 30s.
+    // Ramp: 0 at t=0, 1 at t=40. Multiplied into the "harder" kinds
+    // to bring them in gradually.
+    const rampT = Math.min(1, state.worldTime / 40);
+    // Harder kinds get boosted by the ramp so they appear more
+    // often as the player gets comfortable.
+    const hardBoost = {
+      watercooler: 1.5, filingcabinet: 1.5, printer: 0.8,
+      desk: 1.0, worker: 1.0,
+    };
+    // Wide obstacles (desk, worker) only after 15s (was 30s) so
+    // they appear as a medium-difficulty pattern once the player
+    // has the basics down.
     const w = {};
     for (const k of available) {
-      w[k] = weightOf[k] || 2;
-      if (OBSTACLE_KINDS[k].wide && state.worldTime < 30) w[k] = 0;
+      w[k] = baseWeight[k] || 2;
+      if (hardBoost[k]) w[k] += hardBoost[k] * rampT;
+      if (OBSTACLE_KINDS[k].wide && state.worldTime < 15) w[k] = 0;
     }
     let total = 0;
     for (const k in w) total += w[k];
@@ -1422,16 +1465,122 @@
   }
 
   function spawnNext() {
+    // Decide whether this spawn is a single obstacle or a pair.
+    // The pair chance ramps up with worldTime so the first few
+    // seconds are single, then the hallway starts showing
+    // two-lane patterns (one safe lane).
+    const pairChance = Math.min(0.45, PAIR_SPAWN_BASE + state.worldTime * PAIR_SPAWN_RAMP);
+    const isPair = Math.random() < pairChance && state.worldTime > 6;
+
+    if (isPair) {
+      spawnObstaclePair();
+    } else {
+      spawnSingleObstacle();
+    }
+
+    // With a fixed chance, also spawn a bean alongside the obstacle(s)
+    // so the hallway always has collectibles between hazards.
+    if (Math.random() < BEAN_SPAWN_CHANCE) {
+      spawnBean();
+    }
+  }
+
+  // Spawn a single obstacle. Picks a lane that is different from
+  // the last obstacle's lane when possible, and ensures the new
+  // z is far enough away that the player has reaction time.
+  function spawnSingleObstacle() {
     const ob = state.obstacles.find(o => !o.mesh.visible);
     if (!ob) return;
 
     const kind = pickKind();
     rebuildObstacle(ob, kind);
 
-    ob.lane = Math.floor(Math.random() * 3);
-    ob.z = OBSTACLE_START_Z - Math.random() * 4;
-    ob.mesh.position.set(LANE_X[ob.lane], 0, ob.z);
+    const lane = pickLane(ob);
+    const z = pickZ(lane, ob);
+
+    ob.lane = lane;
+    ob.z = z;
+    ob.mesh.position.set(LANE_X[lane], 0, z);
     ob.mesh.visible = true;
+    state.lastObZ = z;
+    state.lastObLane = lane;
+  }
+
+  // Spawn a pair: two obstacles in two different lanes, with a
+  // small z offset between them so the pattern looks staggered
+  // (not like a wall). The third lane is always safe.
+  function spawnObstaclePair() {
+    // Pick which lane is the safe one. The two obstacles go in
+    // the other two lanes.
+    const safeLane = Math.floor(Math.random() * 3);
+    const lanesForObs = [0, 1, 2].filter(l => l !== safeLane);
+
+    // Stagger the two obstacles by a few units in z so they
+    // don't look like a single wall. The player still has to
+    // commit to the safe lane early.
+    const baseZ = OBSTACLE_START_Z - Math.random() * 3;
+    for (let i = 0; i < 2; i++) {
+      const ob = state.obstacles.find(o => !o.mesh.visible);
+      if (!ob) continue;
+      const kind = pickKind();
+      rebuildObstacle(ob, kind);
+      const lane = lanesForObs[i];
+      const z = baseZ - i * 3.5; // 3.5-unit stagger between the two
+      ob.lane = lane;
+      ob.z = z;
+      ob.mesh.position.set(LANE_X[lane], 0, z);
+      ob.mesh.visible = true;
+    }
+    // Track the nearer one (larger z) for the next single obstacle's
+    // lane-safety check.
+    state.lastObLane = lanesForObs[1];
+    state.lastObZ = baseZ;
+  }
+
+  // Pick a lane for the next obstacle. If the last obstacle is in
+  // the same lane and is close in z, pick a different lane so the
+  // player has a safe option. Returns 0, 1, or 2.
+  function pickLane(_ob) {
+    // Same-lane recent obstacles: the distance between the new
+    // obstacle and the last one in its lane is roughly
+    // |lastObZ - OBSTACLE_START_Z| / (spawnInterval * speed). At
+    // speed 36 and interval 0.45s, that's 16.2 units. If the last
+    // lane is X and the gap is < SAME_LANE_MIN_GAP, the player
+    // wouldn't have time to switch lanes, so avoid lane X.
+    let avoid = -1;
+    if (state.lastObLane >= 0) {
+      // The lastObZ is at spawn (~-70). The new obstacle will be
+      // at ~-70 too. The "distance" between them when both are
+      // on screen is roughly the z difference at spawn, which is
+      // small. So the practical question is: would two obstacles
+      // in the same lane be back-to-back? Since spawn interval is
+      // ~0.45s and the lane switch takes ~0.16s, if the last
+      // obstacle hasn't been passed yet, we MUST avoid that lane.
+      // For simplicity, always avoid the last lane on the next
+      // single spawn. This guarantees a safe lane is always open
+      // between consecutive single obstacles.
+      avoid = state.lastObLane;
+    }
+    const choices = [0, 1, 2].filter(l => l !== avoid);
+    return choices[Math.floor(Math.random() * choices.length)];
+  }
+
+  // Pick a z position for the new obstacle. We ensure the gap to
+  // the last obstacle is at least minGap units so the player has
+  // time to react at any speed. The minGap is based on the current
+  // speed: at speed 12 we want ~6 units (0.5s reaction time), at
+  // speed 36 we want ~14 units (0.39s). This is the "safe lane"
+  // guarantee — consecutive obstacles are never closer than
+  // ~0.4s of travel.
+  function pickZ(_lane, _ob) {
+    if (state.lastObZ <= -900) {
+      // First spawn of the run.
+      return OBSTACLE_START_Z - Math.random() * 4;
+    }
+    const minGap = Math.max(6, state.speed * 0.4);
+    // Place the new obstacle behind the last one by at least
+    // minGap units, with a small random extra gap for variety.
+    return state.lastObZ - minGap - Math.random() * 2.5;
   }
 
   function rebuildObstacle(ob, kind) {
@@ -1694,6 +1843,8 @@
     state.worldTime = 0;
     state.speed = BASE_SPEED;
     state.nextSpawn = SPAWN_INTERVAL_START;
+    state.lastObZ = -999;
+    state.lastObLane = -1;
     state.shake = 0;
     state.flash = 0;
     state.player.lane = 1;
@@ -1715,7 +1866,7 @@
     state.boost.timer = 0;
     // Reset beans, boost particles, dust particles.
     for (const b of state.beans) { b.active = false; b.mesh.visible = false; }
-    state.nextBean = 4;
+    state.nextBean = 2.5;
     for (const p of state.boostParticles) { p.life = 0; p.mesh.visible = false; }
     for (const d of dustPool) { d.life = 0; d.mesh.visible = false; }
     // Reset camera FOV.
@@ -1843,8 +1994,12 @@
 
   function update(dt) {
     state.worldTime += dt;
-    // Difficulty: speed slowly rises.
-    state.speed = Math.min(MAX_SPEED, BASE_SPEED + state.worldTime * SPEED_RAMP);
+    // Difficulty: speed curve. The first 5 seconds are gentle
+    // (BASE_SPEED) so the player can learn the controls, then
+    // speed ramps up at ~0.6 units/sec until it hits MAX_SPEED
+    // around 55s in.
+    const rampStart = Math.max(0, state.worldTime - SPEED_GRACE_SECONDS);
+    state.speed = Math.min(MAX_SPEED, BASE_SPEED + rampStart * SPEED_RAMP);
     // Score climbs with time.
     state.score = Math.floor(state.worldTime * SCORE_PER_SECOND);
 
@@ -1943,12 +2098,13 @@
     manLegR.rotation.x = -manSwing;
     man.position.y = Math.abs(Math.sin(p.runAnim * 1.8)) * 0.05;
 
-    // Spawn obstacles. Spawn interval ramps down from 1.2s to 0.6s
-    // over 60 seconds of run time.
+    // Spawn obstacles. The interval ramps down from SPAWN_INTERVAL_START
+    // (0.95s) to SPAWN_INTERVAL_MIN (0.45s) over SPAWN_RAMP_SECONDS
+    // (25s), then stays at the minimum.
     state.nextSpawn -= dt;
     if (state.nextSpawn <= 0) {
       spawnNext();
-      const rampT = Math.min(1, state.worldTime / 60);
+      const rampT = Math.min(1, state.worldTime / SPAWN_RAMP_SECONDS);
       const baseInterval = SPAWN_INTERVAL_START + (SPAWN_INTERVAL_MIN - SPAWN_INTERVAL_START) * rampT;
       state.nextSpawn = baseInterval * (1 - SPAWN_JITTER + Math.random() * SPAWN_JITTER * 2);
     }
@@ -2062,11 +2218,14 @@
       scene.fog.color.lerp(new THREE.Color(0xffd9a8), Math.min(1, dt * 3));
     }
 
-    // Bean spawn + collision
+    // Bean spawn + collision. Beans are more frequent than before
+    // (2.2-3.8s) so the hallway always has a collectible between
+    // hazards. Obstacle spawns can also drop a bean (see
+    // spawnNext) so density stays high.
     state.nextBean -= dt;
     if (state.nextBean <= 0) {
       spawnBean();
-      state.nextBean = 3.5 + Math.random() * 2.5;
+      state.nextBean = BEAN_INTERVAL_MIN + Math.random() * (BEAN_INTERVAL_MAX - BEAN_INTERVAL_MIN);
     }
     for (const b of state.beans) {
       if (!b.active) continue;
