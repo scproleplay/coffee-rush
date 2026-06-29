@@ -100,6 +100,12 @@
       display: block;
       width: 100%;
       height: 100%;
+      /* The stage already has touch-action: none, but the canvas
+         inside it has its own touch behavior. Set this on the
+         canvas too so the browser doesn't try to start a pan or
+         zoom gesture on a touch, which can swallow swipes and
+         add the iOS 300ms tap delay. */
+      touch-action: none;
     }
 
     /* Header — override the shared .title / .subtitle (which are

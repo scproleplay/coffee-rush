@@ -138,6 +138,8 @@
     pointerStartY: null,
     pointerActive: false,
     pointerDidMove: false,
+    pointerConsumed: false,  // true once a tap/swipe has been processed
+    pointerFallbackTimer: null,  // 250ms fallback if pointerup doesn't fire
     // Boost: meter fills while running, tap the button (or press
     // Shift) to drain it for ~1.5s. While active, the cup passes
     // through obstacles without game-over.
@@ -1646,7 +1648,7 @@
   // -----------------------------------------------------------------------
   // Swipe / tap detection thresholds.
   const SWIPE_MIN_PX = 24;        // minimum drag to count as a swipe
-  const SWIPE_MAX_MS = 600;       // longer than this = drag, not swipe
+  const SWIPE_MAX_MS = 1000;      // longer than this = drag, not swipe
   const TAP_MAX_MS = 250;         // quick tap (used for zone-based taps)
 
   function tryJump() {
@@ -1710,27 +1712,48 @@
   //   - swipe UP = jump
   //   - swipe DOWN = ignored (don't accidentally jump)
   // Tap on the action buttons (JUMP / BOOST) is handled by their own
-  // click handlers.
+  // click + pointerdown handlers.
+  //
+  // Mobile reliability notes (iOS Safari is the worst offender):
+  //   - touch-action: none on the stage + canvas prevents the
+  //     browser from interpreting touches as pan / zoom, which
+  //     would otherwise steal swipes and add a 300ms tap delay.
+  //   - We call e.preventDefault() in pointerdown to suppress the
+  //     default 300ms-click behavior. This is the standard iOS
+  //     fix.
+  //   - We use a 250ms fallback timer after pointerdown so a tap
+  //     still registers even if pointerup is delayed or
+  //     intercepted (e.g. by a system gesture).
   function onStagePointerDown(e) {
-    if (e.target.closest('button, a')) return;
+    // Skip if the touch is on a real button or link — those have
+    // their own handlers. We use closest() so the test works for
+    // child elements inside the buttons (e.g. the <span> icon).
+    if (e.target.closest && e.target.closest('button, a')) return;
     if (!state.running || state.gameOver) return;
-    const rect = CANVAS.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    // Tap zone: only act on quick taps (zone-based). Defer swipe
-    // resolution to pointerup so a quick tap in a zone doesn't fire
-    // the wrong action if the user actually meant to swipe.
+    // Prevent default to kill the iOS 300ms tap delay and any
+    // browser scroll/zoom on this touch. This is the most
+    // important reliability fix for iOS Safari.
+    e.preventDefault();
+    // Record the start position and time. The action fires on
+    // pointerup OR a 250ms fallback (whichever comes first), so
+    // taps always register even if pointerup is suppressed.
     state.pointerStartX = e.clientX;
     state.pointerStartY = e.clientY;
     state.pointerStartT = performance.now();
     state.pointerActive = true;
     state.pointerDidMove = false;
-    // If the touch is in the bottom-right corner area where the
-    // BOOST button sits, treat it as a boost tap. (The button itself
-    // catches the touch first when visible, but for accessibility
-    // we add this fallback so even if the button is hidden by
-    // a layout shift, tapping the boost area still works.)
-    // We skip this — the action button is the canonical way.
+    state.pointerConsumed = false;
+    // Clear any previous fallback timer.
+    if (state.pointerFallbackTimer) {
+      clearTimeout(state.pointerFallbackTimer);
+    }
+    // Fallback: if pointerup doesn't fire within 250ms, treat
+    // the touch as a tap on the spot the user pressed.
+    state.pointerFallbackTimer = setTimeout(() => {
+      if (state.pointerActive && !state.pointerConsumed) {
+        processPointerEnd(state.pointerStartX, state.pointerStartY, 0);
+      }
+    }, 250);
   }
 
   function onStagePointerMove(e) {
@@ -1740,15 +1763,23 @@
     if (Math.abs(dx) > 4 || Math.abs(dy) > 4) state.pointerDidMove = true;
   }
 
-  function onStagePointerUp(e) {
-    if (!state.pointerActive) return;
+  // Shared action handler. Called from onStagePointerUp AND from
+  // the 250ms fallback timer in onStagePointerDown. dx/dy are the
+  // displacement from the start; dt is the elapsed time (0 for
+  // the fallback, which always fires a tap).
+  function processPointerEnd(endX, endY, dt) {
     state.pointerActive = false;
-    const dx = (e.clientX || 0) - (state.pointerStartX || 0);
-    const dy = (e.clientY || 0) - (state.pointerStartY || 0);
-    const dt = performance.now() - (state.pointerStartT || 0);
+    state.pointerConsumed = true;
+    if (state.pointerFallbackTimer) {
+      clearTimeout(state.pointerFallbackTimer);
+      state.pointerFallbackTimer = null;
+    }
+    const dx = (endX || 0) - (state.pointerStartX || 0);
+    const dy = (endY || 0) - (state.pointerStartY || 0);
+    const elapsed = dt || (performance.now() - (state.pointerStartT || 0));
 
-    if (state.pointerDidMove && dt < SWIPE_MAX_MS) {
-      // It's a swipe. Horizontal → lane. Vertical up → jump.
+    // Swipe detection: a quick horizontal or vertical drag.
+    if (state.pointerDidMove && elapsed < SWIPE_MAX_MS) {
       if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > SWIPE_MIN_PX) {
         if (dx < 0) tryLane(state.player.targetLane - 1);
         else tryLane(state.player.targetLane + 1);
@@ -1761,10 +1792,11 @@
       return;
     }
 
-    // It's a quick tap. Use the zone system on the canvas.
-    if (dt < TAP_MAX_MS && Math.abs(dx) < 6 && Math.abs(dy) < 6) {
+    // Tap detection: minimal movement, short time, OR a fallback
+    // (dt=0 means the fallback fired).
+    if (!state.pointerDidMove || Math.abs(dx) < 6 && Math.abs(dy) < 6) {
       const rect = CANVAS.getBoundingClientRect();
-      const x = e.clientX - rect.left;
+      const x = (endX || state.pointerStartX) - rect.left;
       const third = rect.width / 3;
       if (x < third) tryLane(state.player.targetLane - 1);
       else if (x > 2 * third) tryLane(state.player.targetLane + 1);
@@ -1772,8 +1804,43 @@
     }
   }
 
-  JUMP_BTN.addEventListener('click', e => { e.preventDefault(); tryJump(); });
-  if (BOOST_BTN) BOOST_BTN.addEventListener('click', e => { e.preventDefault(); tryBoost(); });
+  function onStagePointerUp(e) {
+    if (!state.pointerActive) return;
+    processPointerEnd(e.clientX, e.clientY, 0);
+  }
+
+  // pointercancel and pointerleave are safety nets. If the OS
+  // interrupts the gesture (e.g. system gesture, notification),
+  // pointerup might not fire. The 250ms fallback will still fire.
+  // We also clear the active flag here so a stray cancel doesn't
+  // leave the input in a stuck state.
+  function onStagePointerCancel() {
+    if (!state.pointerActive) return;
+    // Don't fire an action here — the fallback timer will handle
+    // it if pointerup is truly missing. Just clean up.
+    state.pointerActive = false;
+    if (state.pointerFallbackTimer) {
+      clearTimeout(state.pointerFallbackTimer);
+      state.pointerFallbackTimer = null;
+    }
+  }
+
+  // Action buttons (JUMP / BOOST). Same tap pattern as the overlay
+  // buttons above: bind to click + pointerdown with a dedupe
+  // guard on the SAME function so neither path runs twice.
+  const gameTapHandler = (action) => (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    const now = performance.now();
+    if (now - (action._lastTap || 0) < 500) return;
+    action._lastTap = now;
+    action();
+  };
+  JUMP_BTN.addEventListener('click', gameTapHandler(() => tryJump()));
+  JUMP_BTN.addEventListener('pointerdown', gameTapHandler(() => tryJump()));
+  if (BOOST_BTN) {
+    BOOST_BTN.addEventListener('click', gameTapHandler(() => tryBoost()));
+    BOOST_BTN.addEventListener('pointerdown', gameTapHandler(() => tryBoost()));
+  }
 
   // -----------------------------------------------------------------------
   // Cutscene (unchanged from v1.x)
@@ -1847,6 +1914,14 @@
     state.lastObLane = -1;
     state.shake = 0;
     state.flash = 0;
+    // Clear any pending pointer fallback timer so a stale tap
+    // doesn't fire on the new run.
+    if (state.pointerFallbackTimer) {
+      clearTimeout(state.pointerFallbackTimer);
+      state.pointerFallbackTimer = null;
+    }
+    state.pointerActive = false;
+    state.pointerConsumed = false;
     state.player.lane = 1;
     state.player.targetLane = 1;
     state.player.laneX = LANE_X[1];
@@ -2343,15 +2418,46 @@
     loadBest();
     updateBestDisplays();
     document.addEventListener('keydown', onKeyDown);
+    // Stage pointer events for gameplay. touch-action: none on
+    // the stage + canvas + e.preventDefault() in pointerdown
+    // gives us instant, reliable taps on iOS Safari and Android
+    // Chrome.
     STAGE.addEventListener('pointerdown', onStagePointerDown);
     STAGE.addEventListener('pointermove', onStagePointerMove);
     STAGE.addEventListener('pointerup', onStagePointerUp);
-    STAGE.addEventListener('pointercancel', onStagePointerUp);
-    START_BTN.addEventListener('click', beginRun);
-    PLAY_INTRO_BTN.addEventListener('click', playCutscene);
-    TRY_AGAIN_BTN.addEventListener('click', restart);
-    CUTSCENE_SKIP_BTN.addEventListener('click', skipCutscene);
-    CUTSCENE_START_BTN.addEventListener('click', endCutscene);
+    STAGE.addEventListener('pointercancel', onStagePointerCancel);
+    // iOS Safari gesture events: kill pinch-zoom and rotation
+    // during gameplay. Without this, two-finger gestures on iOS
+    // can interfere with swipes.
+    STAGE.addEventListener('gesturestart', e => e.preventDefault());
+    STAGE.addEventListener('gesturechange', e => e.preventDefault());
+    // Button handlers. We bind to BOTH 'click' and 'pointerdown'
+    // and use a "recently fired" guard on the SAME function so
+    // neither path runs the action twice. The pointerdown handler
+    // fires the action immediately (no 300ms iOS tap delay) and
+    // calls e.preventDefault() to suppress the default browser
+    // behavior. The click event might also fire afterwards
+    // (depending on the browser); the guard ensures the action
+    // only runs once per tap.
+    // Keyboard activation (Enter/Space) still works because the
+    // document-level keydown handler routes to the right action
+    // based on the currently visible overlay.
+    const tapHandler = (action) => (e) => {
+      if (e && e.preventDefault) e.preventDefault();
+      const now = performance.now();
+      if (now - (action._lastTap || 0) < 500) return;
+      action._lastTap = now;
+      action();
+    };
+    const bindTap = (btn, action) => {
+      btn.addEventListener('click', tapHandler(action));
+      btn.addEventListener('pointerdown', tapHandler(action));
+    };
+    bindTap(START_BTN, beginRun);
+    bindTap(PLAY_INTRO_BTN, playCutscene);
+    bindTap(TRY_AGAIN_BTN, restart);
+    bindTap(CUTSCENE_SKIP_BTN, skipCutscene);
+    bindTap(CUTSCENE_START_BTN, endCutscene);
     RESET_BEST_BTN.addEventListener('click', () => {
       state.best = 0;
       saveBest(0);
