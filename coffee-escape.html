@@ -19,16 +19,23 @@
          footer and the page edge. Use a smaller bottom padding so
          the footer feels connected to the page. */
       padding: 16px 16px 14px;
+      /* Center the content vertically when the page is shorter
+         than the viewport. On tall desktop viewports, the empty
+         space is distributed above and below the content block
+         (header + stage + footer) instead of accumulating as a
+         big gap below the footer. This reads as "intentional"
+         whitespace rather than "missing content."
+         On short viewports (mobile) the content is taller than
+         the viewport, so justify-content has no effect. */
+      justify-content: center;
     }
 
     /* On Coffee Escape the main element does NOT stretch with
-       flex: 1 (the shared .arcade-main has flex: 1). That keeps
-       the footer right below the stage instead of pushing it to the
-       bottom of the viewport. On tall viewports the .app's
-       min-height: 100vh still keeps the page full-height, and the
-       footer still sits at the bottom — but the empty space is
-       below the footer (page edge), not between the stage and the
-       footer. That feels intentional and connected. */
+       flex: 1 (the shared .arcade-main has flex: 1). The footer
+       sits right below the stage (no gap between them). The
+       content block (header + stage + footer) is then vertically
+       centered in the viewport by the parent's justify-content,
+       distributing any extra space above and below. */
     .ce-app .arcade-main {
       flex: 0 0 auto;
     }
@@ -41,7 +48,11 @@
     .ce-stage {
       position: relative;
       width: 100%;
-      max-width: 860px;
+      /* Removed the 860px max-width cap so the stage fills the
+         full page content width (up to 888px on desktop with
+         16px padding each side). The 16:9 aspect ratio caps the
+         height, so the stage is now ~500px tall on desktop
+         instead of ~484px — a modest but noticeable improvement. */
       margin: 0 auto;
       aspect-ratio: 16 / 9;
       background: #fff7e6;
