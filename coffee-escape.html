@@ -14,6 +14,23 @@
       max-width: 920px;
       margin: 0 auto;
       -webkit-text-size-adjust: 100%;
+      /* Override the shared .app padding (20px 16px 40px). The
+         40px bottom padding leaves a big empty gap between the
+         footer and the page edge. Use a smaller bottom padding so
+         the footer feels connected to the page. */
+      padding: 16px 16px 14px;
+    }
+
+    /* On Coffee Escape the main element does NOT stretch with
+       flex: 1 (the shared .arcade-main has flex: 1). That keeps
+       the footer right below the stage instead of pushing it to the
+       bottom of the viewport. On tall viewports the .app's
+       min-height: 100vh still keeps the page full-height, and the
+       footer still sits at the bottom — but the empty space is
+       below the footer (page edge), not between the stage and the
+       footer. That feels intentional and connected. */
+    .ce-app .arcade-main {
+      flex: 0 0 auto;
     }
 
     /* The stage is the 3D canvas. It fills the page width up to 860px.
@@ -482,12 +499,14 @@
     /* Footer — tight 2-row layout so the page feels connected to
        the game. Tighter spacing, smaller text, row of action pills. */
     .ce-app .ce-footer {
-      margin-top: 14px;
-      padding: 4px 0 0;
+      /* Tighter top margin so the footer sits closer to the stage.
+         Was 14px; now 10px. */
+      margin-top: 10px;
+      padding: 0;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
     }
     .ce-app .ce-footer-row {
       display: flex;
@@ -582,11 +601,16 @@
     }
 
     /* Subtitle ribbon — warm cream pill instead of a black bar so
-       the cutscene feels lighter and on-theme. */
+       the cutscene feels lighter and on-theme. Sits above the
+       action buttons with a clear gap. */
     .ce-subtitle {
       position: absolute;
       left: 50%;
-      bottom: 9%;
+      /* Fixed pixel offset from the bottom so the subtitle doesn't
+         collide with the Skip/Start buttons regardless of stage
+         height. The buttons are ~40px tall and sit at bottom: 14px,
+         so 14 + 40 + 16 (gap) = 70px gives a safe clearance. */
+      bottom: 70px;
       transform: translateX(-50%);
       background: linear-gradient(180deg, #ffffff 0%, #fff7e0 100%);
       color: #5a3a14;
@@ -619,7 +643,10 @@
 
     .ce-cutscene-actions {
       position: absolute;
-      bottom: 4%;
+      /* Sit at the very bottom of the stage. 14px matches the
+         control-hint and action-button bottom offsets used
+         elsewhere on the page for a consistent visual rhythm. */
+      bottom: 14px;
       left: 50%;
       transform: translateX(-50%);
       display: flex;
@@ -1617,7 +1644,7 @@
   <div class="app ce-app">
     <header class="header">
       <h1 class="title">Coffee Escape ☕🏃</h1>
-      <p class="subtitle">A fresh cup with a single mission: don't get drunk.</p>
+      <p class="subtitle">A tiny cup. A big office. One wild escape.</p>
     </header>
 
     <main class="arcade-main" aria-label="Coffee Escape game">
