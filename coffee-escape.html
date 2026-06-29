@@ -425,29 +425,58 @@
       50% { transform: scale(1.06); }
     }
 
-    /* Floating control hint — shown at the top of the page (above
-       the stage) on all devices, so the controls are always visible
-       without taking up space inside the stage. */
+    /* Floating control hint — small compact overlay inside the
+       stage, anchored at the bottom-center. Absolutely positioned
+       so it doesn't participate in the page's flex layout (the
+       page main is `display: flex` and we don't want the hint to
+       become a sibling flex item that stretches to full height).
+       pointer-events: none so taps fall through to the canvas. */
     .ce-floating-cta {
+      position: absolute;
+      left: 50%;
+      bottom: 14px;
+      transform: translateX(-50%);
       display: inline-block;
       background: linear-gradient(180deg, #ffffff 0%, #fff7e0 100%);
       border: 1.5px solid #ffb347;
       border-radius: 999px;
-      padding: 8px 18px;
+      padding: 6px 14px;
       color: #5a3a14;
       font-weight: 700;
-      font-size: 0.88rem;
+      font-size: 0.78rem;
       letter-spacing: 0.01em;
-      box-shadow: 0 2px 6px rgba(180, 90, 0, 0.18);
-      margin: 0 auto 8px;
+      box-shadow: 0 2px 6px rgba(180, 90, 0, 0.20);
       text-align: center;
+      white-space: nowrap;
+      /* Cap width so the pill never spans the whole canvas. Leaves
+         room for the JUMP/BOOST action buttons on the right. */
+      max-width: calc(100% - 180px);
+      pointer-events: none;
+      z-index: 2;
     }
     @keyframes ce-fade {
       0%, 100% { opacity: 1; }
       50% { opacity: 0.85; }
     }
+    /* Mobile: position the hint above the action buttons (which sit
+       at the bottom-right) and make it smaller. Swap the text to
+       the touch/swipe variant. */
     @media (max-width: 380px) {
-      .ce-floating-cta { font-size: 0.78rem; padding: 6px 12px; }
+      .ce-floating-cta {
+        font-size: 0.72rem;
+        padding: 5px 12px;
+        /* Sit above the JUMP/BOOST buttons (which are 76px tall + 14px
+           from the bottom = 90px from the bottom). */
+        bottom: 100px;
+        max-width: calc(100% - 32px);
+      }
+      .ce-floating-cta-desktop { display: none; }
+      .ce-floating-cta-mobile  { display: inline; }
+    }
+    /* Desktop: show the keyboard hint, hide the touch hint. */
+    @media (min-width: 381px) {
+      .ce-floating-cta-desktop { display: inline; }
+      .ce-floating-cta-mobile  { display: none; }
     }
 
     /* Footer — tight 2-row layout so the page feels connected to
@@ -1592,11 +1621,17 @@
     </header>
 
     <main class="arcade-main" aria-label="Coffee Escape game">
-      <!-- Control hint above the stage so the controls are visible
-           on all devices without overlapping the game. -->
-      <div id="ceHint" class="ce-floating-cta">SPACE / ↑ jump · A / D lanes · SHIFT boost</div>
       <div id="ceStage" class="ce-stage" aria-label="Game play area">
         <canvas id="ceCanvas" class="ce-canvas" aria-label="Coffee Escape play field"></canvas>
+
+        <!-- Control hint: small compact overlay inside the stage, at
+             the bottom center on desktop, above the action buttons on
+             mobile. Two text spans: desktop (keyboard) and mobile
+             (touch/swipe). Only one is shown at a time via CSS. -->
+        <div id="ceHint" class="ce-floating-cta" aria-hidden="true">
+          <span class="ce-floating-cta-desktop">SPACE / ↑ jump · A / D lanes · SHIFT boost</span>
+          <span class="ce-floating-cta-mobile">Swipe ↑ jump · ← → lanes</span>
+        </div>
 
         <!-- HUD: shown during play -->
         <div id="ceHud" class="ce-hud" hidden>
