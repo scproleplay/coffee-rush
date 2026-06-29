@@ -30,6 +30,11 @@
   const FINAL_SCORE_ITEM = document.getElementById('ceFinalScoreItem');
   const FINAL_BEST_ITEM = document.getElementById('ceFinalBestItem');
   const RUN_STAMP = document.getElementById('ceRunStamp');
+  // Global leaderboard submit form (in the game-over card).
+  const LB_FORM = document.getElementById('ceLbSubmit');
+  const LB_NICK_EL = document.getElementById('ceLbNick');
+  const LB_SUBMIT_BTN = document.getElementById('ceLbSubmitBtn');
+  const LB_STATUS_EL = document.getElementById('ceLbStatus');
   const START_OVERLAY = document.getElementById('ceStartOverlay');
   const CUTSCENE = document.getElementById('ceCutscene');
   const GAME_OVER_OVERLAY = document.getElementById('ceGameOverOverlay');
@@ -1835,11 +1840,91 @@
     action._lastTap = now;
     action();
   };
+  // Same pattern for the leaderboard submit button (kept separate
+  // from gameTapHandler so the dedupe is independent).
+  const lbTapHandler = (action) => (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    const now = performance.now();
+    if (now - (action._lastTap || 0) < 500) return;
+    action._lastTap = now;
+    action();
+  };
   JUMP_BTN.addEventListener('click', gameTapHandler(() => tryJump()));
   JUMP_BTN.addEventListener('pointerdown', gameTapHandler(() => tryJump()));
   if (BOOST_BTN) {
     BOOST_BTN.addEventListener('click', gameTapHandler(() => tryBoost()));
     BOOST_BTN.addEventListener('pointerdown', gameTapHandler(() => tryBoost()));
+  }
+
+  // -----------------------------------------------------------------------
+  // Global leaderboard submit (Coffee Escape)
+  // -----------------------------------------------------------------------
+  // Tracks whether the current run's score was already submitted
+  // to the global leaderboard, so the form doesn't appear twice.
+  let scoreSubmitted = false;
+
+  function showLeaderboardForm() {
+    if (!LB_FORM) return;
+    LB_FORM.hidden = false;
+    if (LB_STATUS_EL) {
+      LB_STATUS_EL.textContent = '';
+      LB_STATUS_EL.classList.remove('is-ok', 'is-error');
+    }
+    if (LB_NICK_EL) LB_NICK_EL.value = '';
+  }
+
+  function hideLeaderboardForm() {
+    if (!LB_FORM) return;
+    LB_FORM.hidden = true;
+  }
+
+  function submitToLeaderboard() {
+    if (!window.Leaderboard) {
+      if (LB_STATUS_EL) {
+        LB_STATUS_EL.textContent = 'Leaderboard unavailable.';
+        LB_STATUS_EL.classList.add('is-error');
+      }
+      return;
+    }
+    if (!LB_NICK_EL) return;
+    const nickname = LB_NICK_EL.value.trim();
+    if (nickname.length < 1 || nickname.length > 12) {
+      if (LB_STATUS_EL) {
+        LB_STATUS_EL.textContent = 'Nickname must be 1–12 characters.';
+        LB_STATUS_EL.classList.add('is-error');
+      }
+      return;
+    }
+    if (LB_SUBMIT_BTN) LB_SUBMIT_BTN.disabled = true;
+    if (LB_STATUS_EL) {
+      LB_STATUS_EL.textContent = 'Submitting…';
+      LB_STATUS_EL.classList.remove('is-ok', 'is-error');
+    }
+    window.Leaderboard.submitScore({
+      game: 'coffee-escape',
+      nickname: nickname,
+      score: state.score,
+    }).then(res => {
+      if (LB_SUBMIT_BTN) LB_SUBMIT_BTN.disabled = false;
+      if (res && res.ok) {
+        scoreSubmitted = true;
+        if (LB_STATUS_EL) {
+          LB_STATUS_EL.textContent = 'Submitted! View it on the leaderboard.';
+          LB_STATUS_EL.classList.add('is-ok');
+          LB_STATUS_EL.classList.remove('is-error');
+        }
+        if (LB_SUBMIT_BTN) LB_SUBMIT_BTN.disabled = true;
+      } else {
+        if (LB_STATUS_EL) {
+          LB_STATUS_EL.textContent =
+            (res && res.error && res.error.message)
+              ? res.error.message
+              : 'Submit failed. Please try again.';
+          LB_STATUS_EL.classList.add('is-error');
+          LB_STATUS_EL.classList.remove('is-ok');
+        }
+      }
+    });
   }
 
   // -----------------------------------------------------------------------
@@ -1952,6 +2037,10 @@
 
   function beginRun() {
     resetWorld();
+    // Reset the global leaderboard submit state so a new run can
+    // submit its score again. The form is shown on game over.
+    scoreSubmitted = false;
+    hideLeaderboardForm();
     state.running = true;
     // Hide all overlays so the play area is fully visible. The
     // cutscene path hides them via playCutscene; the direct
@@ -1995,6 +2084,15 @@
     NEW_BEST_EL.hidden = !isNewBest;
     OVER_TITLE_EL.textContent = pickGameOverTitle(state.score);
     GAME_OVER_OVERLAY.hidden = false;
+    // Show the global-leaderboard submit form (only if the user
+    // hasn't already submitted this run). They can submit even if
+    // it's not a new personal best — the leaderboard ranks by
+    // absolute score.
+    if (!scoreSubmitted) {
+      showLeaderboardForm();
+    } else {
+      hideLeaderboardForm();
+    }
     // Count-up animation: the displayed score ramps from 0 to the
     // final value over ~700ms with an ease-out.
     const finalScore = state.score;
@@ -2463,6 +2561,23 @@
       saveBest(0);
       updateBestDisplays();
     });
+    // Global leaderboard submit form (in the game-over card).
+    if (LB_SUBMIT_BTN) {
+      // Same tap pattern as the other buttons: bind to both
+      // 'click' and 'pointerdown' with a dedupe guard to kill the
+      // iOS 300ms tap delay and avoid double-fires.
+      LB_SUBMIT_BTN.addEventListener('click', lbTapHandler(submitToLeaderboard));
+      LB_SUBMIT_BTN.addEventListener('pointerdown', lbTapHandler(submitToLeaderboard));
+    }
+    if (LB_NICK_EL) {
+      // Submit when the user presses Enter in the nickname input.
+      LB_NICK_EL.addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          submitToLeaderboard();
+        }
+      });
+    }
     showStart();
     // Initial paint of the 3D scene behind the start overlay so the
     // background isn't blank.

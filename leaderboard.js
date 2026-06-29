@@ -8,6 +8,7 @@
     { key: "reaction-timer", label: "Reaction Timer" },
     { key: "memory-match",   label: "Memory Match" },
     { key: "math-rush",      label: "Math Rush" },
+    { key: "coffee-escape",  label: "Coffee Escape" },
   ];
 
   const tabs = document.querySelectorAll(".lb-tab");

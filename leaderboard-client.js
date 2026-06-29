@@ -43,6 +43,10 @@
         return { column: "moves", ascending: true, secondary: { column: "time_seconds", ascending: true }, nullsFilter: null };
       case "math-rush":
         return { column: "score", ascending: false, nullsFilter: null };
+      case "coffee-escape":
+        // Highest score (best run distance) wins. Same column as
+        // coffee-rush and math-rush.
+        return { column: "score", ascending: false, nullsFilter: null };
       default:
         throw new Error("Unknown game: " + game);
     }
@@ -77,7 +81,13 @@
   async function submitScore(payload) {
     try {
       const nickname = (payload.nickname || "").trim();
-      if (payload.game !== "coffee-rush" && payload.game !== "reaction-timer" && payload.game !== "memory-match" && payload.game !== "math-rush") {
+      if (
+        payload.game !== "coffee-rush" &&
+        payload.game !== "reaction-timer" &&
+        payload.game !== "memory-match" &&
+        payload.game !== "math-rush" &&
+        payload.game !== "coffee-escape"
+      ) {
         return { ok: false, error: new Error("Unknown game.") };
       }
       if (nickname.length < 1 || nickname.length > 12) {
@@ -104,7 +114,7 @@
   // --- formatGameValue(game, row) ---
   // Returns a human-readable string for the leaderboard row's "value" column.
   function formatGameValue(game, row) {
-    if (game === "coffee-rush" || game === "math-rush") {
+    if (game === "coffee-rush" || game === "math-rush" || game === "coffee-escape") {
       return (row.score == null ? "—" : String(row.score));
     }
     if (game === "reaction-timer") {

@@ -14,28 +14,20 @@
       max-width: 920px;
       margin: 0 auto;
       -webkit-text-size-adjust: 100%;
-      /* Override the shared .app padding (20px 16px 40px). The
-         40px bottom padding leaves a big empty gap between the
-         footer and the page edge. Use a smaller bottom padding so
-         the footer feels connected to the page. */
-      padding: 16px 16px 14px;
-      /* Center the content vertically when the page is shorter
-         than the viewport. On tall desktop viewports, the empty
-         space is distributed above and below the content block
-         (header + stage + footer) instead of accumulating as a
-         big gap below the footer. This reads as "intentional"
-         whitespace rather than "missing content."
-         On short viewports (mobile) the content is taller than
-         the viewport, so justify-content has no effect. */
-      justify-content: center;
+      /* Use natural top padding. The shared .app has min-height:
+         100vh, so on tall viewports there's empty space below the
+         footer — but the content stacks naturally at the top of
+         the page (no vertical centering), so the page reads as
+         a normal document with the game near the top. */
+      padding: 20px 16px 16px;
     }
 
     /* On Coffee Escape the main element does NOT stretch with
-       flex: 1 (the shared .arcade-main has flex: 1). The footer
-       sits right below the stage (no gap between them). The
-       content block (header + stage + footer) is then vertically
-       centered in the viewport by the parent's justify-content,
-       distributing any extra space above and below. */
+       flex: 1 (the shared .arcade-main has flex: 1). The main
+       takes its content's natural height, so the header, stage,
+       and footer stack naturally from the top — no vertical
+       centering, no big gap above the header. The footer sits
+       directly below the game. */
     .ce-app .arcade-main {
       flex: 0 0 auto;
     }
@@ -457,6 +449,83 @@
     @keyframes ce-pulse {
       0%, 100% { transform: scale(1); }
       50% { transform: scale(1.06); }
+    }
+
+    /* Global leaderboard submit form (in the game-over card).
+       Compact, matches the card's visual language. */
+    .ce-lb-submit {
+      margin: 6px 0 12px;
+      text-align: left;
+    }
+    .ce-lb-label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 800;
+      color: #b25e00;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+    }
+    .ce-lb-row {
+      display: flex;
+      gap: 6px;
+      align-items: stretch;
+    }
+    .ce-lb-input {
+      flex: 1 1 auto;
+      min-width: 0;
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #3a1f00;
+      background: #fff;
+      border: 1.5px solid #ffb347;
+      border-radius: 10px;
+      padding: 8px 10px;
+      outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .ce-lb-input:focus {
+      border-color: #ff8800;
+      box-shadow: 0 0 0 3px rgba(255, 136, 0, 0.18);
+    }
+    .ce-lb-btn {
+      flex: 0 0 auto;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: #fff;
+      background: linear-gradient(180deg, #ffb347 0%, #ff8800 100%);
+      border: none;
+      border-radius: 10px;
+      padding: 8px 16px;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(255, 136, 0, 0.30);
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform 0.08s ease, box-shadow 0.15s ease;
+    }
+    .ce-lb-btn:hover { box-shadow: 0 3px 10px rgba(255, 136, 0, 0.45); }
+    .ce-lb-btn:active { transform: translateY(1px); }
+    .ce-lb-btn:disabled {
+      background: #e6d6b0;
+      color: #fff;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+    .ce-lb-status {
+      min-height: 1.2em;
+      margin-top: 6px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #b25e00;
+    }
+    .ce-lb-status.is-ok { color: #2e7d32; }
+    .ce-lb-status.is-error { color: #c0392b; }
+    @media (max-width: 380px) {
+      .ce-lb-input { font-size: 0.95rem; padding: 7px 8px; }
+      .ce-lb-btn { padding: 7px 12px; font-size: 0.88rem; }
     }
 
     /* Floating control hint — small compact overlay inside the
@@ -1932,6 +2001,18 @@
                 <span id="ceFinalBest" class="ce-result-value">0</span>
               </div>
             </div>
+            <!-- Submit to the global leaderboard. Shown only on the
+                 first game over (or when not yet submitted this run). -->
+            <div class="ce-lb-submit" id="ceLbSubmit" hidden>
+              <label class="ce-lb-label" for="ceLbNick">Nickname (1–12 chars)</label>
+              <div class="ce-lb-row">
+                <input id="ceLbNick" class="ce-lb-input" type="text" maxlength="12"
+                       autocomplete="off" spellcheck="false"
+                       placeholder="Your nickname" />
+                <button id="ceLbSubmitBtn" class="ce-lb-btn" type="button">Submit</button>
+              </div>
+              <div id="ceLbStatus" class="ce-lb-status" aria-live="polite"></div>
+            </div>
             <div class="ce-actions">
               <button id="ceTryAgainBtn" class="btn btn-primary" type="button">Try Again</button>
               <a class="btn btn-secondary" href="index.html">Back to Arcade</a>
@@ -1952,7 +2033,7 @@
       </div>
       <div class="ce-footer-row ce-footer-meta">
         <span class="footer-note">Made with love and caffeine.</span>
-        <span class="footer-version">Coffee Escape v2.3</span>
+        <span class="footer-version">Coffee Escape v2.4</span>
         <button id="ceResetBest" class="btn-reset" type="button" aria-label="Reset best score">Reset Best</button>
       </div>
     </footer>
@@ -1962,6 +2043,9 @@
        specific version so a CDN hiccup or API change doesn't break the
        game on a future visit. -->
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script src="leaderboard-client.js"></script>
   <script src="coffee-escape.js"></script>
 </body>
 </html>
