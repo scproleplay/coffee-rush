@@ -1129,6 +1129,36 @@
       background: #1a1a1a;
       border-radius: 50%;
     }
+    /* Subtle drop shadow under the man so he doesn't look like he's
+       floating. */
+    .ce-man::after {
+      content: '';
+      position: absolute;
+      left: 10%;
+      right: 10%;
+      bottom: -2%;
+      height: 4%;
+      background: radial-gradient(ellipse at 50% 50%,
+        rgba(60, 30, 10, 0.35) 30%, transparent 70%);
+      pointer-events: none;
+    }
+    /* Blink animation on the man's eyes. A quick scaleY to 0.1
+       gives a natural blink. */
+    .ce-scene.scene-2 .ce-man .eye {
+      animation: ce-blink 5s ease-in-out infinite;
+    }
+    @keyframes ce-blink {
+      0%, 92%, 100% { transform: scaleY(1); }
+      95%, 97%      { transform: scaleY(0.1); }
+    }
+    /* Subtle idle bob on the man in scene 2 (the "sleepy" scene). */
+    .ce-scene.scene-2 .ce-man {
+      animation: ce-man-sleep-bob 3.6s ease-in-out infinite;
+    }
+    @keyframes ce-man-sleep-bob {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(-2px); }
+    }
 
     /* Scene 3 — man walks in from the right */
     .ce-scene.scene-3 .ce-man { right: -15%; }
@@ -1161,6 +1191,121 @@
     @keyframes ce-arm-reach {
       0%   { transform: rotate(0); }
       100% { transform: rotate(-60deg) translateX(20%); }
+    }
+
+    /* ============================================================
+       Cutscene v2.1 — small animations and depth
+       Adds ambient dust motes, a window light, a steam puff, a
+       moving hallway, a ticking clock, and a subtle idle bob on
+       the cup. All pure CSS, no images, no JS.
+       ============================================================ */
+
+    /* Subtle vignette around the cutscene edges to add depth and
+       focus the eye on the center. */
+    .ce-cutscene::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(ellipse at 50% 50%,
+          transparent 55%,
+          rgba(60, 30, 10, 0.18) 100%);
+      z-index: 7;
+    }
+
+    /* Ambient dust motes — a few tiny drifting particles. They float
+       upward slowly with a subtle horizontal drift, like motes in
+       sunlight. Positioned in the upper half of the cutscene. */
+    .ce-cutscene .ce-motes,
+    .ce-cutscene .ce-cutscene-motes {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 5;
+    }
+    .ce-cutscene .ce-mote,
+    .ce-cutscene .ce-cutscene-mote {
+      position: absolute;
+      left: 20%;
+      top: 60%;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.55);
+      box-shadow: 0 0 6px rgba(255, 255, 255, 0.55);
+      animation: ce-mote-drift 9s linear infinite;
+    }
+    .ce-cutscene .ce-mote.m2,
+    .ce-cutscene .ce-cutscene-mote.m2 {
+      left: 65%;
+      top: 70%;
+      width: 3px;
+      height: 3px;
+      animation-duration: 11s;
+      animation-delay: -3s;
+    }
+    .ce-cutscene .ce-mote.m3,
+    .ce-cutscene .ce-cutscene-mote.m3 {
+      left: 80%;
+      top: 55%;
+      width: 5px;
+      height: 5px;
+      animation-duration: 13s;
+      animation-delay: -6s;
+    }
+    .ce-cutscene .ce-mote.m4,
+    .ce-cutscene .ce-cutscene-mote.m4 {
+      left: 35%;
+      top: 65%;
+      width: 3px;
+      height: 3px;
+      animation-duration: 10s;
+      animation-delay: -2s;
+    }
+    @keyframes ce-mote-drift {
+      0%   { transform: translate(0, 0);   opacity: 0; }
+      10%  { opacity: 0.7; }
+      90%  { opacity: 0.7; }
+      100% { transform: translate(-30px, -200px); opacity: 0; }
+    }
+
+    /* Window light on the wall — a soft warm rectangle that adds
+       a sense of depth and a real office. Positioned in the upper
+       third of the wall, off-center. */
+    .ce-cutscene .ce-window-light {
+      position: absolute;
+      top: 10%;
+      left: 20%;
+      width: 18%;
+      height: 28%;
+      background:
+        linear-gradient(135deg,
+          rgba(255, 235, 180, 0.55) 0%,
+          rgba(255, 220, 150, 0.18) 60%,
+          transparent 100%);
+      border-radius: 4px;
+      box-shadow: 0 0 24px rgba(255, 220, 150, 0.35);
+      pointer-events: none;
+      z-index: 1;
+      /* Subtle pulse like sunlight through a window. */
+      animation: ce-window-glow 4.5s ease-in-out infinite;
+    }
+    @keyframes ce-window-glow {
+      0%, 100% { opacity: 0.85; }
+      50%      { opacity: 1.0; }
+    }
+
+    /* Ticking second hand on the wall clock. The clock is positioned
+       in the office-bg, so the animation runs while any scene is
+       visible. */
+    .ce-cutscene .ce-office-clock::before {
+      animation: ce-clock-tick 60s steps(60, end) infinite;
+    }
+    @keyframes ce-clock-tick {
+      0%   { transform: translate(-50%, 0) rotate(40deg); }
+      100% { transform: translate(-50%, 0) rotate(400deg); }
     }
 
     /* ============================================================
@@ -1369,6 +1514,84 @@
       border-bottom: 1.5px solid rgba(90, 58, 20, 0.6);
     }
 
+    /* A small steam puff above the cup in scene 1 — three tiny
+       white circles that drift up and fade, like the gameplay's
+       3D steam. Gives the cup a "freshly poured" feel. */
+    .ce-cutscene .ce-steam,
+    .ce-cutscene .ce-cutscene-steam {
+      position: absolute;
+      left: 50%;
+      top: 38%;
+      width: 6%;
+      aspect-ratio: 1;
+      transform: translateX(-50%);
+      pointer-events: none;
+      z-index: 2;
+    }
+    .ce-cutscene .ce-steam::before,
+    .ce-cutscene .ce-steam::after,
+    .ce-cutscene .ce-cutscene-steam::before,
+    .ce-cutscene .ce-cutscene-steam::after {
+      content: '';
+      position: absolute;
+      width: 60%;
+      height: 60%;
+      left: 10%;
+      top: 0;
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.7) 30%, transparent 70%);
+      border-radius: 50%;
+      animation: ce-steam-rise 2.4s ease-out infinite;
+    }
+    .ce-cutscene .ce-steam::after,
+    .ce-cutscene .ce-cutscene-steam::after {
+      left: 35%;
+      top: 8%;
+      width: 50%;
+      height: 50%;
+      animation-delay: -1.2s;
+      animation-duration: 2.0s;
+    }
+    @keyframes ce-steam-rise {
+      0%   { transform: translate(0, 0)    scale(0.4); opacity: 0; }
+      20%  { opacity: 0.7; }
+      100% { transform: translate(0, -24px) scale(1.2); opacity: 0; }
+    }
+
+    /* Idle bob on the cup in scene 1 — a very subtle up-and-down
+       that makes the cup feel "alive" while it sits on the desk. */
+    .ce-scene.scene-1 .ce-cup {
+      animation: ce-cup-idle 3.2s ease-in-out infinite;
+    }
+    @keyframes ce-cup-idle {
+      0%, 100% { transform: translateX(-50%) translateY(0); }
+      50%      { transform: translateX(-50%) translateY(-4px); }
+    }
+
+    /* Wake-up glow on the cup in scene 3 — a soft warm halo that
+       pulses briefly when the cup comes alive. */
+    .ce-cutscene .ce-wake-glow,
+    .ce-cutscene .ce-cutscene-wake-glow {
+      position: absolute;
+      left: 50%;
+      bottom: 44%;
+      transform: translateX(-50%);
+      width: 24%;
+      aspect-ratio: 1;
+      background: radial-gradient(circle, rgba(255, 210, 74, 0.65) 30%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0;
+    }
+    .ce-scene.scene-3 .ce-wake-glow,
+    .ce-scene.scene-3 .ce-cutscene-wake-glow {
+      animation: ce-wake-pulse 1.6s ease-out;
+    }
+    @keyframes ce-wake-pulse {
+      0%   { transform: translateX(-50%) scale(0.3); opacity: 0; }
+      40%  { transform: translateX(-50%) scale(1.4); opacity: 0.8; }
+      100% { transform: translateX(-50%) scale(2.0); opacity: 0; }
+    }
+
     /* Scenes 2 and 3 reuse the same cup layout with different
        positions / expressions. Override only the position bits. */
     .ce-scene.scene-2 .ce-cup,
@@ -1445,7 +1668,9 @@
       font-size: clamp(0.7rem, 1.4vw, 0.9rem);
       padding: 6px 10px;
       border-radius: 14px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.18);
+      box-shadow:
+        0 1px 2px rgba(60, 30, 10, 0.18),
+        0 4px 10px rgba(60, 30, 10, 0.15);
       white-space: nowrap;
       animation: ce-thought-bob 1.6s ease-in-out infinite;
     }
@@ -1522,11 +1747,20 @@
         #a06d3a 50px, #a06d3a 52px,
         #b87850 52px, #b87850 100px
       );
+      background-size: 100px 100px;
       transform-origin: 50% 0%;
       /* Tilt the floor so it recedes into the distance. */
       transform: rotateX(60deg);
       transform-origin: 50% 0%;
       box-shadow: inset 0 8px 18px rgba(60, 30, 10, 0.30);
+      /* Scroll the floor stripes toward the camera to give the
+         sense of running forward. This is the key "alive" effect
+         in the hallway cutscene scenes. */
+      animation: ce-hallway-scroll 0.8s linear infinite;
+    }
+    @keyframes ce-hallway-scroll {
+      from { background-position: 0 0; }
+      to   { background-position: 100px 0; }
     }
     .ce-hallway-lane {
       position: absolute;
@@ -1780,6 +2014,15 @@
 
         <!-- Animated intro cutscene (5 scenes) -->
         <div id="ceCutscene" class="ce-cutscene" hidden>
+          <!-- Ambient dust motes + window light are added to scenes
+               that need them. See scene 1-3 below. The motes are
+               shared across scenes 1-3 so they appear once. -->
+          <div class="ce-cutscene-motes" aria-hidden="true">
+            <span class="ce-cutscene-mote m1"></span>
+            <span class="ce-cutscene-mote m2"></span>
+            <span class="ce-cutscene-mote m3"></span>
+            <span class="ce-cutscene-mote m4"></span>
+          </div>
           <div class="ce-scene-dots" aria-hidden="true">
             <span class="dot on" data-i="0"></span>
             <span class="dot" data-i="1"></span>
@@ -1792,6 +2035,7 @@
           <div class="ce-scene scene-1 active" data-scene="1">
             <div class="ce-office-bg" aria-hidden="true">
               <div class="ce-office-wall"></div>
+              <div class="ce-window-light" aria-hidden="true"></div>
               <div class="ce-office-clock"></div>
               <div class="ce-office-plant"></div>
               <div class="ce-office-floor"></div>
@@ -1802,6 +2046,7 @@
               <div class="ce-monitor-stand"></div>
               <div class="ce-keyboard"></div>
             </div>
+            <div class="ce-cutscene-steam" aria-hidden="true"></div>
             <div class="ce-char ce-cup" aria-hidden="true">
               <div class="ce-cup-handle"></div>
               <div class="ce-cup-face">
@@ -1820,6 +2065,7 @@
           <div class="ce-scene scene-2" data-scene="2">
             <div class="ce-office-bg" aria-hidden="true">
               <div class="ce-office-wall"></div>
+              <div class="ce-window-light" aria-hidden="true"></div>
               <div class="ce-office-clock"></div>
               <div class="ce-office-plant"></div>
               <div class="ce-office-floor"></div>
@@ -1862,6 +2108,7 @@
           <div class="ce-scene scene-3" data-scene="3">
             <div class="ce-office-bg" aria-hidden="true">
               <div class="ce-office-wall"></div>
+              <div class="ce-window-light" aria-hidden="true"></div>
               <div class="ce-office-clock"></div>
               <div class="ce-office-plant"></div>
               <div class="ce-office-floor"></div>
@@ -1892,6 +2139,8 @@
                 <div class="mouth"></div>
               </div>
             </div>
+            <!-- Wake-up glow that pulses briefly when the cup comes alive. -->
+            <div class="ce-cutscene-wake-glow" aria-hidden="true"></div>
             <div class="ce-char ce-man" aria-hidden="true">
               <div class="ce-thought-bubble ce-thought-bubble--surprised">!?</div>
               <div class="head">
