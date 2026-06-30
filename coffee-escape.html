@@ -702,17 +702,32 @@
       color: #5a3a14;
       font-weight: 700;
       font-size: clamp(0.85rem, 2.2vw, 1.1rem);
-      padding: 8px 20px;
+      padding: 8px 22px;
       border-radius: 999px;
       letter-spacing: 0.01em;
       box-shadow:
         0 1px 2px rgba(180, 90, 0, 0.18),
-        0 6px 16px rgba(180, 90, 0, 0.22);
+        0 6px 18px rgba(180, 90, 0, 0.25);
       border: 1.5px solid #ffb347;
       white-space: normal;
       max-width: 88%;
       text-align: center;
       animation: ce-subtitle-in 0.4s ease-out;
+    }
+    .ce-subtitle::before {
+      /* A small leading "double-quote" mark that gives the caption a
+         story-subtitle feel. Uses a Unicode character so we don't
+         need an icon font. */
+      content: '\201C';
+      position: absolute;
+      left: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #c98a4d;
+      font-weight: 900;
+      font-size: 1.1em;
+      line-height: 1;
+      opacity: 0.7;
     }
     @keyframes ce-subtitle-in {
       from { opacity: 0; transform: translateX(-50%) translateY(8px); }
@@ -1024,6 +1039,18 @@
     .ce-scene.scene-3 .ce-cup { left: 24%; bottom: 21%; }
     .ce-scene.scene-4 .ce-cup { left: 30%; bottom: 21%; }
     .ce-scene.scene-5 .ce-cup { left: 22%; bottom: 21%; }
+    /* Cup wake-up bounce in scene 3: a single squish-and-stretch
+       when the scene becomes active. */
+    .ce-scene.scene-3 .ce-cup {
+      animation: ce-cup-wake 0.8s ease-out 0.2s 1 both;
+    }
+    @keyframes ce-cup-wake {
+      0%   { transform: translateX(-50%) scale(1, 1); }
+      25%  { transform: translateX(-50%) scale(1.1, 0.85); }
+      50%  { transform: translateX(-50%) scale(0.95, 1.1); }
+      75%  { transform: translateX(-50%) scale(1.05, 0.95); }
+      100% { transform: translateX(-50%) scale(1, 1); }
+    }
 
     /* Cup runs off in scene 5 */
     .ce-scene.scene-5.active .ce-cup { animation: ce-cup-run 1.6s ease-in forwards; }
@@ -1047,86 +1074,184 @@
       position: absolute;
       bottom: 12%;
     }
-    /* man parts built with child divs (head, body, legs) */
+    /* Head: a warm, round face with a soft gradient and a small
+       chin shadow for depth. */
     .ce-man .head {
       position: absolute;
       top: 0;
-      left: 18%;
-      right: 18%;
+      left: 14%;
+      right: 14%;
       aspect-ratio: 1 / 1;
-      background: #e7b78f;
+      background:
+        radial-gradient(circle at 50% 40%, #f3c9a3 0%, #e7b78f 60%, #d4a378 100%);
       border-radius: 50%;
       border: 2px solid #5a3a14;
+      box-shadow:
+        inset 0 -4px 6px rgba(120, 80, 50, 0.18),
+        0 2px 4px rgba(0, 0, 0, 0.15);
     }
+    /* Hair: a thin balding patch on top. */
     .ce-man .hair {
       position: absolute;
-      top: -2%;
-      left: 22%;
-      right: 22%;
-      height: 18%;
+      top: -1%;
+      left: 24%;
+      right: 24%;
+      height: 14%;
       background: #3a2a1a;
       border-radius: 50% 50% 30% 30% / 80% 80% 30% 30%;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
     }
+    /* Eyes: closed, sleepy horizontal lines. In scene 3, the eyes
+       widen (the existing .expr-shocked / .expr-happy modifiers
+       override this). */
     .ce-man .eye {
       position: absolute;
-      top: 36%;
+      top: 44%;
       width: 22%;
-      aspect-ratio: 1 / 1;
-      background: #fff;
-      border: 2px solid #5a3a14;
-      border-radius: 50%;
+      aspect-ratio: 2 / 0.5;
+      background: transparent;
+      border: 0;
+      border-radius: 0;
     }
-    .ce-man .eye.l { left: 18%; }
-    .ce-man .eye.r { right: 18%; }
-    .ce-man .pupil {
+    .ce-man .eye::before {
+      content: '';
       position: absolute;
-      left: 30%; top: 30%;
-      width: 40%; aspect-ratio: 1 / 1;
-      background: #222;
-      border-radius: 50%;
+      left: 0;
+      right: 0;
+      top: 50%;
+      height: 3px;
+      background: #3a2a14;
+      border-radius: 2px;
+      transform: translateY(-50%);
     }
+    .ce-man .eye.l { left: 16%; }
+    .ce-man .eye.r { right: 16%; }
+    /* Pupil: hidden by default (eyes are closed). The
+       .ce-scene.scene-3 .ce-man rule re-shows the eyes as open
+       circles. */
+    .ce-man .pupil { display: none; }
+    /* Mouth: a small "Z" or a flat line for the sleepy look. In
+       scene 3 the worker reacts with a "!" surprise — handled by
+       the existing .ce-man .mouth. */
     .ce-man .mouth {
       position: absolute;
-      left: 30%; right: 30%; top: 64%;
-      height: 10%;
-      border-bottom: 3px solid #5a3a14;
-      border-radius: 0 0 50% 50% / 0 0 100% 100%;
+      left: 35%; right: 35%; top: 70%;
+      height: 2px;
+      background: #5a3a14;
+      border-radius: 1px;
+      box-shadow: 0 1px 0 rgba(90, 58, 20, 0.4);
     }
+    /* A small "ZZZ" badge that sits to the side of the head in
+       scenes 2 and 3. Pure decoration; uses a pseudo-element
+       on the head so we don't need to add a new HTML element. */
+    .ce-man .head::after {
+      content: 'Z';
+      position: absolute;
+      top: 4%;
+      right: -32%;
+      width: 32%;
+      aspect-ratio: 1;
+      background: rgba(255, 255, 255, 0.85);
+      border-radius: 50%;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: clamp(0.5rem, 1vw, 0.7rem);
+      color: #5a3a14;
+      /* Only show the "Z" in scene 2 (the "sleepy" scene). */
+      animation: ce-z-float 2.4s ease-in-out infinite;
+    }
+    .ce-man .head::before {
+      content: 'z';
+      position: absolute;
+      top: -2%;
+      right: -16%;
+      width: 22%;
+      aspect-ratio: 1;
+      background: rgba(255, 255, 255, 0.7);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: clamp(0.4rem, 0.8vw, 0.55rem);
+      color: #5a3a14;
+      animation: ce-z-float 2.4s ease-in-out -1.2s infinite;
+    }
+    @keyframes ce-z-float {
+      0%   { transform: translate(0, 0)    scale(0.6); opacity: 0; }
+      30%  { opacity: 0.9; }
+      100% { transform: translate(-10px, -14px) scale(1.1); opacity: 0; }
+    }
+    /* Body: a warm sweater with a subtle V-neck and a coffee-stain
+       detail. */
     .ce-man .body {
       position: absolute;
       top: 28%;
-      left: 14%;
-      right: 14%;
+      left: 12%;
+      right: 12%;
       bottom: 26%;
-      background: #a04a2a;
-      border-radius: 18% 18% 8% 8% / 12% 12% 4% 4%;
+      background: linear-gradient(180deg, #c26844 0%, #a04a2a 60%, #8a3a1a 100%);
+      border-radius: 14% 14% 8% 8% / 8% 8% 6% 6%;
+      box-shadow:
+        inset 0 -3px 4px rgba(60, 30, 10, 0.20),
+        inset 0 2px 0 rgba(255, 220, 180, 0.20),
+        0 2px 4px rgba(0, 0, 0, 0.15);
     }
+    /* V-neck: a small dark triangle at the top of the body. */
+    .ce-man .body::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 22%;
+      height: 18%;
+      background: #e7b78f;
+      clip-path: polygon(0 0, 100% 0, 50% 100%);
+    }
+    /* Arms: sweater sleeves with cuffs. */
     .ce-man .arm {
       position: absolute;
       top: 30%;
       width: 18%;
       height: 32%;
-      background: #a04a2a;
+      background: linear-gradient(180deg, #a04a2a 0%, #8a3a1a 100%);
       border-radius: 30%;
+    }
+    /* A cuff (lighter band) at the bottom of each arm. */
+    .ce-man .arm::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 18%;
+      background: #6a2a10;
+      border-radius: 0 0 30% 30% / 0 0 40% 40%;
     }
     .ce-man .arm.l { left: 4%; transform-origin: 100% 0; }
     .ce-man .arm.r { right: 4%; transform-origin: 0 0; }
+    /* Pants: dark navy. */
     .ce-man .leg {
       position: absolute;
       bottom: 0;
       width: 22%;
       height: 30%;
-      background: #2b3a55;
-      border-radius: 18% 18% 6% 6% / 24% 24% 6% 6%;
+      background: linear-gradient(180deg, #3a4a6a 0%, #2b3a55 100%);
+      border-radius: 14% 14% 4% 4% / 18% 18% 4% 4%;
     }
     .ce-man .leg.l { left: 22%; transform-origin: 50% 0; }
     .ce-man .leg.r { right: 22%; transform-origin: 50% 0; }
+    /* Shoes: small dark ovals at the bottom of each leg. */
     .ce-man .shoe {
       position: absolute;
-      bottom: 0;
-      width: 110%;
+      bottom: -2px;
+      width: 130%;
       height: 18%;
-      background: #1a1a1a;
+      background: linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%);
       border-radius: 50%;
     }
     /* Subtle drop shadow under the man so he doesn't look like he's
@@ -1134,22 +1259,13 @@
     .ce-man::after {
       content: '';
       position: absolute;
-      left: 10%;
-      right: 10%;
-      bottom: -2%;
-      height: 4%;
+      left: 8%;
+      right: 8%;
+      bottom: -3%;
+      height: 5%;
       background: radial-gradient(ellipse at 50% 50%,
-        rgba(60, 30, 10, 0.35) 30%, transparent 70%);
+        rgba(60, 30, 10, 0.40) 30%, transparent 70%);
       pointer-events: none;
-    }
-    /* Blink animation on the man's eyes. A quick scaleY to 0.1
-       gives a natural blink. */
-    .ce-scene.scene-2 .ce-man .eye {
-      animation: ce-blink 5s ease-in-out infinite;
-    }
-    @keyframes ce-blink {
-      0%, 92%, 100% { transform: scaleY(1); }
-      95%, 97%      { transform: scaleY(0.1); }
     }
     /* Subtle idle bob on the man in scene 2 (the "sleepy" scene). */
     .ce-scene.scene-2 .ce-man {
@@ -1157,7 +1273,47 @@
     }
     @keyframes ce-man-sleep-bob {
       0%, 100% { transform: translateY(0); }
-      50%      { transform: translateY(-2px); }
+      50%      { transform: translateY(-3px); }
+    }
+    /* In scene 3, the worker reacts to the cup waking up. The eyes
+       open (round, with pupils), the mouth becomes a small "O",
+       and the head tilts slightly. */
+    .ce-scene.scene-3 .ce-man .head {
+      animation: ce-man-startle-head 1.4s ease-in-out;
+      transform-origin: 50% 100%;
+    }
+    @keyframes ce-man-startle-head {
+      0%   { transform: rotate(0deg); }
+      40%  { transform: rotate(-6deg); }
+      100% { transform: rotate(0deg); }
+    }
+    .ce-scene.scene-3 .ce-man .eye {
+      aspect-ratio: 1 / 1;
+      background: #fff;
+      border: 2px solid #5a3a14;
+      border-radius: 50%;
+      top: 40%;
+    }
+    .ce-scene.scene-3 .ce-man .eye::before {
+      content: '';
+      position: absolute;
+      left: 25%; top: 25%;
+      width: 50%; height: 50%;
+      background: #1a1a1a;
+      border-radius: 50%;
+      transform: none;
+    }
+    .ce-scene.scene-3 .ce-man .pupil { display: none; }
+    .ce-scene.scene-3 .ce-man .mouth {
+      left: 42%; right: 42%; top: 68%;
+      height: 14%;
+      background: #5a3a14;
+      border-radius: 50%;
+      box-shadow: none;
+    }
+    .ce-scene.scene-3 .ce-man .head::before,
+    .ce-scene.scene-3 .ce-man .head::after {
+      display: none;
     }
 
     /* Scene 3 — man walks in from the right */
@@ -1184,6 +1340,29 @@
     .ce-scene.scene-5 .ce-man { right: 38%; }
     .ce-scene.scene-5.active .ce-man { animation: ce-man-reach 1.6s ease-in forwards; }
     .ce-scene.scene-5.active .ce-man .arm.r { animation: ce-arm-reach 0.6s ease-out forwards; }
+    /* In scene 5 the worker is awake and reaching for the cup, so
+       the "Z" sleep badges don't apply. */
+    .ce-scene.scene-5 .ce-man .head::before,
+    .ce-scene.scene-5 .ce-man .head::after {
+      display: none;
+    }
+    /* In scene 5 the eyes are open (the worker is alert). */
+    .ce-scene.scene-5 .ce-man .eye {
+      aspect-ratio: 1 / 1;
+      background: #fff;
+      border: 2px solid #5a3a14;
+      border-radius: 50%;
+      top: 40%;
+    }
+    .ce-scene.scene-5 .ce-man .eye::before {
+      content: '';
+      position: absolute;
+      left: 25%; top: 25%;
+      width: 50%; height: 50%;
+      background: #1a1a1a;
+      border-radius: 50%;
+      transform: none;
+    }
     @keyframes ce-man-reach {
       0%   { transform: translateX(0); }
       100% { transform: translateX(-6%) rotate(-3deg); }
@@ -1322,44 +1501,99 @@
       inset: 0;
       overflow: hidden;
     }
+    /* Wall: warm cream gradient with a subtle paper texture. A
+       picture frame on the upper-left adds depth. A door on the
+       upper-right hints at the hallway the cup will run into. */
     .ce-office-wall {
       position: absolute;
       left: 0;
       right: 0;
       top: 0;
-      height: 62%;
+      height: 64%;
       background:
-        /* Faint coffee-bean motif via a small repeating gradient. */
-        radial-gradient(circle at 12% 28%, rgba(90, 50, 20, 0.06) 0 4px, transparent 6px) 0 0 / 28px 28px,
-        radial-gradient(circle at 60% 50%, rgba(90, 50, 20, 0.05) 0 3px, transparent 5px) 0 0 / 22px 22px,
-        linear-gradient(180deg, #f4d6a8 0%, #ecc18a 100%);
+        /* Subtle paper texture. */
+        radial-gradient(circle at 20% 30%, rgba(90, 50, 20, 0.04) 0 3px, transparent 5px) 0 0 / 18px 18px,
+        radial-gradient(circle at 70% 60%, rgba(90, 50, 20, 0.03) 0 2px, transparent 4px) 0 0 / 22px 22px,
+        /* Vertical gradient: lighter at top, warmer near the
+           baseboard. */
+        linear-gradient(180deg, #f4d6a8 0%, #e8c590 100%);
     }
+    /* Baseboard: a thin dark strip at the bottom of the wall. Adds
+       depth and grounds the room. */
+    .ce-office-wall::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -1px;
+      height: 4%;
+      background: linear-gradient(180deg, #8a5a2c 0%, #5a3a14 100%);
+      box-shadow: 0 2px 4px rgba(60, 30, 10, 0.25);
+    }
+    /* A doorframe on the right side of the wall — a recessed dark
+       rectangle that hints at the hallway. Pure decoration. */
+    .ce-office-bg::before {
+      content: '';
+      position: absolute;
+      top: 8%;
+      right: 6%;
+      width: 10%;
+      height: 60%;
+      background:
+        linear-gradient(180deg, #3a2a14 0%, #2a1f0a 100%);
+      border-radius: 4px 4px 0 0;
+      box-shadow:
+        inset 0 4px 12px rgba(0, 0, 0, 0.6),
+        0 0 0 2px #8a5a2c;
+    }
+    .ce-office-bg::after {
+      content: '';
+      position: absolute;
+      top: 8%;
+      right: 6%;
+      width: 10%;
+      height: 60%;
+      background:
+        linear-gradient(180deg,
+          transparent 0%,
+          transparent 8%,
+          rgba(255, 220, 150, 0.08) 30%,
+          transparent 100%);
+      pointer-events: none;
+    }
+    /* Floor: warm wood planks with a baseboard seam at the top. */
     .ce-office-floor {
       position: absolute;
       left: 0;
       right: 0;
       bottom: 0;
-      height: 38%;
+      height: 36%;
       background:
-        /* Wood-plank stripes. */
         repeating-linear-gradient(
           90deg,
           #b07a48 0px, #b07a48 36px,
           #a06d3a 36px, #a06d3a 37px,
           #b87850 37px, #b87850 72px
         );
-      box-shadow: inset 0 6px 12px rgba(60, 30, 10, 0.25);
+      box-shadow:
+        inset 0 8px 16px rgba(60, 30, 10, 0.35),
+        inset 0 1px 0 #5a3a14;
     }
+    /* Clock: a wall clock with a wooden frame, white face, and
+       ticking second hand. */
     .ce-office-clock {
       position: absolute;
-      top: 14%;
-      right: 14%;
-      width: 11%;
+      top: 12%;
+      left: 8%;
+      width: 10%;
       aspect-ratio: 1;
       background: #ffffff;
       border: 4px solid #5a3a14;
       border-radius: 50%;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+      box-shadow:
+        0 2px 4px rgba(60, 30, 10, 0.30),
+        0 6px 14px rgba(60, 30, 10, 0.18),
+        inset 0 -3px 4px rgba(60, 30, 10, 0.10);
     }
     .ce-office-clock::before,
     .ce-office-clock::after {
@@ -1381,23 +1615,50 @@
       height: 38%;
       transform: translate(-50%, 0) rotate(-10deg);
     }
+    /* Picture frame on the wall: a small wooden frame with a
+       coffee-cup illustration. Adds depth to the wall. */
+    .ce-cutscene .ce-wall-picture,
+    .ce-cutscene .ce-cutscene-wall-picture {
+      position: absolute;
+      top: 12%;
+      left: 42%;
+      width: 10%;
+      height: 16%;
+      background: #fff;
+      border: 3px solid #5a3a14;
+      box-shadow:
+        0 2px 6px rgba(60, 30, 10, 0.30),
+        0 0 0 2px #c98a4d;
+    }
+    .ce-cutscene .ce-wall-picture::before {
+      content: '☕';
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: clamp(0.6rem, 1.4vw, 1.0rem);
+    }
+    /* Plant: terracotta pot with green leaves. */
     .ce-office-plant {
       position: absolute;
       bottom: 32%;
-      left: 6%;
-      width: 10%;
+      right: 22%;
+      width: 8%;
       aspect-ratio: 1;
       background: #b87333;
       border-radius: 4px 4px 30% 30% / 4px 4px 25% 25%;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.18);
+      box-shadow:
+        0 4px 8px rgba(0, 0, 0, 0.22),
+        0 1px 2px rgba(0, 0, 0, 0.10);
     }
     .ce-office-plant::before {
       content: '';
       position: absolute;
       left: 10%;
       right: 10%;
-      top: -45%;
-      height: 50%;
+      top: -50%;
+      height: 55%;
       background:
         radial-gradient(ellipse at 50% 80%, #4a8a3a 35%, transparent 36%),
         radial-gradient(ellipse at 30% 60%, #4a8a3a 28%, transparent 29%),
@@ -1418,11 +1679,25 @@
       right: 12%;
       bottom: 0;
       height: 14%;
-      background: linear-gradient(180deg, #8a4a1f 0%, #5a2d12 100%);
+      background: linear-gradient(180deg, #a86d3a 0%, #5a2d12 100%);
       border-radius: 6px 6px 0 0;
       box-shadow:
-        inset 0 2px 0 rgba(255, 255, 255, 0.18),
-        0 4px 8px rgba(0, 0, 0, 0.20);
+        inset 0 2px 0 rgba(255, 255, 255, 0.20),
+        inset 0 -2px 4px rgba(0, 0, 0, 0.20),
+        0 4px 12px rgba(0, 0, 0, 0.25);
+    }
+    /* Desk edge: a thin highlight along the top to give the wood
+       a polished look. */
+    .ce-desk-top::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 0;
+      height: 2px;
+      background: linear-gradient(180deg,
+        rgba(255, 220, 170, 0.5) 0%,
+        rgba(255, 220, 170, 0) 100%);
     }
     .ce-monitor {
       position: absolute;
@@ -1431,16 +1706,34 @@
       transform: translateX(-50%);
       width: 12%;
       height: 28%;
-      background: #1a1a1a;
+      background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%);
       border: 3px solid #2a2a2a;
       border-radius: 4px;
+      box-shadow:
+        0 2px 4px rgba(0, 0, 0, 0.20),
+        inset 0 1px 0 rgba(255, 255, 255, 0.10);
     }
     .ce-monitor::before {
       content: '';
       position: absolute;
       inset: 8%;
-      background: linear-gradient(135deg, #2a3a4a 0%, #4a5a6a 100%);
+      background:
+        /* A small "code editor" on the monitor screen for life. */
+        linear-gradient(180deg, #1e2a3a 0%, #2a3a4a 100%);
       border-radius: 2px;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    }
+    /* A subtle screen glow on the monitor. */
+    .ce-monitor::after {
+      content: '';
+      position: absolute;
+      left: 20%;
+      right: 20%;
+      bottom: 12%;
+      height: 4%;
+      background: rgba(180, 200, 255, 0.18);
+      border-radius: 2px;
+      filter: blur(2px);
     }
     .ce-monitor-stand {
       position: absolute;
@@ -1456,10 +1749,73 @@
       left: 50%;
       bottom: 8%;
       transform: translateX(-50%);
-      width: 14%;
-      height: 3%;
-      background: #2a2a2a;
-      border-radius: 2px;
+      width: 16%;
+      height: 4%;
+      background: linear-gradient(180deg, #3a3a3a 0%, #2a2a2a 100%);
+      border-radius: 3px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.20);
+    }
+    /* Desk lamp on the left of the desk: a small lamp with a warm
+       glow. Pure decoration. */
+    .ce-cutscene .ce-desk-lamp,
+    .ce-cutscene .ce-cutscene-desk-lamp {
+      position: absolute;
+      left: 16%;
+      bottom: 14%;
+      width: 4%;
+      aspect-ratio: 1;
+      background:
+        radial-gradient(ellipse at 50% 30%,
+          rgba(255, 220, 150, 0.55) 0%,
+          rgba(255, 200, 120, 0.18) 40%,
+          transparent 70%);
+      pointer-events: none;
+    }
+    .ce-cutscene .ce-desk-lamp::before,
+    .ce-cutscene .ce-cutscene-desk-lamp::before {
+      content: '';
+      position: absolute;
+      left: 30%;
+      bottom: 0;
+      width: 2px;
+      height: 70%;
+      background: #3a2a14;
+    }
+    .ce-cutscene .ce-desk-lamp::after,
+    .ce-cutscene .ce-cutscene-desk-lamp::after {
+      content: '';
+      position: absolute;
+      left: 10%;
+      right: 10%;
+      top: 0;
+      height: 30%;
+      background: linear-gradient(180deg, #2a1f0a 0%, #5a3a14 100%);
+      border-radius: 4px 4px 0 0;
+    }
+    /* Papers: a small stack of white sheets on the right of the desk. */
+    .ce-cutscene .ce-desk-papers,
+    .ce-cutscene .ce-cutscene-desk-papers {
+      position: absolute;
+      right: 18%;
+      bottom: 14%;
+      width: 6%;
+      height: 2.5%;
+      background: #fff;
+      border: 1px solid #d4b88a;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+    }
+    .ce-cutscene .ce-desk-papers::before,
+    .ce-cutscene .ce-cutscene-desk-papers::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: -2px;
+      height: 100%;
+      background: #fff;
+      border: 1px solid #d4b88a;
+      transform: rotate(-3deg);
+      transform-origin: left center;
     }
 
     /* Cup handle — a small "C" shape on the right side of the cutscene
@@ -1476,19 +1832,28 @@
       background: transparent;
     }
     .ce-scene.scene-1 .ce-cup {
-      /* Cup sits on the desk, calm face */
+      /* Cup sits on the desk, calm face. The background is a
+         left-to-right gradient that gives the cup a 3D highlight
+         (lighter on the left) and a soft shadow (darker on the
+         right). */
       position: absolute;
       left: 50%;
       bottom: 44%;
       transform: translateX(-50%);
       width: 8%;
       aspect-ratio: 1 / 1.1;
-      background: linear-gradient(180deg, #ffffff 0%, #f0e0c0 100%);
+      background: linear-gradient(90deg,
+        #ffffff 0%,
+        #f8f0e0 30%,
+        #e8d8b8 70%,
+        #c8a878 100%);
       border: 2.5px solid #5a3a14;
       border-radius: 8% 8% 24% 24% / 6% 6% 30% 30%;
       transform-origin: center bottom;
       overflow: visible;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.18);
+      box-shadow:
+        0 4px 10px rgba(0, 0, 0, 0.22),
+        0 1px 2px rgba(0, 0, 0, 0.10);
     }
     /* Coffee surface inside the cutscene cup — small brown disc. */
     .ce-scene.scene-1 .ce-cup::before {
@@ -1602,12 +1967,18 @@
       transform: translateX(-50%);
       width: 8%;
       aspect-ratio: 1 / 1.1;
-      background: linear-gradient(180deg, #ffffff 0%, #f0e0c0 100%);
+      background: linear-gradient(90deg,
+        #ffffff 0%,
+        #f8f0e0 30%,
+        #e8d8b8 70%,
+        #c8a878 100%);
       border: 2.5px solid #5a3a14;
       border-radius: 8% 8% 24% 24% / 6% 6% 30% 30%;
       transform-origin: center bottom;
       overflow: visible;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.18);
+      box-shadow:
+        0 4px 10px rgba(0, 0, 0, 0.22),
+        0 1px 2px rgba(0, 0, 0, 0.10);
     }
     .ce-scene.scene-2 .ce-cup::before,
     .ce-scene.scene-3 .ce-cup::before {
@@ -1832,6 +2203,13 @@
     .ce-cup-runner {
       bottom: 16%;
       width: 11%;
+      animation: ce-cup-runner-bounce 0.4s ease-in-out infinite;
+    }
+    /* A subtle vertical bounce on the running cup so it feels
+       like it's actually bouncing along the floor. */
+    @keyframes ce-cup-runner-bounce {
+      0%, 100% { transform: translateX(-50%) translateY(0); }
+      50%      { transform: translateX(-50%) translateY(-4px); }
     }
     .ce-cup-runner-body {
       width: 100%;
@@ -1949,15 +2327,66 @@
       filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.25));
     }
     /* Position a few obstacles in the perspective. The "depth" is
-       faked by size + vertical position. */
-    .ce-scene.scene-4 .mo-1 { left: 22%; top: 18%; font-size: clamp(0.7rem, 1.5vw, 1.0rem); }
-    .ce-scene.scene-4 .mo-2 { left: 50%; top: 26%; font-size: clamp(0.85rem, 1.8vw, 1.2rem); }
-    .ce-scene.scene-4 .mo-3 { left: 78%; top: 20%; font-size: clamp(0.7rem, 1.5vw, 1.0rem); }
-    .ce-scene.scene-4 .mo-4 { left: 65%; top: 36%; font-size: clamp(0.9rem, 1.9vw, 1.3rem); }
+       faked by size + vertical position. Scene 4 has obstacles
+       "appear" with a small pop-in animation. */
+    .ce-scene.scene-4 .mo-1 {
+      left: 22%; top: 18%; font-size: clamp(0.7rem, 1.5vw, 1.0rem);
+      animation: ce-mo-pop 0.5s ease-out 0.2s both;
+    }
+    .ce-scene.scene-4 .mo-2 {
+      left: 50%; top: 26%; font-size: clamp(0.85rem, 1.8vw, 1.2rem);
+      animation: ce-mo-pop 0.5s ease-out 0.5s both;
+    }
+    .ce-scene.scene-4 .mo-3 {
+      left: 78%; top: 20%; font-size: clamp(0.7rem, 1.5vw, 1.0rem);
+      animation: ce-mo-pop 0.5s ease-out 0.8s both;
+    }
+    .ce-scene.scene-4 .mo-4 {
+      left: 65%; top: 36%; font-size: clamp(0.9rem, 1.9vw, 1.3rem);
+      animation: ce-mo-pop 0.5s ease-out 1.1s both;
+    }
+    @keyframes ce-mo-pop {
+      0%   { transform: translate(-50%, 0) scale(0); opacity: 0; }
+      60%  { transform: translate(-50%, 0) scale(1.2); opacity: 1; }
+      100% { transform: translate(-50%, 0) scale(1); opacity: 1; }
+    }
 
     .ce-scene.scene-5 .mo-1 { left: 28%; top: 22%; font-size: clamp(0.6rem, 1.3vw, 0.9rem); }
     .ce-scene.scene-5 .mo-2 { left: 72%; top: 22%; font-size: clamp(0.6rem, 1.3vw, 0.9rem); }
     .ce-scene.scene-5 .mo-3 { left: 50%; top: 38%; font-size: clamp(0.7rem, 1.5vw, 1.0rem); }
+
+    /* Respect the user's reduced-motion preference. We keep the
+       cutscene's opacity/position transitions (which are needed for
+       scene changes) but disable the ambient looping animations
+       (motes, steam, clock tick, sparkles, window glow, ZZZ
+       float). The cup and man still appear, just without the
+       looping flourishes. */
+    @media (prefers-reduced-motion: reduce) {
+      .ce-cutscene .ce-cutscene-mote,
+      .ce-cutscene .ce-steam,
+      .ce-cutscene .ce-cutscene-steam,
+      .ce-cutscene .ce-sparkle,
+      .ce-cutscene .ce-cutscene-wall-picture,
+      .ce-cutscene .ce-cutscene-wake-glow,
+      .ce-cutscene .ce-window-light,
+      .ce-cutscene .ce-mote,
+      .ce-cutscene .ce-cutscene-mote {
+        animation: none !important;
+      }
+      .ce-cutscene .ce-mote,
+      .ce-cutscene .ce-cutscene-mote {
+        opacity: 0.35;
+      }
+      .ce-scene.scene-1 .ce-cup,
+      .ce-scene.scene-2 .ce-man,
+      .ce-scene.scene-3 .ce-cup,
+      .ce-scene.scene-3 .ce-man .head,
+      .ce-scene.scene-4 .ce-hallway-floor,
+      .ce-scene.scene-5 .ce-hallway-floor,
+      .ce-scene.scene-5 .ce-cup-runner {
+        animation: none !important;
+      }
+    }
   </style>
 </head>
 <body>
@@ -2036,6 +2465,7 @@
             <div class="ce-office-bg" aria-hidden="true">
               <div class="ce-office-wall"></div>
               <div class="ce-window-light" aria-hidden="true"></div>
+              <div class="ce-cutscene-wall-picture" aria-hidden="true"></div>
               <div class="ce-office-clock"></div>
               <div class="ce-office-plant"></div>
               <div class="ce-office-floor"></div>
@@ -2045,6 +2475,8 @@
               <div class="ce-monitor"></div>
               <div class="ce-monitor-stand"></div>
               <div class="ce-keyboard"></div>
+              <div class="ce-cutscene-desk-lamp" aria-hidden="true"></div>
+              <div class="ce-cutscene-desk-papers" aria-hidden="true"></div>
             </div>
             <div class="ce-cutscene-steam" aria-hidden="true"></div>
             <div class="ce-char ce-cup" aria-hidden="true">
@@ -2058,7 +2490,7 @@
                 <div class="mouth"></div>
               </div>
             </div>
-            <div class="ce-subtitle">Another quiet day at CodeCup Studio...</div>
+            <div class="ce-subtitle">Another quiet morning at CodeCup Studio...</div>
           </div>
 
           <!-- Scene 2 — A sleepy worker reaches for the coffee. -->
@@ -2066,6 +2498,7 @@
             <div class="ce-office-bg" aria-hidden="true">
               <div class="ce-office-wall"></div>
               <div class="ce-window-light" aria-hidden="true"></div>
+              <div class="ce-cutscene-wall-picture" aria-hidden="true"></div>
               <div class="ce-office-clock"></div>
               <div class="ce-office-plant"></div>
               <div class="ce-office-floor"></div>
@@ -2075,6 +2508,8 @@
               <div class="ce-monitor"></div>
               <div class="ce-monitor-stand"></div>
               <div class="ce-keyboard"></div>
+              <div class="ce-cutscene-desk-lamp" aria-hidden="true"></div>
+              <div class="ce-cutscene-desk-papers" aria-hidden="true"></div>
             </div>
             <div class="ce-char ce-cup expr-scared" aria-hidden="true">
               <div class="ce-cup-handle"></div>
@@ -2109,6 +2544,7 @@
             <div class="ce-office-bg" aria-hidden="true">
               <div class="ce-office-wall"></div>
               <div class="ce-window-light" aria-hidden="true"></div>
+              <div class="ce-cutscene-wall-picture" aria-hidden="true"></div>
               <div class="ce-office-clock"></div>
               <div class="ce-office-plant"></div>
               <div class="ce-office-floor"></div>
@@ -2118,6 +2554,8 @@
               <div class="ce-monitor"></div>
               <div class="ce-monitor-stand"></div>
               <div class="ce-keyboard"></div>
+              <div class="ce-cutscene-desk-lamp" aria-hidden="true"></div>
+              <div class="ce-cutscene-desk-papers" aria-hidden="true"></div>
             </div>
             <div class="ce-char ce-cup expr-happy" aria-hidden="true">
               <div class="ce-cup-handle"></div>
@@ -2177,7 +2615,7 @@
               <span class="ce-mini-ob mo-3">☕</span>
               <span class="ce-mini-ob mo-4">📦</span>
             </div>
-            <div class="ce-subtitle">Now it has to escape the morning rush.</div>
+            <div class="ce-subtitle">Cables, chairs, and chaos stood in the way.</div>
           </div>
 
           <!-- Scene 5 — Camera points down the hallway like the game view. -->
@@ -2209,7 +2647,7 @@
               <span class="ce-mini-ob mo-2">〰</span>
               <span class="ce-mini-ob mo-3">📦</span>
             </div>
-            <div class="ce-subtitle ce-subtitle--action">Run. Jump. Dodge. Stay caffeinated.</div>
+            <div class="ce-subtitle ce-subtitle--action">Run. Jump. Dodge. Escape the rush.</div>
           </div>
 
           <div class="ce-cutscene-actions">
