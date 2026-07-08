@@ -2,7 +2,7 @@
 // Third-person camera behind and slightly above a coffee cup that sprints
 // down an office hallway. Three lanes (left / center / right). Avoid
 // furniture. Score climbs with time, speed slowly increases. Best score
-// saved in localStorage. Cutscene, start, and game-over screens stay as
+// saved in localStorage. Start and game-over screens stay as
 // DOM overlays; the canvas is just the play area.
 //
 // All visuals are built from Three.js primitives + a few small canvas
@@ -36,24 +36,15 @@
   const LB_SUBMIT_BTN = document.getElementById('ceLbSubmitBtn');
   const LB_STATUS_EL = document.getElementById('ceLbStatus');
   const START_OVERLAY = document.getElementById('ceStartOverlay');
-  const CUTSCENE = document.getElementById('ceCutscene');
   const GAME_OVER_OVERLAY = document.getElementById('ceGameOverOverlay');
   const START_BTN = document.getElementById('ceStartBtn');
-  const PLAY_INTRO_BTN = document.getElementById('cePlayIntroBtn');
   const TRY_AGAIN_BTN = document.getElementById('ceTryAgainBtn');
-  const CUTSCENE_SKIP_BTN = document.getElementById('ceCutsceneSkip');
-  const CUTSCENE_START_BTN = document.getElementById('ceCutsceneStart');
   const RESET_BEST_BTN = document.getElementById('ceResetBest');
   const JUMP_BTN = document.getElementById('ceJumpBtn');
   const BOOST_BTN = document.getElementById('ceBoostBtn');
   const BOOST_FILL = document.getElementById('ceBoostFill');
   const BOOST_HUD_FILL = document.getElementById('ceBoostHudFill');
   const HINT = document.getElementById('ceHint');
-  const SCENE_DOTS = CUTSCENE.querySelectorAll('.ce-scene-dots .dot');
-
-  // Cutscene
-  const SCENE_DURATION_MS = 2400;
-  const TOTAL_SCENES = 5;
 
   // -----------------------------------------------------------------------
   // World constants
@@ -271,33 +262,22 @@
     const c = document.createElement('canvas');
     c.width = 256; c.height = 256;
     const g = c.getContext('2d');
-    // Base cream
+    // Base cream — warm house wall.
     g.fillStyle = '#f4d6a8';
     g.fillRect(0, 0, 256, 256);
-    // Subtle vertical stripes (very faint, gives the wall depth)
-    g.fillStyle = 'rgba(178, 94, 0, 0.06)';
+    // Subtle vertical stripes (very faint, gives the wall depth).
+    g.fillStyle = 'rgba(178, 94, 0, 0.05)';
     for (let x = 0; x < 256; x += 24) g.fillRect(x, 0, 12, 256);
-    // Coffee-bean motif (rotated ovals with a center line)
-    for (let y = 16; y < 256; y += 64) {
-      for (let x = 16; x < 256; x += 64) {
-        // Bean body
-        g.save();
-        g.translate(x + (y / 64) % 2 * 16, y);
-        g.rotate(0.6);
-        g.fillStyle = 'rgba(90, 50, 20, 0.18)';
-        g.beginPath();
-        g.ellipse(0, 0, 9, 5, 0, 0, Math.PI * 2);
-        g.fill();
-        // Center line
-        g.strokeStyle = 'rgba(90, 50, 20, 0.35)';
-        g.lineWidth = 1;
-        g.beginPath();
-        g.moveTo(-7, 0);
-        g.quadraticCurveTo(0, 1.2, 7, 0);
-        g.stroke();
-        g.restore();
-      }
-    }
+    // Wainscoting: lower panel with a horizontal rail.
+    g.fillStyle = 'rgba(120, 70, 30, 0.08)';
+    g.fillRect(0, 170, 256, 86);
+    g.fillStyle = 'rgba(120, 70, 30, 0.15)';
+    g.fillRect(0, 168, 256, 3);
+    // Subtle picture-frame rectangles on the upper wall.
+    g.strokeStyle = 'rgba(120, 70, 30, 0.10)';
+    g.lineWidth = 1.5;
+    g.strokeRect(40, 20, 60, 45);
+    g.strokeRect(156, 28, 50, 38);
     const tex = new THREE.CanvasTexture(c);
     tex.wrapS = THREE.RepeatWrapping;
     tex.wrapT = THREE.RepeatWrapping;
@@ -575,14 +555,17 @@
     } else {
       item = makeSideTable();
     }
+    // Scale up side decorations so they read as real house props.
+    item.scale.setScalar(1.5);
     if (decorType === 0 || decorType === 1) {
       // Wall-mounted decor: orient so it faces the hall.
       item.rotation.y = side === 'left' ? -Math.PI / 2 : Math.PI / 2;
       item.position.x = side === 'left' ? -2.95 : 2.95;
       item.position.y = 2.6;
     } else {
-      // Floor decor: sit on the ground near the wall.
-      item.position.x = side === 'left' ? -2.55 : 2.55;
+      // Floor decor: sit on the ground near the wall. Pulled
+      // slightly inward so the 1.5× scaled props don't clip walls.
+      item.position.x = side === 'left' ? -2.2 : 2.2;
       item.position.y = 0;
     }
     item.position.z = -i * DECOR_SPACING;
@@ -1058,9 +1041,9 @@
     chair:      { wide: false, jumpHeight: 0.55, color: 0x7d3f1c },
     box:        { wide: false, jumpHeight: 0.55, color: 0xcaa274 },
     plant:      { wide: false, jumpHeight: 0.55, color: 0x4a8a3a },
-    printer:    { wide: false, jumpHeight: 0.60, color: 0xe7e7e7 },
-    watercooler:{ wide: false, jumpHeight: 0.90, color: 0x6ec6ff },
-    filingcabinet:{wide: false, jumpHeight: 0.85, color: 0xc8c8c8 },
+    printer:    { wide: false, jumpHeight: 0.60, color: 0xd4a574 },
+    watercooler:{ wide: false, jumpHeight: 0.90, color: 0x8a6a3a },
+    filingcabinet:{wide: false, jumpHeight: 0.85, color: 0xb8a088 },
     desk:       { wide: true,  jumpHeight: 0.50, color: 0x8a4a1f },
     worker:     { wide: true,  jumpHeight: 0.55, color: 0xa04a2a },
   };
@@ -1151,7 +1134,7 @@
       puddle.position.set(-0.18, 0.01, 0);
       group.add(puddle);
     } else if (kind === 'chair') {
-      // Office chair on wheels. 5-star base + post + seat + back.
+      // Chair on wheels. 5-star base + post + seat + back.
       const post = new THREE.Mesh(
         new THREE.CylinderGeometry(0.04, 0.04, 0.35, 6),
         matDark
@@ -1189,7 +1172,7 @@
       back.position.set(0, 0.85, -0.21);
       group.add(back);
     } else if (kind === 'box') {
-      // Cardboard box with a "JAVA" label plate on the side.
+      // Cardboard box or toy box with tape across the top.
       const box = new THREE.Mesh(
         new THREE.BoxGeometry(0.7, 0.7, 0.7),
         matPrimary
@@ -1231,7 +1214,7 @@
         group.add(leaf);
       }
     } else if (kind === 'printer') {
-      // Office printer — wide box with a paper tray.
+      // Laundry basket — woven basket with clothes peeking out.
       const body = new THREE.Mesh(
         new THREE.BoxGeometry(0.7, 0.45, 0.6),
         matPrimary
@@ -1262,7 +1245,7 @@
         group.add(btn);
       }
     } else if (kind === 'watercooler') {
-      // Water cooler: blue bottle on a small base.
+      // Tall floor lamp or bookshelf.
       const base = new THREE.Mesh(
         new THREE.BoxGeometry(0.4, 0.5, 0.4),
         new THREE.MeshLambertMaterial({ color: 0xeeeeee })
@@ -1291,7 +1274,7 @@
       cap.position.y = 1.10;
       group.add(cap);
     } else if (kind === 'filingcabinet') {
-      // Tall metal cabinet with 3 drawers.
+      // Wooden dresser with 3 drawers.
       const body = new THREE.Mesh(
         new THREE.BoxGeometry(0.5, 0.95, 0.4),
         matPrimary
@@ -1308,7 +1291,7 @@
         group.add(handle);
       }
     } else if (kind === 'desk') {
-      // Wide desk: flat top with 4 legs. Spans 2 lanes.
+      // Wide dining table: flat top with 4 legs. Spans 2 lanes.
       const top = new THREE.Mesh(
         new THREE.BoxGeometry(1.7, 0.06, 0.7),
         matPrimary
@@ -1343,9 +1326,9 @@
       keyboard.position.set(0.3, 0.79, 0.15);
       group.add(keyboard);
     } else if (kind === 'worker') {
-      // Sleepy worker slumped at a desk. Wide (spans 2 lanes).
-      // Desk is just a thin slab (the "desk" kind has the full desk;
-      // here we just need the worker on a small desk for context).
+      // Sleepy person slumped at a dining table. Wide (spans 2 lanes).
+      // Table is just a thin slab (the "desk" kind has the full table;
+      // here we just need the sleeper on a small table for context).
       const deskTop = new THREE.Mesh(
         new THREE.BoxGeometry(1.7, 0.06, 0.7),
         new THREE.MeshLambertMaterial({ color: 0x8a4a1f })
@@ -1398,6 +1381,11 @@
       group.add(keyboard);
     }
 
+    // Scale all obstacles up so they read clearly as house furniture
+    // rather than tiny props. 1.5× makes chairs, boxes, etc. visually
+    // prominent without breaking jumpability (player jump apex ≈ 1.8u,
+    // tallest scaled obstacle ≈ 1.4u).
+    group.scale.setScalar(1.5);
     return group;
   }
 
@@ -1928,63 +1916,10 @@
   }
 
   // -----------------------------------------------------------------------
-  // Cutscene (unchanged from v1.x)
-  // -----------------------------------------------------------------------
-  let cutsceneTimers = [];
-  function clearCutsceneTimers() {
-    cutsceneTimers.forEach(t => clearTimeout(t));
-    cutsceneTimers = [];
-  }
-  function hideCutscene() {
-    CUTSCENE.hidden = true;
-    CUTSCENE.style.display = 'none';
-    CUTSCENE.querySelectorAll('.ce-scene').forEach(s => s.classList.remove('active'));
-    SCENE_DOTS.forEach(d => d.classList.remove('on'));
-  }
-  function playCutscene() {
-    clearCutsceneTimers();
-    CUTSCENE.style.display = '';
-    CUTSCENE.hidden = false;
-    START_OVERLAY.hidden = true;
-    GAME_OVER_OVERLAY.hidden = true;
-    CUTSCENE_START_BTN.hidden = true;
-
-    const scenes = CUTSCENE.querySelectorAll('.ce-scene');
-    scenes.forEach(s => s.classList.remove('active'));
-    scenes[0].classList.add('active');
-    SCENE_DOTS.forEach((d, i) => d.classList.toggle('on', i === 0));
-
-    for (let i = 0; i < TOTAL_SCENES; i++) {
-      const isLast = i === TOTAL_SCENES - 1;
-      cutsceneTimers.push(setTimeout(() => {
-        scenes.forEach(s => s.classList.remove('active'));
-        scenes[i].classList.add('active');
-        SCENE_DOTS.forEach((d, j) => d.classList.toggle('on', j === i));
-        if (isLast) CUTSCENE_START_BTN.hidden = false;
-      }, i * SCENE_DURATION_MS));
-    }
-    cutsceneTimers.push(setTimeout(() => {
-      hideCutscene();
-      beginRun();
-    }, TOTAL_SCENES * SCENE_DURATION_MS + 600));
-  }
-  function skipCutscene() {
-    clearCutsceneTimers();
-    hideCutscene();
-    beginRun();
-  }
-  function endCutscene() {
-    clearCutsceneTimers();
-    hideCutscene();
-    beginRun();
-  }
-
-  // -----------------------------------------------------------------------
   // Run lifecycle
   // -----------------------------------------------------------------------
   function showStart() {
     START_OVERLAY.hidden = false;
-    CUTSCENE.hidden = true;
     GAME_OVER_OVERLAY.hidden = true;
   }
 
@@ -2042,14 +1977,7 @@
     scoreSubmitted = false;
     hideLeaderboardForm();
     state.running = true;
-    // Hide all overlays so the play area is fully visible. The
-    // cutscene path hides them via playCutscene; the direct
-    // "Start Running" path needs to do it here. The mobile-polish
-    // pass rewrote this function and accidentally dropped the
-    // START_OVERLAY hidden line — re-adding it here.
     START_OVERLAY.hidden = true;
-    CUTSCENE.hidden = true;
-    CUTSCENE.style.display = 'none';
     GAME_OVER_OVERLAY.hidden = true;
     HUD.hidden = false;
     if (HINT) HINT.hidden = false;
@@ -2130,7 +2058,7 @@
 
   function restart() {
     GAME_OVER_OVERLAY.hidden = true;
-    playCutscene();
+    beginRun();
   }
 
   // -----------------------------------------------------------------------
@@ -2499,13 +2427,14 @@
   // -----------------------------------------------------------------------
   function render() {
     renderer.render(scene, camera);
-    if (state.flash > 0) {
-      // White flash overlay on top of the canvas
-      const r = STAGE.getBoundingClientRect();
-      const el = document.createElement('div');
-      el.style.cssText = `position:absolute;inset:0;background:rgba(255,255,255,${state.flash * 1.2});pointer-events:none;z-index:3;`;
-      STAGE.appendChild(el);
-      setTimeout(() => el.remove(), 60);
+      if (state.flash > 0) {
+        // White flash overlay on top of the canvas
+        const r = STAGE.getBoundingClientRect();
+        const el = document.createElement('div');
+        el.style.cssText = `position:absolute;inset:0;background:rgba(255,255,255,${state.flash * 1.2});pointer-events:none;z-index:3;`;
+        STAGE.appendChild(el);
+        setTimeout(() => el.remove(), 60);
+      }
     }
   }
 
@@ -2552,10 +2481,7 @@
       btn.addEventListener('pointerdown', tapHandler(action));
     };
     bindTap(START_BTN, beginRun);
-    bindTap(PLAY_INTRO_BTN, playCutscene);
     bindTap(TRY_AGAIN_BTN, restart);
-    bindTap(CUTSCENE_SKIP_BTN, skipCutscene);
-    bindTap(CUTSCENE_START_BTN, endCutscene);
     RESET_BEST_BTN.addEventListener('click', () => {
       state.best = 0;
       saveBest(0);
