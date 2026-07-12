@@ -41,6 +41,12 @@ import { createCup } from './entities/cup';
 import { createMan } from './entities/man';
 import { makeBean } from './entities/bean';
 import {
+  makePictureFrame,
+  makeWallLamp,
+  makePlant,
+  makeSideTable,
+} from './entities/decor';
+import {
   isKindAvailable,
   nextSpawnDelay,
   pickKind as purePickKind,
@@ -56,6 +62,26 @@ import {
   nextLane,
   swipeToAction,
 } from './systems/inputLogic';
+import {
+  nextBeanDelay,
+  scoreFromTime,
+  speedAtTime,
+  tickBoost,
+} from './systems/pacingLogic';
+import {
+  applyJumpImpulse,
+  cupTiltX,
+  laneBank,
+  tickJump,
+  tickLaneMotion,
+  tickRunAnim,
+} from './systems/playerMotion';
+import { startBoost as pureStartBoost } from './systems/pacingLogic';
+import {
+  beanRecyclePastCamera,
+  blocksPlayerLane,
+  canCollectBean,
+} from './systems/collisionLogic';
 
 const PlatformLeaderboard = {
   async submitScore(payload) {
@@ -231,142 +257,8 @@ function startCoffeeEscape() {
 
   // -----------------------------------------------------------------------
   // Hallway — warm coffee/office environment
-  // -----------------------------------------------------------------------
-  // Floor: long plane, scrolled by shifting the texture's offset.
-  const floorTex = makeFloorTexture();
-  const floor = new THREE.Mesh(
-    new THREE.PlaneGeometry(12, 200),
-    new THREE.MeshLambertMaterial({ map: floorTex })
-  );
-  floor.rotation.x = -Math.PI / 2;
-  floor.position.y = 0;
-  floor.position.z = -80;
-  scene.add(floor);
+  // Decor factories imported from ./entities/decor
 
-  // Walls: two planes on either side of the hallway.
-  const wallTex = makeWallTexture();
-  const wallMat = new THREE.MeshLambertMaterial({ map: wallTex, side: THREE.FrontSide });
-  const wallL = new THREE.Mesh(new THREE.PlaneGeometry(200, 6), wallMat);
-  wallL.rotation.y = Math.PI / 2;
-  wallL.position.set(-3, 3, -80);
-  scene.add(wallL);
-  const wallR = wallL.clone();
-  wallR.rotation.y = -Math.PI / 2;
-  wallR.position.set(3, 3, -80);
-  scene.add(wallR);
-
-  // Ceiling
-  const ceilingTex = makeCeilingTexture();
-  const ceiling = new THREE.Mesh(
-    new THREE.PlaneGeometry(12, 200),
-    new THREE.MeshLambertMaterial({ map: ceilingTex })
-  );
-  ceiling.rotation.x = Math.PI / 2;
-  ceiling.position.y = 6;
-  ceiling.position.z = -80;
-  scene.add(ceiling);
-
-  // Two side rails so the lane boundaries are visible.
-  const railMat = new THREE.MeshLambertMaterial({ color: 0x8a5a2c });
-  const railGeo = new THREE.BoxGeometry(0.08, 0.05, 200);
-  const railL = new THREE.Mesh(railGeo, railMat);
-  railL.position.set(-0.8, 0.025, -80);
-  scene.add(railL);
-  const railR = railL.clone();
-  railR.position.x = 0.8;
-  scene.add(railR);
-
-  // Skirting board at the bottom of the walls.
-  const skirtMat = new THREE.MeshLambertMaterial({ color: 0x5a3a14 });
-  const skirtL = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.18, 200), skirtMat);
-  skirtL.position.set(-2.96, 0.09, -80);
-  scene.add(skirtL);
-  const skirtR = skirtL.clone();
-  skirtR.position.x = 2.96;
-  scene.add(skirtR);
-
-  // Wall decorations (frames, lamps, plants, side tables) that scroll
-  // past as the world moves. Each item is a small 3D Group.
-  function makePictureFrame(variant, side) {
-    const group = new THREE.Group();
-    const frame = new THREE.Mesh(
-      new THREE.BoxGeometry(0.02, 0.6, 0.8),
-      new THREE.MeshLambertMaterial({ color: 0x5a3a14 })
-    );
-    group.add(frame);
-    const pic = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.65, 0.45),
-      new THREE.MeshBasicMaterial({ map: makePictureTexture(variant) })
-    );
-    if (side === 'left') {
-      pic.position.set(0.012, 0.05, 0);
-    } else {
-      pic.position.set(-0.012, 0.05, 0);
-      pic.rotation.y = Math.PI;
-    }
-    group.add(pic);
-    return group;
-  }
-
-  function makeWallLamp() {
-    const group = new THREE.Group();
-    const arm = new THREE.Mesh(
-      new THREE.BoxGeometry(0.18, 0.04, 0.04),
-      new THREE.MeshLambertMaterial({ color: 0x3a2a1a })
-    );
-    group.add(arm);
-    const shade = new THREE.Mesh(
-      new THREE.ConeGeometry(0.12, 0.16, 8),
-      new THREE.MeshLambertMaterial({ color: 0xffe5b0, emissive: 0xffaa55, emissiveIntensity: 0.5 })
-    );
-    shade.position.y = -0.10;
-    shade.rotation.x = Math.PI;
-    group.add(shade);
-    return group;
-  }
-
-  function makePlant() {
-    const group = new THREE.Group();
-    const pot = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.15, 0.12, 0.22, 10),
-      new THREE.MeshLambertMaterial({ color: 0xb87333 })
-    );
-    pot.position.y = 0.11;
-    group.add(pot);
-    for (let i = 0; i < 3; i++) {
-      const leaf = new THREE.Mesh(
-        new THREE.ConeGeometry(0.06, 0.32, 6),
-        new THREE.MeshLambertMaterial({ color: 0x4a8a3a })
-      );
-      leaf.position.set((i - 1) * 0.08, 0.36, 0);
-      leaf.rotation.z = (i - 1) * 0.3;
-      group.add(leaf);
-    }
-    return group;
-  }
-
-  function makeSideTable() {
-    const group = new THREE.Group();
-    const top = new THREE.Mesh(
-      new THREE.BoxGeometry(0.4, 0.04, 0.3),
-      new THREE.MeshLambertMaterial({ color: 0x8a4a1f })
-    );
-    top.position.y = 0.85;
-    group.add(top);
-    const legGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.85, 6);
-    for (const [x, z] of [[-0.17, 0.42], [0.17, 0.42], [-0.17, -0.42], [0.17, -0.42]]) {
-      const leg = new THREE.Mesh(legGeo, new THREE.MeshLambertMaterial({ color: 0x5a3a14 }));
-      leg.position.set(x, 0, z);
-      group.add(leg);
-    }
-    const mug = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.05, 0.05, 0.08, 10),
-      new THREE.MeshLambertMaterial({ color: 0xffffff })
-    );
-    mug.position.set(0.08, 0.91, 0);
-    group.add(mug);
-    return group;
-  }
 
   // Decor pool. We allocate a fixed set and recycle their z to make
   // them scroll past. Spacing is the same as the ceiling tile period
@@ -782,8 +674,10 @@ if (isPair) {
 
   function tryJump() {
     if (!canJump({ running: state.running, gameOver: state.gameOver, onGround: state.player.onGround })) return;
-    state.player.vy = JUMP_VY;
-    state.player.onGround = false;
+    const imp = applyJumpImpulse(state.player.onGround);
+    if (!imp) return;
+    state.player.vy = imp.vy;
+    state.player.onGround = imp.onGround;
   }
 
   function tryLane(target) {
@@ -804,8 +698,15 @@ if (isPair) {
       meter: state.boost.meter,
       cost: state.boost.cost,
     })) return;
-    state.boost.active = true;
-    state.boost.timer = state.boost.duration;
+    const started = pureStartBoost({
+      active: state.boost.active,
+      meter: state.boost.meter,
+      cost: state.boost.cost,
+      duration: state.boost.duration,
+    });
+    if (!started) return;
+    state.boost.active = started.active;
+    state.boost.timer = started.timer;
   }
 
   function onKeyDown(e) {
@@ -1234,33 +1135,24 @@ if (isPair) {
     // (BASE_SPEED) so the player can learn the controls, then
     // speed ramps up at ~0.6 units/sec until it hits MAX_SPEED
     // around 55s in.
-    const rampStart = Math.max(0, state.worldTime - SPEED_GRACE_SECONDS);
-    state.speed = Math.min(MAX_SPEED, BASE_SPEED + rampStart * SPEED_RAMP);
-    // Score climbs with time.
-    state.score = Math.floor(state.worldTime * SCORE_PER_SECOND);
+    state.speed = speedAtTime(state.worldTime);
+    // Score climbs with time (beans add via collectBean).
+    state.score = scoreFromTime(state.worldTime);
 
-    // Lane interpolation
+    // Lane + jump — pure helpers (tested)
     const p = state.player;
-    if (p.laneSwitchT < 1) {
-      p.laneSwitchT = Math.min(1, p.laneSwitchT + dt * 1000 / LANE_SWITCH_MS);
-      const t = p.laneSwitchT;
-      // Ease out cubic
-      const e = 1 - Math.pow(1 - t, 3);
-      p.laneX = p.laneFromX + (p.laneToX - p.laneFromX) * e;
-      if (t >= 1) p.lane = p.targetLane;
-    }
-
-    // Jump physics
-    p.vy -= GRAVITY * dt;
-    p.y += p.vy * dt;
-    if (p.y <= 0) {
-      p.y = 0;
-      p.vy = 0;
-      p.onGround = true;
-    } else {
-      p.onGround = false;
-    }
-    p.runAnim += dt * Math.max(8, state.speed / 0.3);
+    Object.assign(p, tickLaneMotion(p, dt, LANE_X));
+    const jumped = tickJump({
+      y: p.y,
+      vy: p.vy,
+      onGround: p.onGround,
+      airT: p.airT || 0,
+    }, dt);
+    p.y = jumped.y;
+    p.vy = jumped.vy;
+    p.onGround = jumped.onGround;
+    p.airT = jumped.airT;
+    p.runAnim = tickRunAnim(p.runAnim, dt, state.speed);
 
     // -------- Cup position, orientation, and animation --------
     // The cup is built facing the camera (face on local +Z, which is
@@ -1289,27 +1181,8 @@ if (isPair) {
       armRGroup.rotation.x = 1.5 * tuck + 0.2;
     }
 
-    // Lane-change bank: roll around the z-axis a bit during a switch.
-    let bank = 0;
-    if (p.laneSwitchT < 1) {
-      const m = p.laneSwitchT;
-      const peak = Math.sin(m * Math.PI); // 0..1..0
-      bank = (p.laneToX - p.laneFromX) * 0.5 * peak;
-    }
-
-    // Forward tilt while sprinting (slight), upright while jumping.
-    // The tumble is a forward roll, which is rotation around the
-    // local X axis. Combine tilt + tumble by adding them.
-    const runTilt = p.onGround ? 0.10 : 0;
-    let tiltX = -runTilt;
-    if (!p.onGround) {
-      if (p.airT === undefined) p.airT = 0;
-      p.airT += dt;
-      // One full forward flip per ~0.7s of air time.
-      tiltX += p.airT * (2 * Math.PI / 0.7);
-    } else {
-      p.airT = 0;
-    }
+    const bank = laneBank(p.laneSwitchT, p.laneFromX, p.laneToX);
+    const tiltX = cupTiltX(p.onGround, p.airT || 0);
     cup.rotation.x = tiltX;
     cup.rotation.z = bank;
 
@@ -1362,15 +1235,7 @@ if (isPair) {
     );
     for (const o of state.obstacles) {
       if (!o.mesh.visible) continue;
-      // Sofas are wide; they only collide if the player is in one
-      // of the two lanes the sofa covers. Single-lane items only
-      // collide in their own lane.
-      if (o.wide) {
-        const covered = [o.lane === 0 ? 0 : o.lane - 1, o.lane === 2 ? 2 : o.lane + 1];
-        if (!covered.includes(p.lane)) continue;
-      } else {
-        if (o.lane !== p.lane) continue;
-      }
+      if (!blocksPlayerLane(o.lane, p.lane, !!o.wide)) continue;
       _obBox.setFromObject(o.mesh);
       if (_playerBox.intersectsBox(_obBox)) {
         // Boost mode: pass through obstacles. The cup still dodges
@@ -1459,7 +1324,7 @@ if (isPair) {
     state.nextBean -= dt;
     if (state.nextBean <= 0) {
       spawnBean();
-      state.nextBean = BEAN_INTERVAL_MIN + Math.random() * (BEAN_INTERVAL_MAX - BEAN_INTERVAL_MIN);
+      state.nextBean = nextBeanDelay(BEAN_INTERVAL_MIN, BEAN_INTERVAL_MAX);
     }
     for (const b of state.beans) {
       if (!b.active) continue;
@@ -1470,18 +1335,18 @@ if (isPair) {
       b.mesh.position.y = b.y + Math.sin(b.rot * 1.2) * 0.06;
       b.mesh.rotation.y = b.rot;
       // Recycle when past camera
-      if (b.z > 6) {
+      if (beanRecyclePastCamera(b.z)) {
         b.active = false;
         b.mesh.visible = false;
         continue;
       }
-      // Collision with cup. Cup must be in the same lane, near the
-      // bean's z, and above the floor (in the air or on the ground).
-      if (b.lane === p.lane) {
-        const dz = b.z - 0;
-        if (Math.abs(dz) < 0.5 && p.y > 0.2) {
-          collectBean(b);
-        }
+      if (canCollectBean({
+        beanLane: b.lane,
+        beanZ: b.z,
+        playerLane: p.lane,
+        playerY: p.y,
+      })) {
+        collectBean(b);
       }
     }
 
@@ -1528,24 +1393,19 @@ if (isPair) {
       if (d.life <= 0) d.mesh.visible = false;
     }
 
-    // Boost meter: fills while running, freezes while active,
-    // drops to 0 the instant the boost ends.
-    if (state.boost.active) {
-      state.boost.timer -= dt;
-      if (state.boost.timer <= 0) {
-        state.boost.active = false;
-        state.boost.meter = 0;
-      }
-      // While active, the meter reads as the "cost" threshold
-      // (so the bar visually stays at the level it was at when
-      // boost was triggered). This avoids the bar jumping to 100
-      // mid-boost and gives a "you've used it" feel.
-      if (state.boost.meter < state.boost.cost) {
-        state.boost.meter = state.boost.cost;
-      }
-    } else {
-      // Fill over ~7 seconds to a full meter.
-      state.boost.meter = Math.min(state.boost.max, state.boost.meter + dt * (100 / 7));
+    // Boost meter — pure tick (tested)
+    {
+      const b = tickBoost({
+        active: state.boost.active,
+        timer: state.boost.timer,
+        meter: state.boost.meter,
+        max: state.boost.max,
+        cost: state.boost.cost,
+        duration: state.boost.duration,
+      }, dt);
+      state.boost.active = b.active;
+      state.boost.timer = b.timer;
+      state.boost.meter = b.meter;
     }
     // Update visual fills
     if (BOOST_FILL) BOOST_FILL.style.height = (state.boost.meter / state.boost.max * 100) + '%';

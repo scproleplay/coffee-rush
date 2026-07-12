@@ -65,7 +65,9 @@ index.html
 | CE `entities/obstacleKinds`, `buildObstacleMeshes` | ✅ |
 | CE `entities/cup`, `man`, `bean` (game-local only) | ✅ |
 | CE `systems/spawnLogic` + `inputLogic` (pure, tested) | ✅ |
-| Vitest harness (`npm test`) | ✅ 25 tests |
+| CE `systems/pacingLogic`, `playerMotion`, `collisionLogic` | ✅ |
+| CE `entities/decor` | ✅ |
+| Vitest harness (`npm test`) | ✅ 47 tests |
 | Profile page (guest nickname) | ✅ stub — auth-ready |
 | Coffee Rush / others | ⏳ legacy under `/legacy/` |
 | Supabase Auth UI | ⏳ Phase C |
