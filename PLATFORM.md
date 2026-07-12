@@ -58,15 +58,18 @@ index.html
 | Shell homepage | ✅ |
 | Leaderboard page | ✅ |
 | Auth contracts (guest) | ✅ ready for Phase B login |
-| Coffee Escape module | ✅ Phase A (runtime port; split TS next) |
+| Coffee Escape module | ✅ Phase B split started |
+| CE `engine/constants`, `engine/textures`, `engine/types` | ✅ |
+| CE `entities/obstacleKinds`, `buildObstacleMeshes` | ✅ |
+| Profile page (guest nickname) | ✅ stub — auth-ready |
 | Coffee Rush / others | ⏳ legacy under `/legacy/` |
-| Supabase Auth UI | ⏳ Phase B |
+| Supabase Auth UI | ⏳ Phase C |
 | Merge to main | ❌ blocked until QA |
 
 ## Next milestones
 
-1. Split Coffee Escape runtime into `engine/`, `entities/`, `systems/` + strict types  
+1. Continue CE split: cup/man entities, input/spawn/update systems, remove `@ts-nocheck`  
 2. Migrate Coffee Rush (Phaser or polished canvas module)  
-3. Supabase Auth + `user_id` on scores + profile page  
+3. Supabase Auth + `user_id` on scores (profile already exists)  
 4. Kid/teen visual pass (motion, sound, avatars)  
 5. QA on mobile → merge `platform/vite-migration` → `main`

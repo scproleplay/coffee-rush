@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Your Profile · CodeCup Arcade</title>
+  </head>
+  <body>
+    <div class="shell">
+      <header class="shell-header">
+        <div class="shell-badge">👤 Player card</div>
+        <h1 class="shell-title">Your Profile</h1>
+        <p class="shell-subtitle" id="profileMode">Guest mode — full login coming soon</p>
+        <nav class="shell-nav">
+          <a class="btn btn-secondary" href="/">← Arcade</a>
+          <a class="btn btn-ghost" href="/leaderboard/">🌍 Leaderboard</a>
+        </nav>
+      </header>
+
+      <section class="hero-panel" aria-label="Nickname">
+        <h2>Pick your arcade name</h2>
+        <p>
+          This nickname shows on the global leaderboard. When login ships, the
+          same name attaches to your real account — no game rewrites.
+        </p>
+        <form id="profileForm" style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px">
+          <label class="sr-only" for="profileNick">Nickname</label>
+          <input
+            id="profileNick"
+            type="text"
+            maxlength="12"
+            placeholder="1–12 characters"
+            autocomplete="username"
+            style="
+              flex: 1;
+              min-width: 180px;
+              padding: 12px 16px;
+              border-radius: 999px;
+              border: 2px solid #ffb347;
+              font: inherit;
+              font-weight: 700;
+            "
+          />
+          <button class="btn btn-primary" type="submit">Save nickname</button>
+        </form>
+        <p id="profileStatus" class="shell-footer-note" style="margin-top: 12px"></p>
+      </section>
+
+      <section class="hero-panel">
+        <h2>Coming next ✨</h2>
+        <ul style="margin: 0; padding-left: 1.2rem; font-weight: 600; color: #6b3a14; line-height: 1.6">
+          <li>Real login (email / Google)</li>
+          <li>Avatar & cosmetics</li>
+          <li>Personal best history across every game</li>
+          <li>Friends & seasonal ranks</li>
+        </ul>
+      </section>
+
+      <footer class="shell-footer">
+        <p class="shell-footer-note">Built for growth — identity lives in the shell, not each game.</p>
+      </footer>
+    </div>
+    <style>
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        border: 0;
+      }
+    </style>
+    <script type="module" src="/src/shell/profile.ts"></script>
+  </body>
+</html>

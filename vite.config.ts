@@ -25,6 +25,7 @@ export default defineConfig({
         main: path.resolve(root, 'index.html'),
         coffeeEscape: path.resolve(root, 'coffee-escape/index.html'),
         leaderboard: path.resolve(root, 'leaderboard/index.html'),
+        profile: path.resolve(root, 'profile/index.html'),
       },
     },
     target: 'es2022',

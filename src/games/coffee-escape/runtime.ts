@@ -1,14 +1,42 @@
 // @ts-nocheck
-/**
- * Coffee Escape runtime — Phase A platform migration.
- * Legacy engine body kept intact; THREE is an ES module import.
- * Next: split into engine/entities/systems + strict TypeScript.
- */
 import * as THREE from 'three';
 import { submitScore as platformSubmitScore } from '@shared/leaderboard/client';
-
-// Expose for any residual global access during migration
-(window as unknown as { THREE: typeof THREE }).THREE = THREE;
+import {
+  STORAGE_KEY,
+  LANE_X,
+  LANE_SWITCH_MS,
+  GROUND_Y,
+  JUMP_VY,
+  GRAVITY,
+  OBSTACLE_POOL_SIZE,
+  OBSTACLE_START_Z,
+  OBSTACLE_END_Z,
+  RECYCLE_Z,
+  BASE_SPEED,
+  MAX_SPEED,
+  SPEED_RAMP,
+  SPEED_GRACE_SECONDS,
+  SPAWN_INTERVAL_START,
+  SPAWN_INTERVAL_MIN,
+  SPAWN_RAMP_SECONDS,
+  SPAWN_JITTER,
+  PAIR_SPAWN_BASE,
+  PAIR_SPAWN_RAMP,
+  SAME_LANE_MIN_GAP,
+  BEAN_SPAWN_CHANCE,
+  BEAN_INTERVAL_MIN,
+  BEAN_INTERVAL_MAX,
+  SCORE_PER_SECOND,
+  BEAN_POOL_SIZE,
+} from './engine/constants';
+import {
+  makeFloorTexture,
+  makeWallTexture,
+  makeCeilingTexture,
+  makePictureTexture,
+} from './engine/textures';
+import { OBSTACLE_KINDS } from './entities/obstacleKinds';
+import { buildObstacleMeshes } from './entities/buildObstacleMeshes';
 
 const PlatformLeaderboard = {
   async submitScore(payload) {
@@ -30,7 +58,6 @@ function startCoffeeEscape() {
 // -----------------------------------------------------------------------
   // DOM references
   // -----------------------------------------------------------------------
-  const STORAGE_KEY = 'codecup-coffee-escape-best';
   const STAGE = document.getElementById('ceStage');
   const CANVAS = document.getElementById('ceCanvas');
   const HUD = document.getElementById('ceHud');
@@ -65,47 +92,7 @@ function startCoffeeEscape() {
   // -----------------------------------------------------------------------
   // Three lanes indexed 0/1/2 (left/center/right). The cup's lane is
   // laneX[currentLane] and it interpolates to laneX[targetLane].
-  const LANE_X = [-1.6, 0, 1.6];
-  const LANE_SWITCH_MS = 160;     // how long a lane change takes
-  const GROUND_Y = 0;             // cup runs on the y=0 plane
-  const JUMP_VY = 9.0;            // initial upward velocity on jump
-  const GRAVITY = 22.0;           // downward acceleration
-  const OBSTACLE_POOL_SIZE = 26;  // how many obstacles we keep alive (enough for pair spawns)
-  const OBSTACLE_START_Z = -70;   // far ahead
-  const OBSTACLE_END_Z = 6;      // past the cup
-  const RECYCLE_Z = -85;         // where recycled obstacles re-enter
-
-  // Speed (units per second the world scrolls past the cup).
-  // The speed curve is gentle for the first 5 seconds, then ramps
-  // up at ~0.6 units/sec^2. Reaches the cap (~36) around 55s. This
-  // gives the player time to learn the controls before the
-  // hallway gets fast.
-  const BASE_SPEED = 12;
-  const MAX_SPEED = 36;
-  const SPEED_RAMP = 0.60;        // speed added per second after the 5s grace period
-  const SPEED_GRACE_SECONDS = 5;  // no ramp during the first 5s
-  // Spawn interval ramps down from ~0.95s (easy) to 0.45s
-  // (dense) over ~25 seconds, then stays at 0.45s.
-  const SPAWN_INTERVAL_START = 0.95;
-  const SPAWN_INTERVAL_MIN = 0.45;
-  const SPAWN_RAMP_SECONDS = 25;
-  const SPAWN_JITTER = 0.30;
-  // Fraction of spawns that produce a two-lane "pattern" (two
-  // obstacles in different lanes at the same z, leaving one safe
-  // lane). Introduced gradually so it doesn't appear before t=6s.
-  const PAIR_SPAWN_BASE = 0.15;
-  const PAIR_SPAWN_RAMP = 0.025;   // per second; reaches ~0.4 by 10s
-  // Minimum z-distance between two consecutive same-lane obstacles
-  // so the player has time to switch lanes. At MAX_SPEED 36,
-  // 12 units = 0.33s, which is just enough for a lane switch.
-  const SAME_LANE_MIN_GAP = 12;
-  // Chance to spawn a bean alongside an obstacle (so the hallway
-  // always has collectibles between hazards).
-  const BEAN_SPAWN_CHANCE = 0.5;
-  const BEAN_INTERVAL_MIN = 2.2;
-  const BEAN_INTERVAL_MAX = 3.8;
-  const SCORE_PER_SECOND = 10;
-
+  // World constants imported from ./engine/constants
   // -----------------------------------------------------------------------
   // State
   // -----------------------------------------------------------------------
@@ -221,196 +208,7 @@ function startCoffeeEscape() {
   rim.position.set(0, 0.5, 2);
   scene.add(rim);
 
-  // -----------------------------------------------------------------------
-  // Textures (canvas-generated at startup, no external assets)
-  // -----------------------------------------------------------------------
-  // Wood floor — warm oak planks with a subtle grain pattern. The
-  // texture tiles along z (we scroll its offset.y each frame).
-  function makeFloorTexture() {
-    const c = document.createElement('canvas');
-    c.width = 256; c.height = 256;
-    const g = c.getContext('2d');
-    // Base wood color
-    g.fillStyle = '#b07a48';
-    g.fillRect(0, 0, 256, 256);
-    // Slight color variation per plank (3 planks tall)
-    for (let i = 0; i < 3; i++) {
-      const y = i * 86;
-      const tint = ['#a87042', '#b67e4c', '#aa7244'][i];
-      g.fillStyle = tint;
-      g.fillRect(0, y, 256, 86);
-      // Plank separator
-      g.fillStyle = 'rgba(60, 30, 10, 0.4)';
-      g.fillRect(0, y, 256, 1);
-      // Wood grain lines within the plank
-      g.strokeStyle = 'rgba(80, 40, 20, 0.18)';
-      g.lineWidth = 0.7;
-      for (let j = 0; j < 6; j++) {
-        const gy = y + 8 + j * 13 + Math.sin(j * 1.7) * 2;
-        g.beginPath();
-        g.moveTo(0, gy);
-        g.bezierCurveTo(60, gy + 2, 130, gy - 2, 256, gy + 1);
-        g.stroke();
-      }
-      // A few knots
-      for (let k = 0; k < 2; k++) {
-        const kx = 30 + ((i * 73 + k * 113) % 200);
-        const ky = y + 20 + ((i * 41 + k * 19) % 50);
-        g.fillStyle = 'rgba(60, 30, 10, 0.3)';
-        g.beginPath();
-        g.ellipse(kx, ky, 6, 4, 0, 0, Math.PI * 2);
-        g.fill();
-      }
-    }
-    const tex = new THREE.CanvasTexture(c);
-    tex.wrapS = THREE.RepeatWrapping;
-    tex.wrapT = THREE.RepeatWrapping;
-    tex.repeat.set(2, 30);
-    tex.anisotropy = 4;
-    return tex;
-  }
-
-  // Wallpaper — cream with a small repeating coffee-bean motif. The
-  // pattern tiles along z (so it scrolls naturally as the world moves).
-  function makeWallTexture() {
-    const c = document.createElement('canvas');
-    c.width = 256; c.height = 256;
-    const g = c.getContext('2d');
-    // Base cream — warm house wall.
-    g.fillStyle = '#f4d6a8';
-    g.fillRect(0, 0, 256, 256);
-    // Subtle vertical stripes (very faint, gives the wall depth).
-    g.fillStyle = 'rgba(178, 94, 0, 0.05)';
-    for (let x = 0; x < 256; x += 24) g.fillRect(x, 0, 12, 256);
-    // Wainscoting: lower panel with a horizontal rail.
-    g.fillStyle = 'rgba(120, 70, 30, 0.08)';
-    g.fillRect(0, 170, 256, 86);
-    g.fillStyle = 'rgba(120, 70, 30, 0.15)';
-    g.fillRect(0, 168, 256, 3);
-    // Subtle picture-frame rectangles on the upper wall.
-    g.strokeStyle = 'rgba(120, 70, 30, 0.10)';
-    g.lineWidth = 1.5;
-    g.strokeRect(40, 20, 60, 45);
-    g.strokeRect(156, 28, 50, 38);
-    const tex = new THREE.CanvasTexture(c);
-    tex.wrapS = THREE.RepeatWrapping;
-    tex.wrapT = THREE.RepeatWrapping;
-    tex.repeat.set(10, 1);
-    tex.anisotropy = 4;
-    return tex;
-  }
-
-  // Ceiling — drop-ceiling tiles with warm panels between them.
-  function makeCeilingTexture() {
-    const c = document.createElement('canvas');
-    c.width = 256; c.height = 256;
-    const g = c.getContext('2d');
-    g.fillStyle = '#fff7e0';
-    g.fillRect(0, 0, 256, 256);
-    // Tile grid
-    g.strokeStyle = '#caa274';
-    g.lineWidth = 2;
-    for (let y = 0; y <= 256; y += 64) {
-      g.beginPath();
-      g.moveTo(0, y);
-      g.lineTo(256, y);
-      g.stroke();
-    }
-    for (let x = 0; x <= 256; x += 64) {
-      g.beginPath();
-      g.moveTo(x, 0);
-      g.lineTo(x, 256);
-      g.stroke();
-    }
-    // Soft tint per tile (alternates)
-    for (let y = 0; y < 4; y++) {
-      for (let x = 0; x < 4; x++) {
-        if ((x + y) % 2 === 0) {
-          g.fillStyle = 'rgba(255, 220, 160, 0.18)';
-          g.fillRect(x * 64 + 2, y * 64 + 2, 60, 60);
-        }
-      }
-    }
-    const tex = new THREE.CanvasTexture(c);
-    tex.wrapS = THREE.RepeatWrapping;
-    tex.wrapT = THREE.RepeatWrapping;
-    tex.repeat.set(4, 12);
-    return tex;
-  }
-
-  // A single picture-frame canvas used as a texture on a few wall
-  // decorations. Returns 1 of N variants.
-  function makePictureTexture(variant) {
-    const c = document.createElement('canvas');
-    c.width = 128; c.height = 96;
-    const g = c.getContext('2d');
-    // Background gradient
-    if (variant === 0) {
-      // Steam swirl (matches the cup)
-      g.fillStyle = '#f4b572'; g.fillRect(0, 0, 128, 96);
-      g.strokeStyle = 'rgba(255,255,255,0.7)';
-      g.lineWidth = 2;
-      g.beginPath();
-      g.moveTo(32, 80);
-      g.bezierCurveTo(20, 40, 80, 40, 96, 16);
-      g.stroke();
-    } else if (variant === 1) {
-      // A coffee bean
-      g.fillStyle = '#fff7e0'; g.fillRect(0, 0, 128, 96);
-      g.fillStyle = '#5a3a14';
-      g.save();
-      g.translate(64, 48);
-      g.rotate(0.5);
-      g.beginPath();
-      g.ellipse(0, 0, 28, 18, 0, 0, Math.PI * 2);
-      g.fill();
-      g.strokeStyle = '#fff7e0';
-      g.lineWidth = 2;
-      g.beginPath();
-      g.moveTo(-22, 0);
-      g.quadraticCurveTo(0, 4, 22, 0);
-      g.stroke();
-      g.restore();
-    } else if (variant === 2) {
-      // A espresso cup
-      g.fillStyle = '#e7c08a'; g.fillRect(0, 0, 128, 96);
-      // Saucer
-      g.fillStyle = '#fff';
-      g.beginPath();
-      g.ellipse(64, 70, 36, 8, 0, 0, Math.PI * 2);
-      g.fill();
-      // Cup
-      g.fillStyle = '#fff';
-      g.beginPath();
-      g.moveTo(40, 30);
-      g.lineTo(88, 30);
-      g.lineTo(82, 68);
-      g.lineTo(46, 68);
-      g.closePath();
-      g.fill();
-      g.strokeStyle = '#5a3a14';
-      g.lineWidth = 1.5;
-      g.stroke();
-      // Coffee
-      g.fillStyle = '#3a1f08';
-      g.beginPath();
-      g.ellipse(64, 32, 22, 4, 0, 0, Math.PI * 2);
-      g.fill();
-    } else {
-      // Chalkboard menu
-      g.fillStyle = '#2a4a32'; g.fillRect(0, 0, 128, 96);
-      g.fillStyle = '#fff';
-      g.font = 'bold 14px sans-serif';
-      g.textAlign = 'center';
-      g.fillText('MENU', 64, 18);
-      g.font = '10px sans-serif';
-      g.fillText('Espresso ..... $3', 64, 38);
-      g.fillText('Latte ......... $4', 64, 52);
-      g.fillText('Cappuccino ... $4', 64, 66);
-      g.fillText('Drip Coffee .. $2', 64, 80);
-    }
-    return new THREE.CanvasTexture(c);
-  }
+  // Textures imported from ./engine/textures
 
   // -----------------------------------------------------------------------
   // Hallway — warm coffee/office environment
@@ -855,7 +653,6 @@ function startCoffeeEscape() {
   // Floating beans that the cup can collect by jumping into. Each
   // bean is a small group: an oval (scaled sphere) + a darker line
   // down the middle. They rotate slowly and bob in place.
-  const BEAN_POOL_SIZE = 14;
   const beans = [];
   function makeBean() {
     const group = new THREE.Group();
@@ -1048,20 +845,7 @@ function startCoffeeEscape() {
   // `wide: true` means the obstacle blocks 2 adjacent lanes (the
   // player has to switch lanes to clear it). Other obstacles block
   // a single lane and are cleared by jumping.
-  const OBSTACLE_KINDS = {
-    spill:      { wide: false, jumpHeight: 0.35, color: 0x3a1f08 },
-    cable:      { wide: false, jumpHeight: 0.30, color: 0x1a1a1a },
-    mug:        { wide: false, jumpHeight: 0.35, color: 0xffffff },
-    chair:      { wide: false, jumpHeight: 0.55, color: 0x7d3f1c },
-    box:        { wide: false, jumpHeight: 0.55, color: 0xcaa274 },
-    plant:      { wide: false, jumpHeight: 0.55, color: 0x4a8a3a },
-    printer:    { wide: false, jumpHeight: 0.60, color: 0xd4a574 },
-    watercooler:{ wide: false, jumpHeight: 0.90, color: 0x8a6a3a },
-    filingcabinet:{wide: false, jumpHeight: 0.85, color: 0xb8a088 },
-    desk:       { wide: true,  jumpHeight: 0.50, color: 0x8a4a1f },
-    worker:     { wide: true,  jumpHeight: 0.55, color: 0xa04a2a },
-  };
-
+  // OBSTACLE_KINDS imported from ./entities/obstacleKinds
   // Tall obstacles (jumpHeight > 0.7) only spawn after 20s of run time.
   function kindAvailable(kind) {
     const meta = OBSTACLE_KINDS[kind];
@@ -1071,338 +855,7 @@ function startCoffeeEscape() {
     if (meta.jumpHeight > 0.7 && state.worldTime < 12) return false;
     return true;
   }
-
-  // Build the meshes for a given kind. Returns a Group ready to be
-  // added to the scene. Y is the floor (0).
-  function buildObstacleMeshes(kind) {
-    const group = new THREE.Group();
-    const c = OBSTACLE_KINDS[kind].color;
-    const matPrimary = new THREE.MeshLambertMaterial({ color: c });
-    const matDark = new THREE.MeshLambertMaterial({ color: 0x222222 });
-    const matBrown = new THREE.MeshLambertMaterial({ color: 0x5a3a14 });
-    const matMetal = new THREE.MeshLambertMaterial({ color: 0xa8a8a8 });
-    const matGlass = new THREE.MeshLambertMaterial({ color: 0x4ec0ff, transparent: true, opacity: 0.7 });
-
-    if (kind === 'spill') {
-      // Flat brown puddle on the floor. Cylinder with very low height
-      // and a wide radius.
-      const spill = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.55, 0.55, 0.04, 16),
-        matPrimary
-      );
-      spill.position.y = 0.02;
-      group.add(spill);
-      // A small "splash" droplet to the side
-      const drop = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.12, 0.12, 0.03, 8),
-        matPrimary
-      );
-      drop.position.set(0.45, 0.015, 0.25);
-      group.add(drop);
-    } else if (kind === 'cable') {
-      // Power cable lying across the floor. A long thin box.
-      const cable = new THREE.Mesh(
-        new THREE.BoxGeometry(0.05, 0.04, 0.9),
-        matPrimary
-      );
-      cable.position.set(0, 0.04, 0);
-      group.add(cable);
-      // Plug at one end
-      const plug = new THREE.Mesh(
-        new THREE.BoxGeometry(0.10, 0.07, 0.08),
-        matPrimary
-      );
-      plug.position.set(0, 0.06, 0.45);
-      group.add(plug);
-      // Strain relief
-      const relief = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.04, 0.04, 0.08, 6),
-        matPrimary
-      );
-      relief.rotation.x = Math.PI / 2;
-      relief.position.set(0, 0.06, 0.39);
-      group.add(relief);
-    } else if (kind === 'mug') {
-      // Tipped-over coffee mug on the floor.
-      const body = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.13, 0.13, 0.22, 12),
-        matPrimary
-      );
-      body.position.y = 0.11;
-      // Tip it on its side
-      body.rotation.z = Math.PI / 2;
-      group.add(body);
-      // Handle
-      const handle = new THREE.Mesh(
-        new THREE.TorusGeometry(0.07, 0.02, 6, 10, Math.PI),
-        matPrimary
-      );
-      handle.rotation.y = Math.PI / 2;
-      handle.position.set(0.13, 0.11, 0);
-      group.add(handle);
-      // Coffee spill puddle next to it
-      const puddle = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.20, 0.20, 0.02, 12),
-        new THREE.MeshLambertMaterial({ color: 0x3a1f08 })
-      );
-      puddle.position.set(-0.18, 0.01, 0);
-      group.add(puddle);
-    } else if (kind === 'chair') {
-      // Chair on wheels. 5-star base + post + seat + back.
-      const post = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.04, 0.04, 0.35, 6),
-        matDark
-      );
-      post.position.y = 0.18;
-      group.add(post);
-      const base = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.20, 0.20, 0.05, 8),
-        matDark
-      );
-      base.position.y = 0.025;
-      group.add(base);
-      // 5 wheel legs
-      for (let i = 0; i < 5; i++) {
-        const a = (i / 5) * Math.PI * 2;
-        const wheel = new THREE.Mesh(
-          new THREE.SphereGeometry(0.03, 6, 6),
-          matDark
-        );
-        wheel.position.set(Math.cos(a) * 0.18, 0.03, Math.sin(a) * 0.18);
-        group.add(wheel);
-      }
-      // Seat
-      const seat = new THREE.Mesh(
-        new THREE.BoxGeometry(0.5, 0.08, 0.5),
-        matPrimary
-      );
-      seat.position.y = 0.45;
-      group.add(seat);
-      // Back
-      const back = new THREE.Mesh(
-        new THREE.BoxGeometry(0.5, 0.7, 0.08),
-        matPrimary
-      );
-      back.position.set(0, 0.85, -0.21);
-      group.add(back);
-    } else if (kind === 'box') {
-      // Cardboard box or toy box with tape across the top.
-      const box = new THREE.Mesh(
-        new THREE.BoxGeometry(0.7, 0.7, 0.7),
-        matPrimary
-      );
-      box.position.y = 0.35;
-      group.add(box);
-      // Tape line across the top
-      const tape = new THREE.Mesh(
-        new THREE.BoxGeometry(0.72, 0.02, 0.10),
-        matBrown
-      );
-      tape.position.y = 0.7;
-      group.add(tape);
-    } else if (kind === 'plant') {
-      // Potted plant.
-      const pot = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.20, 0.16, 0.30, 10),
-        new THREE.MeshLambertMaterial({ color: 0xb87333 })
-      );
-      pot.position.y = 0.15;
-      group.add(pot);
-      // Soil
-      const soil = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.19, 0.19, 0.02, 10),
-        new THREE.MeshLambertMaterial({ color: 0x3a1f08 })
-      );
-      soil.position.y = 0.30;
-      group.add(soil);
-      // Leaves
-      for (let i = 0; i < 5; i++) {
-        const a = (i / 5) * Math.PI * 2;
-        const leaf = new THREE.Mesh(
-          new THREE.ConeGeometry(0.08, 0.40, 6),
-          new THREE.MeshLambertMaterial({ color: 0x4a8a3a })
-        );
-        leaf.position.set(Math.cos(a) * 0.12, 0.55, Math.sin(a) * 0.12);
-        leaf.rotation.z = Math.cos(a) * 0.4;
-        leaf.rotation.x = Math.sin(a) * 0.4;
-        group.add(leaf);
-      }
-    } else if (kind === 'printer') {
-      // Laundry basket — woven basket with clothes peeking out.
-      const body = new THREE.Mesh(
-        new THREE.BoxGeometry(0.7, 0.45, 0.6),
-        matPrimary
-      );
-      body.position.y = 0.22;
-      group.add(body);
-      // Paper output slot on top
-      const slot = new THREE.Mesh(
-        new THREE.BoxGeometry(0.4, 0.04, 0.2),
-        matPrimary
-      );
-      slot.position.y = 0.46;
-      group.add(slot);
-      // Paper sticking out
-      const paper = new THREE.Mesh(
-        new THREE.BoxGeometry(0.32, 0.02, 0.14),
-        new THREE.MeshLambertMaterial({ color: 0xffffff })
-      );
-      paper.position.y = 0.49;
-      group.add(paper);
-      // Buttons
-      for (let i = 0; i < 3; i++) {
-        const btn = new THREE.Mesh(
-          new THREE.SphereGeometry(0.025, 6, 6),
-          new THREE.MeshLambertMaterial({ color: i === 0 ? 0x2ec27e : 0xc0392b })
-        );
-        btn.position.set(-0.20 + i * 0.07, 0.46, 0.31);
-        group.add(btn);
-      }
-    } else if (kind === 'watercooler') {
-      // Tall floor lamp or bookshelf.
-      const base = new THREE.Mesh(
-        new THREE.BoxGeometry(0.4, 0.5, 0.4),
-        new THREE.MeshLambertMaterial({ color: 0xeeeeee })
-      );
-      base.position.y = 0.25;
-      group.add(base);
-      // Tap
-      const tap = new THREE.Mesh(
-        new THREE.BoxGeometry(0.08, 0.04, 0.05),
-        matMetal
-      );
-      tap.position.set(0, 0.30, 0.22);
-      group.add(tap);
-      // Big blue bottle on top
-      const bottle = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.18, 0.16, 0.55, 10),
-        matGlass
-      );
-      bottle.position.y = 0.78;
-      group.add(bottle);
-      // Cap
-      const cap = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.10, 0.10, 0.08, 8),
-        new THREE.MeshLambertMaterial({ color: 0xffffff })
-      );
-      cap.position.y = 1.10;
-      group.add(cap);
-    } else if (kind === 'filingcabinet') {
-      // Wooden dresser with 3 drawers.
-      const body = new THREE.Mesh(
-        new THREE.BoxGeometry(0.5, 0.95, 0.4),
-        matPrimary
-      );
-      body.position.y = 0.475;
-      group.add(body);
-      // 3 drawer handles
-      for (let i = 0; i < 3; i++) {
-        const handle = new THREE.Mesh(
-          new THREE.BoxGeometry(0.12, 0.025, 0.025),
-          matMetal
-        );
-        handle.position.set(0, 0.18 + i * 0.30, 0.21);
-        group.add(handle);
-      }
-    } else if (kind === 'desk') {
-      // Wide dining table: flat top with 4 legs. Spans 2 lanes.
-      const top = new THREE.Mesh(
-        new THREE.BoxGeometry(1.7, 0.06, 0.7),
-        matPrimary
-      );
-      top.position.y = 0.75;
-      group.add(top);
-      // 4 legs
-      const legGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.75, 6);
-      for (const [x, z] of [[-0.78, 0.30], [0.78, 0.30], [-0.78, -0.30], [0.78, -0.30]]) {
-        const leg = new THREE.Mesh(legGeo, matBrown);
-        leg.position.set(x, 0.375, z);
-        group.add(leg);
-      }
-      // A monitor on top
-      const monitorStand = new THREE.Mesh(
-        new THREE.BoxGeometry(0.05, 0.10, 0.05),
-        matDark
-      );
-      monitorStand.position.set(-0.4, 0.83, 0);
-      group.add(monitorStand);
-      const monitor = new THREE.Mesh(
-        new THREE.BoxGeometry(0.4, 0.28, 0.03),
-        matDark
-      );
-      monitor.position.set(-0.4, 1.00, 0);
-      group.add(monitor);
-      // Keyboard
-      const keyboard = new THREE.Mesh(
-        new THREE.BoxGeometry(0.4, 0.02, 0.15),
-        new THREE.MeshLambertMaterial({ color: 0x222222 })
-      );
-      keyboard.position.set(0.3, 0.79, 0.15);
-      group.add(keyboard);
-    } else if (kind === 'worker') {
-      // Sleepy person slumped at a dining table. Wide (spans 2 lanes).
-      // Table is just a thin slab (the "desk" kind has the full table;
-      // here we just need the sleeper on a small table for context).
-      const deskTop = new THREE.Mesh(
-        new THREE.BoxGeometry(1.7, 0.06, 0.7),
-        new THREE.MeshLambertMaterial({ color: 0x8a4a1f })
-      );
-      deskTop.position.y = 0.75;
-      group.add(deskTop);
-      const legGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.75, 6);
-      for (const [x, z] of [[-0.78, 0.30], [0.78, 0.30], [-0.78, -0.30], [0.78, -0.30]]) {
-        const leg = new THREE.Mesh(legGeo, matBrown);
-        leg.position.set(x, 0.375, z);
-        group.add(leg);
-      }
-      // Worker body (cylinder) slumped forward
-      const body = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.18, 0.18, 0.55, 10),
-        matPrimary
-      );
-      body.position.set(-0.3, 1.05, 0.20);
-      body.rotation.x = -0.6; // slumped forward
-      group.add(body);
-      // Head
-      const head = new THREE.Mesh(
-        new THREE.SphereGeometry(0.13, 10, 8),
-        new THREE.MeshLambertMaterial({ color: 0xe7b78f })
-      );
-      head.position.set(-0.3, 1.30, 0.40);
-      group.add(head);
-      // Hair patch
-      const hair = new THREE.Mesh(
-        new THREE.SphereGeometry(0.10, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2),
-        new THREE.MeshLambertMaterial({ color: 0x3a2a1a })
-      );
-      hair.position.set(-0.3, 1.40, 0.40);
-      group.add(hair);
-      // Closed eyes (two thin cylinders)
-      for (const dx of [-0.05, 0.05]) {
-        const eye = new THREE.Mesh(
-          new THREE.BoxGeometry(0.03, 0.005, 0.005),
-          new THREE.MeshLambertMaterial({ color: 0x1a0a02 })
-        );
-        eye.position.set(-0.3 + dx, 1.30, 0.52);
-        group.add(eye);
-      }
-      // Keyboard they're slumped on
-      const keyboard = new THREE.Mesh(
-        new THREE.BoxGeometry(0.4, 0.02, 0.15),
-        new THREE.MeshLambertMaterial({ color: 0x222222 })
-      );
-      keyboard.position.set(-0.3, 0.79, 0.30);
-      group.add(keyboard);
-    }
-
-    // Scale all obstacles up so they read clearly as house furniture
-    // rather than tiny props. 1.5× makes chairs, boxes, etc. visually
-    // prominent without breaking jumpability (player jump apex ≈ 1.8u,
-    // tallest scaled obstacle ≈ 1.4u).
-    group.scale.setScalar(1.5);
-    return group;
-  }
-
+  // buildObstacleMeshes imported from ./entities/buildObstacleMeshes
   function makeObstacle(kind) {
     const mesh = buildObstacleMeshes(kind);
     return {
