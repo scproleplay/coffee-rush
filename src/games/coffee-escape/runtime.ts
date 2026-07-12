@@ -1,51 +1,34 @@
 // @ts-nocheck
+/**
+ * Coffee Escape runtime — wires modules into the game loop.
+ * Prefer extracting pure logic to systems/* (tested) and builders to
+ * engine/* + entities/* rather than growing this file.
+ */
 import * as THREE from 'three';
 import { submitScore as platformSubmitScore } from '@shared/leaderboard/client';
 import {
   STORAGE_KEY,
   LANE_X,
-  LANE_SWITCH_MS,
-  GROUND_Y,
   JUMP_VY,
-  GRAVITY,
   OBSTACLE_POOL_SIZE,
   OBSTACLE_START_Z,
   OBSTACLE_END_Z,
-  RECYCLE_Z,
   BASE_SPEED,
-  MAX_SPEED,
-  SPEED_RAMP,
-  SPEED_GRACE_SECONDS,
   SPAWN_INTERVAL_START,
-  SPAWN_INTERVAL_MIN,
-  SPAWN_RAMP_SECONDS,
-  SPAWN_JITTER,
-  PAIR_SPAWN_BASE,
-  PAIR_SPAWN_RAMP,
-  SAME_LANE_MIN_GAP,
   BEAN_SPAWN_CHANCE,
   BEAN_INTERVAL_MIN,
   BEAN_INTERVAL_MAX,
-  SCORE_PER_SECOND,
   BEAN_POOL_SIZE,
 } from './engine/constants';
-import {
-  makeFloorTexture,
-  makeWallTexture,
-  makeCeilingTexture,
-  makePictureTexture,
-} from './engine/textures';
+import { createScene } from './engine/scene';
+import { createHallway } from './engine/hallway';
+import { createFxPools } from './engine/fxPools';
 import { OBSTACLE_KINDS } from './entities/obstacleKinds';
 import { buildObstacleMeshes } from './entities/buildObstacleMeshes';
 import { createCup } from './entities/cup';
 import { createMan } from './entities/man';
 import { makeBean } from './entities/bean';
-import {
-  makePictureFrame,
-  makeWallLamp,
-  makePlant,
-  makeSideTable,
-} from './entities/decor';
+import { getCeDom } from './ui/domRefs';
 import {
   isKindAvailable,
   nextSpawnDelay,
@@ -58,15 +41,13 @@ import {
   canBoost,
   canChangeLane,
   canJump,
-  keyToAction,
-  nextLane,
-  swipeToAction,
 } from './systems/inputLogic';
 import {
   nextBeanDelay,
   scoreFromTime,
   speedAtTime,
   tickBoost,
+  startBoost as pureStartBoost,
 } from './systems/pacingLogic';
 import {
   applyJumpImpulse,
@@ -76,7 +57,6 @@ import {
   tickLaneMotion,
   tickRunAnim,
 } from './systems/playerMotion';
-import { startBoost as pureStartBoost } from './systems/pacingLogic';
 import {
   beanRecyclePastCamera,
   blocksPlayerLane,
@@ -101,37 +81,15 @@ const PlatformLeaderboard = {
 
 function startCoffeeEscape() {
 
-// -----------------------------------------------------------------------
-  // DOM references
-  // -----------------------------------------------------------------------
-  const STAGE = document.getElementById('ceStage');
-  const CANVAS = document.getElementById('ceCanvas');
-  const HUD = document.getElementById('ceHud');
-  const SCORE_EL = document.getElementById('ceScore');
-  const BEST_HUD_EL = document.getElementById('ceBestHud');
-  const BEST_START_EL = document.getElementById('ceBestStart');
-  const FINAL_SCORE_EL = document.getElementById('ceFinalScore');
-  const FINAL_BEST_EL = document.getElementById('ceFinalBest');
-  const OVER_TITLE_EL = document.getElementById('ceOverTitle');
-  const NEW_BEST_EL = document.getElementById('ceNewBest');
-  const FINAL_SCORE_ITEM = document.getElementById('ceFinalScoreItem');
-  const FINAL_BEST_ITEM = document.getElementById('ceFinalBestItem');
-  const RUN_STAMP = document.getElementById('ceRunStamp');
-  // Global leaderboard submit form (in the game-over card).
-  const LB_FORM = document.getElementById('ceLbSubmit');
-  const LB_NICK_EL = document.getElementById('ceLbNick');
-  const LB_SUBMIT_BTN = document.getElementById('ceLbSubmitBtn');
-  const LB_STATUS_EL = document.getElementById('ceLbStatus');
-  const START_OVERLAY = document.getElementById('ceStartOverlay');
-  const GAME_OVER_OVERLAY = document.getElementById('ceGameOverOverlay');
-  const START_BTN = document.getElementById('ceStartBtn');
-  const TRY_AGAIN_BTN = document.getElementById('ceTryAgainBtn');
-  const RESET_BEST_BTN = document.getElementById('ceResetBest');
-  const JUMP_BTN = document.getElementById('ceJumpBtn');
-  const BOOST_BTN = document.getElementById('ceBoostBtn');
-  const BOOST_FILL = document.getElementById('ceBoostFill');
-  const BOOST_HUD_FILL = document.getElementById('ceBoostHudFill');
-  const HINT = document.getElementById('ceHint');
+  // DOM
+  const {
+    STAGE, CANVAS, HUD, SCORE_EL, BEST_HUD_EL, BEST_START_EL,
+    FINAL_SCORE_EL, FINAL_BEST_EL, OVER_TITLE_EL, NEW_BEST_EL,
+    FINAL_SCORE_ITEM, FINAL_BEST_ITEM, RUN_STAMP,
+    LB_FORM, LB_NICK_EL, LB_SUBMIT_BTN, LB_STATUS_EL,
+    START_OVERLAY, GAME_OVER_OVERLAY, START_BTN, TRY_AGAIN_BTN,
+    RESET_BEST_BTN, JUMP_BTN, BOOST_BTN, BOOST_FILL, BOOST_HUD_FILL, HINT,
+  } = getCeDom();
 
   // -----------------------------------------------------------------------
   // World constants
@@ -206,96 +164,13 @@ function startCoffeeEscape() {
     nextBoostParticle: 0,
   };
 
-  // -----------------------------------------------------------------------
-  // Three.js setup
-  // -----------------------------------------------------------------------
+    // Scene + hallway (factories — hallway restored & isolated)
   if (!THREE) {
     console.error('Three.js failed to load. Coffee Escape cannot start.');
     return;
   }
-
-  const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xfff1d6);
-  // Warm fog for depth — closer near, fading to a deep warm color in
-  // the distance. Boosts the "long hallway" feel.
-  scene.fog = new THREE.Fog(0xffd9a8, 22, 90);
-
-  const camera = new THREE.PerspectiveCamera(70, 16 / 9, 0.1, 200);
-  const cameraBaseY = 2.6;
-  const cameraBaseZ = 4.5;
-  camera.position.set(0, cameraBaseY, cameraBaseZ);
-  camera.lookAt(0, 1.0, -8);
-
-  const renderer = new THREE.WebGLRenderer({
-    canvas: CANVAS,
-    antialias: true,
-    alpha: false,
-  });
-  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
-  renderer.setClearColor(0xfff1d6, 1);
-  renderer.outputColorSpace = THREE.SRGBColorSpace;
-
-  // Lighting — three lights for depth:
-  //  - Hemi: ambient sky/ground bounce (cream / warm tan)
-  //  - Sun: warm key light from the front-right
-  //  - Fill: a cooler fill from the back-left so the cup doesn't go
-  //    pitch-black on the side facing away from the sun
-  const hemi = new THREE.HemisphereLight(0xfff1d6, 0xb87333, 0.70);
-  scene.add(hemi);
-  const sun = new THREE.DirectionalLight(0xffe5b0, 0.95);
-  sun.position.set(4, 10, -3);
-  scene.add(sun);
-  const fill = new THREE.DirectionalLight(0xc8d8ff, 0.30);
-  fill.position.set(-5, 6, 2);
-  scene.add(fill);
-  // Subtle warm rim from the floor — a soft point light near the
-  // cup so the underside of the cup catches a hint of warm bounce.
-  const rim = new THREE.PointLight(0xffb070, 0.4, 8, 2);
-  rim.position.set(0, 0.5, 2);
-  scene.add(rim);
-
-  // Textures imported from ./engine/textures
-
-  // -----------------------------------------------------------------------
-  // Hallway — warm coffee/office environment
-  // Decor factories imported from ./entities/decor
-
-
-  // Decor pool. We allocate a fixed set and recycle their z to make
-  // them scroll past. Spacing is the same as the ceiling tile period
-  // so the visual rhythm matches.
-  const DECOR_SPACING = 8;
-  const decorItems = [];
-  for (let i = 0; i < 26; i++) {
-    const side = (i % 2 === 0) ? 'left' : 'right';
-    const decorType = i % 4;
-    let item;
-    if (decorType === 0) {
-      item = makePictureFrame(i % 4, side);
-    } else if (decorType === 1) {
-      item = makeWallLamp();
-    } else if (decorType === 2) {
-      item = makePlant();
-    } else {
-      item = makeSideTable();
-    }
-    // Scale up side decorations so they read as real house props.
-    item.scale.setScalar(1.5);
-    if (decorType === 0 || decorType === 1) {
-      // Wall-mounted decor: orient so it faces the hall.
-      item.rotation.y = side === 'left' ? -Math.PI / 2 : Math.PI / 2;
-      item.position.x = side === 'left' ? -2.95 : 2.95;
-      item.position.y = 2.6;
-    } else {
-      // Floor decor: sit on the ground near the wall. Pulled
-      // slightly inward so the 1.5× scaled props don't clip walls.
-      item.position.x = side === 'left' ? -2.2 : 2.2;
-      item.position.y = 0;
-    }
-    item.position.z = -i * DECOR_SPACING;
-    scene.add(item);
-    decorItems.push(item);
-  }
+  const { scene, camera, renderer, cameraBaseY, cameraBaseZ } = createScene(CANVAS);
+  const { floorTex, wallTex, ceilingTex, decorItems, DECOR_SPACING } = createHallway(scene);
 
   // -----------------------------------------------------------------------
   // Cup + man + beans — CE-local entity factories (not shared platform code)
@@ -327,88 +202,10 @@ function startCoffeeEscape() {
   }
   state.beans = beans;
 
-  // -----------------------------------------------------------------------
-  // Ambient motes (dust / coffee aroma in the air)
-  // -----------------------------------------------------------------------
-  // 16 small semi-transparent spheres scattered in a wide volume
-  // around the cup. Each has a slow drift (its own sin-based
-  // motion) and recycles when it drifts past the camera. Adds depth
-  // to the hallway without being noticeable as "particles."
-  const MOTE_COUNT = 26;
-  const motes = [];
-  for (let i = 0; i < MOTE_COUNT; i++) {
-    const m = new THREE.Mesh(
-      new THREE.SphereGeometry(0.05, 6, 6),
-      new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.40 })
-    );
-    m.position.set(
-      (Math.random() - 0.5) * 6,
-      1.2 + Math.random() * 4.5,
-      -10 - Math.random() * 70
-    );
-    m.userData.phase = Math.random() * Math.PI * 2;
-    m.userData.driftY = 0.4 + Math.random() * 0.4;
-    scene.add(m);
-    motes.push(m);
-  }
+    // FX pools
+  const { motes, dustPool, boostParticles, boostGlow } = createFxPools(scene);
   state.motes = motes;
-
-  // -----------------------------------------------------------------------
-  // Dust / burst particle pool
-  // -----------------------------------------------------------------------
-  // Short-lived colored spheres used for bean-collect bursts and
-  // future effects. Each entry has a mesh + a physics record.
-  const DUST_POOL_SIZE = 32;
-  const dustPool = [];
-  for (let i = 0; i < DUST_POOL_SIZE; i++) {
-    const m = new THREE.Mesh(
-      new THREE.SphereGeometry(0.10, 6, 6),
-      new THREE.MeshBasicMaterial({ color: 0xffd24a, transparent: true, opacity: 0.9 })
-    );
-    m.visible = false;
-    scene.add(m);
-    dustPool.push({
-      mesh: m,
-      life: 0,
-      maxLife: 0.5,
-      x: 0, y: 0, z: 0,
-      vx: 0, vy: 0, vz: 0,
-      r: 0.18,
-      color: '#ffd24a',
-    });
-  }
-
-  // -----------------------------------------------------------------------
-  // Boost particle pool
-  // -----------------------------------------------------------------------
-  // Small blue particles emitted behind the cup while boost is
-  // active. Each particle drifts up and fades out.
-  const BOOST_PARTICLE_POOL = 24;
-  const boostParticles = [];
-  for (let i = 0; i < BOOST_PARTICLE_POOL; i++) {
-    const p = new THREE.Mesh(
-      new THREE.SphereGeometry(0.10, 6, 6),
-      new THREE.MeshBasicMaterial({ color: 0x6ec6ff, transparent: true, opacity: 0.8 })
-    );
-    p.visible = false;
-    scene.add(p);
-    boostParticles.push({
-      mesh: p,
-      life: 0,
-      maxLife: 0.5,
-      vy: 0,
-    });
-  }
   state.boostParticles = boostParticles;
-
-  // Boost glow — a soft transparent sphere around the cup that's
-  // visible while boost is active. Pulses slightly.
-  const boostGlow = new THREE.Mesh(
-    new THREE.SphereGeometry(0.7, 12, 10),
-    new THREE.MeshBasicMaterial({ color: 0x6ec6ff, transparent: true, opacity: 0 })
-  );
-  boostGlow.position.set(0, 0.5, 0);
-  scene.add(boostGlow);
 
   // Bean spawn — pick a free bean from the pool and put it in a
   // random lane at a far z. Floats at jump height with a slow bob.

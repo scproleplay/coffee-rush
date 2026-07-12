@@ -80,3 +80,45 @@ index.html
 3. Supabase Auth + `user_id` on scores (profile already exists)  
 4. Kid/teen visual pass (motion, sound, avatars)  
 5. QA on mobile → merge `platform/vite-migration` → `main`
+
+
+## Why `runtime.ts` is still large (~1.3k) and how we split further
+
+TypeScript does **not** require one file. A big runtime is normal *during* migration when it still owns:
+
+1. **Game loop orchestration** (`update` / `render` / `requestAnimationFrame`)
+2. **Mutable run state** (player, pools, timers)
+3. **DOM event wiring** (pointer/keyboard/buttons)
+4. **Three.js object mutation** (positions, materials each frame)
+
+### Preferred split pattern (what we use)
+
+| Kind | Where | Style |
+|------|--------|--------|
+| Pure rules (testable) | `systems/*.ts` | functions |
+| Mesh builders | `entities/*.ts`, `engine/*` | factories returning handles |
+| Scene shell | `engine/scene.ts`, `engine/hallway.ts` | factories |
+| DOM lookup | `ui/domRefs.ts` | one object of refs |
+| Orchestration | `runtime.ts` → later `Game.ts` class optional | thin wire-up |
+
+### Do we need classes?
+
+**Not required.** Prefer:
+
+- **Factories** (`createCup`, `createHallway`) — clear ownership, easy tests of pure parts
+- **Pure functions** for rules — TDD-friendly
+- **Optional** `class CoffeeEscapeGame` later only if it helps group lifecycle (`start/stop/dispose`) — not for every system
+
+Avoid a deep OOP hierarchy (harder for non-game-devs, easier to break).
+
+### Target shape
+
+```
+runtime.ts          < 400 lines  (loop + wire only)
+systems/*           pure + tested
+entities/*          builders
+engine/*            scene, hallway, fx, constants
+ui/*                dom refs, overlays helpers
+```
+
+Next slices: input controller module, obstacle pool module, update/render split.
