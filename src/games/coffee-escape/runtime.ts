@@ -82,6 +82,7 @@ import {
   blocksPlayerLane,
   canCollectBean,
 } from './systems/collisionLogic';
+import { isNewBest, pickGameOverTitle } from './systems/gameFlow';
 
 const PlatformLeaderboard = {
   async submitScore(payload) {
@@ -1033,8 +1034,8 @@ if (isPair) {
     state.running = false;
     state.gameOver = true;
     HUD.hidden = true;
-    const isNewBest = state.score > state.best;
-    if (isNewBest) {
+    const newBest = isNewBest(state.score, state.best);
+    if (newBest) {
       state.best = state.score;
       saveBest(state.best);
     }
@@ -1045,7 +1046,7 @@ if (isPair) {
     if (FINAL_BEST_ITEM) FINAL_BEST_ITEM.classList.remove('is-best');
     FINAL_SCORE_EL.textContent = '0';
     FINAL_BEST_EL.textContent = '0';
-    NEW_BEST_EL.hidden = !isNewBest;
+    NEW_BEST_EL.hidden = !newBest;
     OVER_TITLE_EL.textContent = pickGameOverTitle(state.score);
     GAME_OVER_OVERLAY.hidden = false;
     // Show the global-leaderboard submit form (only if the user
@@ -1073,7 +1074,7 @@ if (isPair) {
         FINAL_SCORE_EL.textContent = String(finalScore);
         FINAL_BEST_EL.textContent = String(finalBest);
         // Highlight the best box if the player set a new record.
-        if (isNewBest) {
+        if (newBest) {
           if (FINAL_BEST_ITEM) FINAL_BEST_ITEM.classList.add('is-best');
           if (FINAL_SCORE_EL) {
             FINAL_SCORE_EL.classList.add('is-best');
@@ -1085,12 +1086,7 @@ if (isPair) {
     requestAnimationFrame(tick);
   }
 
-  function pickGameOverTitle(score) {
-    if (score >= 200) return 'Legendary Espresso! ☕👑';
-    if (score >= 100) return 'What a brew-tal run! ☕💨';
-    if (score >= 50) return 'Caught! ☕😱';
-    return 'Spat out! ☕😵';
-  }
+  // pickGameOverTitle imported from ./systems/gameFlow
 
   function restart() {
     GAME_OVER_OVERLAY.hidden = true;
