@@ -61,6 +61,7 @@ index.html
 | Coffee Escape module | ✅ Phase B split started |
 | CE `engine/constants`, `engine/textures`, `engine/types` | ✅ |
 | CE `entities/obstacleKinds`, `buildObstacleMeshes` | ✅ |
+| CE `entities/cup`, `man`, `bean` (game-local only) | ✅ |
 | Profile page (guest nickname) | ✅ stub — auth-ready |
 | Coffee Rush / others | ⏳ legacy under `/legacy/` |
 | Supabase Auth UI | ⏳ Phase C |
