@@ -24,10 +24,12 @@ A real multi-game **platform** kids and teens love:
 
 ```bash
 npm install
-npm run dev      # http://localhost:5173
+npm run dev        # http://localhost:5173
 npm run build
 npm run preview
 npm run typecheck
+npm test           # Vitest unit tests (TDD for pure CE/shared logic)
+npm run test:watch
 ```
 
 ## Layout
@@ -62,6 +64,8 @@ index.html
 | CE `engine/constants`, `engine/textures`, `engine/types` | ✅ |
 | CE `entities/obstacleKinds`, `buildObstacleMeshes` | ✅ |
 | CE `entities/cup`, `man`, `bean` (game-local only) | ✅ |
+| CE `systems/spawnLogic` + `inputLogic` (pure, tested) | ✅ |
+| Vitest harness (`npm test`) | ✅ 25 tests |
 | Profile page (guest nickname) | ✅ stub — auth-ready |
 | Coffee Rush / others | ⏳ legacy under `/legacy/` |
 | Supabase Auth UI | ⏳ Phase C |

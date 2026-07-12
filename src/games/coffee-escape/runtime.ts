@@ -40,6 +40,22 @@ import { buildObstacleMeshes } from './entities/buildObstacleMeshes';
 import { createCup } from './entities/cup';
 import { createMan } from './entities/man';
 import { makeBean } from './entities/bean';
+import {
+  isKindAvailable,
+  nextSpawnDelay,
+  pickKind as purePickKind,
+  pickLane as purePickLane,
+  pickZ as purePickZ,
+  shouldSpawnPair,
+} from './systems/spawnLogic';
+import {
+  canBoost,
+  canChangeLane,
+  canJump,
+  keyToAction,
+  nextLane,
+  swipeToAction,
+} from './systems/inputLogic';
 
 const PlatformLeaderboard = {
   async submitScore(payload) {
@@ -573,12 +589,7 @@ function startCoffeeEscape() {
   // OBSTACLE_KINDS imported from ./entities/obstacleKinds
   // Tall obstacles (jumpHeight > 0.7) only spawn after 20s of run time.
   function kindAvailable(kind) {
-    const meta = OBSTACLE_KINDS[kind];
-    // Tall obstacles (watercooler, filingcabinet) need a real
-    // jump. Make them available earlier (12s) so the hallway
-    // gets more vertical variety after the first 10 seconds.
-    if (meta.jumpHeight > 0.7 && state.worldTime < 12) return false;
-    return true;
+    return isKindAvailable(kind, state.worldTime);
   }
   // buildObstacleMeshes imported from ./entities/buildObstacleMeshes
   function makeObstacle(kind) {
@@ -614,52 +625,13 @@ function startCoffeeEscape() {
   // toward medium/hard kinds (watercooler, filingcabinet) so the
   // hallway gets denser and more varied.
   function pickKind() {
-    const kinds = Object.keys(OBSTACLE_KINDS);
-    const available = kinds.filter(kindAvailable);
-    if (available.length === 0) return 'chair'; // safety
-    // Base weights: easy kinds more common.
-    const baseWeight = {
-      spill: 4, cable: 3, mug: 3, chair: 5, box: 3, plant: 2,
-      printer: 3, watercooler: 2, filingcabinet: 2, desk: 2, worker: 2,
-    };
-    // Ramp: 0 at t=0, 1 at t=40. Multiplied into the "harder" kinds
-    // to bring them in gradually.
-    const rampT = Math.min(1, state.worldTime / 40);
-    // Harder kinds get boosted by the ramp so they appear more
-    // often as the player gets comfortable.
-    const hardBoost = {
-      watercooler: 1.5, filingcabinet: 1.5, printer: 0.8,
-      desk: 1.0, worker: 1.0,
-    };
-    // Wide obstacles (desk, worker) only after 15s (was 30s) so
-    // they appear as a medium-difficulty pattern once the player
-    // has the basics down.
-    const w = {};
-    for (const k of available) {
-      w[k] = baseWeight[k] || 2;
-      if (hardBoost[k]) w[k] += hardBoost[k] * rampT;
-      if (OBSTACLE_KINDS[k].wide && state.worldTime < 15) w[k] = 0;
-    }
-    let total = 0;
-    for (const k in w) total += w[k];
-    if (total === 0) return 'chair';
-    let r = Math.random() * total;
-    for (const k in w) {
-      if (r < w[k]) return k;
-      r -= w[k];
-    }
-    return 'chair';
+    return purePickKind(state.worldTime);
   }
 
   function spawnNext() {
-    // Decide whether this spawn is a single obstacle or a pair.
-    // The pair chance ramps up with worldTime so the first few
-    // seconds are single, then the hallway starts showing
-    // two-lane patterns (one safe lane).
-    const pairChance = Math.min(0.45, PAIR_SPAWN_BASE + state.worldTime * PAIR_SPAWN_RAMP);
-    const isPair = Math.random() < pairChance && state.worldTime > 6;
-
-    if (isPair) {
+    // Pure pair decision — tested in systems/spawnLogic.test.ts
+    const isPair = shouldSpawnPair(state.worldTime);
+if (isPair) {
       spawnObstaclePair();
     } else {
       spawnSingleObstacle();
@@ -728,28 +700,7 @@ function startCoffeeEscape() {
   // the same lane and is close in z, pick a different lane so the
   // player has a safe option. Returns 0, 1, or 2.
   function pickLane(_ob) {
-    // Same-lane recent obstacles: the distance between the new
-    // obstacle and the last one in its lane is roughly
-    // |lastObZ - OBSTACLE_START_Z| / (spawnInterval * speed). At
-    // speed 36 and interval 0.45s, that's 16.2 units. If the last
-    // lane is X and the gap is < SAME_LANE_MIN_GAP, the player
-    // wouldn't have time to switch lanes, so avoid lane X.
-    let avoid = -1;
-    if (state.lastObLane >= 0) {
-      // The lastObZ is at spawn (~-70). The new obstacle will be
-      // at ~-70 too. The "distance" between them when both are
-      // on screen is roughly the z difference at spawn, which is
-      // small. So the practical question is: would two obstacles
-      // in the same lane be back-to-back? Since spawn interval is
-      // ~0.45s and the lane switch takes ~0.16s, if the last
-      // obstacle hasn't been passed yet, we MUST avoid that lane.
-      // For simplicity, always avoid the last lane on the next
-      // single spawn. This guarantees a safe lane is always open
-      // between consecutive single obstacles.
-      avoid = state.lastObLane;
-    }
-    const choices = [0, 1, 2].filter(l => l !== avoid);
-    return choices[Math.floor(Math.random() * choices.length)];
+    return purePickLane(state.lastObLane);
   }
 
   // Pick a z position for the new obstacle. We ensure the gap to
@@ -760,14 +711,7 @@ function startCoffeeEscape() {
   // guarantee — consecutive obstacles are never closer than
   // ~0.4s of travel.
   function pickZ(_lane, _ob) {
-    if (state.lastObZ <= -900) {
-      // First spawn of the run.
-      return OBSTACLE_START_Z - Math.random() * 4;
-    }
-    const minGap = Math.max(6, state.speed * 0.4);
-    // Place the new obstacle behind the last one by at least
-    // minGap units, with a small random extra gap for variety.
-    return state.lastObZ - minGap - Math.random() * 2.5;
+    return purePickZ(state.lastObZ, state.speed);
   }
 
   function rebuildObstacle(ob, kind) {
@@ -837,15 +781,13 @@ function startCoffeeEscape() {
   const TAP_MAX_MS = 250;         // quick tap (used for zone-based taps)
 
   function tryJump() {
-    if (!state.running || state.gameOver) return;
-    if (state.player.onGround) {
-      state.player.vy = JUMP_VY;
-      state.player.onGround = false;
-    }
+    if (!canJump({ running: state.running, gameOver: state.gameOver, onGround: state.player.onGround })) return;
+    state.player.vy = JUMP_VY;
+    state.player.onGround = false;
   }
 
   function tryLane(target) {
-    if (!state.running || state.gameOver) return;
+    if (!canChangeLane({ running: state.running, gameOver: state.gameOver })) return;
     if (target < 0 || target > 2) return;
     if (state.player.targetLane === target) return;
     state.player.targetLane = target;
@@ -855,14 +797,15 @@ function startCoffeeEscape() {
   }
 
   function tryBoost() {
-    if (!state.running || state.gameOver) return;
-    if (state.boost.active) return;
-    if (state.boost.meter < state.boost.cost) return;
+    if (!canBoost({
+      running: state.running,
+      gameOver: state.gameOver,
+      boostActive: state.boost.active,
+      meter: state.boost.meter,
+      cost: state.boost.cost,
+    })) return;
     state.boost.active = true;
     state.boost.timer = state.boost.duration;
-    // Lock the meter at its current level during the boost (visually
-    // the bar stays full while boost is active). It'll drop to 0
-    // when the boost ends.
   }
 
   function onKeyDown(e) {
@@ -1397,9 +1340,7 @@ function startCoffeeEscape() {
     state.nextSpawn -= dt;
     if (state.nextSpawn <= 0) {
       spawnNext();
-      const rampT = Math.min(1, state.worldTime / SPAWN_RAMP_SECONDS);
-      const baseInterval = SPAWN_INTERVAL_START + (SPAWN_INTERVAL_MIN - SPAWN_INTERVAL_START) * rampT;
-      state.nextSpawn = baseInterval * (1 - SPAWN_JITTER + Math.random() * SPAWN_JITTER * 2);
+      state.nextSpawn = nextSpawnDelay(state.worldTime);
     }
 
     // Move obstacles toward the cup and recycle.
