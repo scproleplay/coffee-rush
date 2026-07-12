@@ -37,6 +37,9 @@ import {
 } from './engine/textures';
 import { OBSTACLE_KINDS } from './entities/obstacleKinds';
 import { buildObstacleMeshes } from './entities/buildObstacleMeshes';
+import { createCup } from './entities/cup';
+import { createMan } from './entities/man';
+import { makeBean } from './entities/bean';
 
 const PlatformLeaderboard = {
   async submitScore(payload) {
@@ -386,305 +389,27 @@ function startCoffeeEscape() {
   }
 
   // -----------------------------------------------------------------------
-  // Cup (player) — cute takeaway coffee cup with sleeve, coffee top,
-  // face, and little running limbs. Built from primitives so the game
-  // stays lightweight and loads fast on phones.
+  // Cup + man + beans — CE-local entity factories (not shared platform code)
   // -----------------------------------------------------------------------
-  const cup = new THREE.Group();
+  const {
+    cup,
+    armLGroup,
+    armRGroup,
+    legLGroup,
+    legRGroup,
+    steamGroup,
+    contactShadow,
+  } = createCup(scene, LANE_X[1]);
 
-  // Materials reused across the cup
-  const matCupBody  = new THREE.MeshLambertMaterial({ color: 0xffffff }); // pure white cup so it pops on the warm wood floor
-  const matRim      = new THREE.MeshLambertMaterial({ color: 0xe8d8b8 }); // darker cream
-  const matCoffee   = new THREE.MeshLambertMaterial({ color: 0x3a1f08 }); // very dark brown
-  const matCrema    = new THREE.MeshLambertMaterial({ color: 0x8a5a2c }); // light brown ring
-  const matSleeve   = new THREE.MeshLambertMaterial({ color: 0xc98a4d }); // cardboard tan
-  const matSleeveRim= new THREE.MeshLambertMaterial({ color: 0xa86d3a }); // darker tan (top/bottom edges of sleeve)
-  const matLogo     = new THREE.MeshLambertMaterial({ color: 0xff5a1f }); // brand orange
-  const matFace     = new THREE.MeshLambertMaterial({ color: 0x1a0a02 }); // near-black
-  const matCheek    = new THREE.MeshLambertMaterial({ color: 0xff8a6b, transparent: true, opacity: 0.55 });
-  const matLimb     = new THREE.MeshLambertMaterial({ color: 0x5a3a14 }); // dark brown
-  const matHand     = new THREE.MeshLambertMaterial({ color: 0xe7b78f }); // skin tone
-  const matShoe     = new THREE.MeshLambertMaterial({ color: 0x1a1a1a });
-  const matSteam    = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.45 });
+  const {
+    man,
+    manArmL,
+    manArmR,
+    manLegL,
+    manLegR,
+  } = createMan(scene, LANE_X[0]);
 
-  // Body: a slightly tapered cylinder. Top is slightly wider than the
-  // bottom so the cup reads as a takeaway, not a barrel.
-  const cupBody = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.40, 0.34, 0.85, 16),
-    matCupBody
-  );
-  cupBody.position.y = 0.55;
-  cup.add(cupBody);
-
-  // Rim around the top of the cup (slightly recessed, gives the cup
-  // a "real" lip).
-  const cupRim = new THREE.Mesh(
-    new THREE.TorusGeometry(0.40, 0.04, 8, 24),
-    matRim
-  );
-  cupRim.rotation.x = Math.PI / 2;
-  cupRim.position.y = 0.98;
-  cup.add(cupRim);
-
-  // Coffee surface inside the rim (slightly lower than the rim).
-  const coffeeSurface = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.36, 0.36, 0.02, 16),
-    matCoffee
-  );
-  coffeeSurface.position.y = 0.965;
-  cup.add(coffeeSurface);
-
-  // Crema ring (a tiny inner disc that suggests coffee with milk).
-  const crema = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.20, 0.20, 0.005, 12),
-    matCrema
-  );
-  crema.position.y = 0.978;
-  cup.add(crema);
-
-  // Cardboard sleeve around the lower-middle of the cup. This is what
-  // makes the cup instantly read as a takeaway coffee.
-  const sleeve = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.42, 0.40, 0.32, 16, 1, true),
-    matSleeve
-  );
-  sleeve.position.y = 0.36;
-  cup.add(sleeve);
-
-  // Top and bottom rims of the sleeve.
-  const sleeveRimTop = new THREE.Mesh(
-    new THREE.TorusGeometry(0.42, 0.025, 6, 16),
-    matSleeveRim
-  );
-  sleeveRimTop.rotation.x = Math.PI / 2;
-  sleeveRimTop.position.y = 0.52;
-  cup.add(sleeveRimTop);
-  const sleeveRimBot = sleeveRimTop.clone();
-  sleeveRimBot.position.y = 0.20;
-  cup.add(sleeveRimBot);
-
-  // Logo on the sleeve (front-facing, toward the camera at +Z).
-  // Built as a small heart from a few primitives.
-  const logoGroup = new THREE.Group();
-  logoGroup.position.set(0, 0.36, 0.42);
-  // Two lobes of a heart (small spheres) and a small wedge at the bottom.
-  const logoLobeL = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 6), matLogo);
-  logoLobeL.position.set(-0.045, 0.02, 0);
-  logoGroup.add(logoLobeL);
-  const logoLobeR = logoLobeL.clone();
-  logoLobeR.position.x = 0.045;
-  logoGroup.add(logoLobeR);
-  const logoTip = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.10, 4), matLogo);
-  logoTip.rotation.x = Math.PI;
-  logoTip.position.set(0, -0.06, 0);
-  logoGroup.add(logoTip);
-  cup.add(logoGroup);
-
-  // Face: two eyes (spheres) + a smile (small torus segment) on the
-  // front of the cup. The cup's +Z face is what the camera sees
-  // (camera is at world +Z looking toward -Z).
-  const faceGroup = new THREE.Group();
-  faceGroup.position.set(0, 0.78, 0.41);
-
-  // Eyes
-  const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.045, 10, 8), matFace);
-  eyeL.position.set(-0.10, 0, 0);
-  faceGroup.add(eyeL);
-  const eyeR = eyeL.clone();
-  eyeR.position.x = 0.10;
-  faceGroup.add(eyeR);
-  // Tiny white highlights on the eyes for cuteness
-  const matHighlight = new THREE.MeshBasicMaterial({ color: 0xffffff });
-  const hlL = new THREE.Mesh(new THREE.SphereGeometry(0.012, 6, 6), matHighlight);
-  hlL.position.set(-0.085, 0.018, 0.035);
-  faceGroup.add(hlL);
-  const hlR = hlL.clone();
-  hlR.position.x = 0.115;
-  faceGroup.add(hlR);
-  // Smile — half-torus on the front
-  const smile = new THREE.Mesh(
-    new THREE.TorusGeometry(0.05, 0.012, 6, 12, Math.PI),
-    matFace
-  );
-  smile.rotation.x = Math.PI / 2;
-  smile.position.set(0, -0.06, 0);
-  // Flip the smile so the open side faces up
-  smile.rotation.z = Math.PI;
-  faceGroup.add(smile);
-  // Cheek blushes
-  const cheekL = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), matCheek);
-  cheekL.position.set(-0.16, -0.04, 0.01);
-  faceGroup.add(cheekL);
-  const cheekR = cheekL.clone();
-  cheekR.position.x = 0.16;
-  faceGroup.add(cheekR);
-  cup.add(faceGroup);
-
-  // Arms — pivoted from the shoulder, so they swing cleanly. Each arm
-  // is a Group: shoulder pivot + cylinder + hand sphere.
-  const armLGroup = new THREE.Group();
-  armLGroup.position.set(-0.38, 0.66, 0);
-  const armLMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.40, 8), matLimb);
-  armLMesh.position.y = -0.20;
-  armLGroup.add(armLMesh);
-  const handL = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), matHand);
-  handL.position.y = -0.40;
-  armLGroup.add(handL);
-  cup.add(armLGroup);
-
-  const armRGroup = new THREE.Group();
-  armRGroup.position.set(0.38, 0.66, 0);
-  const armRMesh = armLMesh.clone();
-  armRMesh.position.y = -0.20;
-  armRGroup.add(armRMesh);
-  const handR = handL.clone();
-  handR.position.y = -0.40;
-  armRGroup.add(handR);
-  cup.add(armRGroup);
-
-  // Legs — pivoted from the hip, with a shoe at the end.
-  const legLGroup = new THREE.Group();
-  legLGroup.position.set(-0.14, 0.14, 0);
-  const legLMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.32, 8), matLimb);
-  legLMesh.position.y = -0.16;
-  legLGroup.add(legLMesh);
-  const shoeL = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), matShoe);
-  shoeL.scale.set(1, 0.5, 1.3);
-  shoeL.position.set(0, -0.32, 0.02);
-  legLGroup.add(shoeL);
-  cup.add(legLGroup);
-
-  const legRGroup = new THREE.Group();
-  legRGroup.position.set(0.14, 0.14, 0);
-  const legRMesh = legLMesh.clone();
-  legRMesh.position.y = -0.16;
-  legRGroup.add(legRMesh);
-  const shoeR = shoeL.clone();
-  shoeR.position.set(0, -0.32, 0.02);
-  legRGroup.add(shoeR);
-  cup.add(legRGroup);
-
-  // Steam: three small spheres that drift up from the coffee surface.
-  // They live in a Group that bobs naturally with the run animation.
-  const steamGroup = new THREE.Group();
-  steamGroup.position.set(0, 1.0, 0);
-  for (let i = 0; i < 3; i++) {
-    const s = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), matSteam);
-    s.position.set((i - 1) * 0.08, i * 0.12, 0);
-    s.userData.phase = i * 1.2;
-    steamGroup.add(s);
-  }
-  cup.add(steamGroup);
-
-  // The whole cup lives at y=0 (feet on the ground). The `cup.position.y`
-  // is offset by the player's jump height in the update loop.
-  cup.position.set(LANE_X[1], 0, 0);
-  scene.add(cup);
-
-  // Soft contact shadow under the cup. A flat dark disc that
-  // follows the cup, shrinks when the cup is in the air, and fades
-  // out. Slightly larger and darker than v2.3 so the cup reads as
-  // grounded against the warm wood floor.
-  const contactShadow = new THREE.Mesh(
-    new THREE.CircleGeometry(0.48, 24),
-    new THREE.MeshBasicMaterial({
-      color: 0x000000, transparent: true, opacity: 0.42, depthWrite: false,
-    })
-  );
-  contactShadow.rotation.x = -Math.PI / 2;
-  contactShadow.position.set(LANE_X[1], 0.012, 0);
-  contactShadow.renderOrder = 1; // draw after the floor
-  scene.add(contactShadow);
-
-  // -----------------------------------------------------------------------
-  // Tired man (chaser)
-  // -----------------------------------------------------------------------
-  // Lives behind the cup on the left side. He runs in place relative to
-  // the camera. Commit A just makes him visible and animated; the trip
-  // gag lands in a follow-up commit.
-  const man = new THREE.Group();
-
-  const manBody = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.35, 0.35, 1.0, 10),
-    new THREE.MeshLambertMaterial({ color: 0xa04a2a })
-  );
-  manBody.position.y = 0.9;
-  man.add(manBody);
-
-  const manHead = new THREE.Mesh(
-    new THREE.SphereGeometry(0.22, 12, 10),
-    new THREE.MeshLambertMaterial({ color: 0xe7b78f })
-  );
-  manHead.position.y = 1.6;
-  man.add(manHead);
-
-  // Hair patch on top (small flattened sphere).
-  const hair = new THREE.Mesh(
-    new THREE.SphereGeometry(0.18, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2),
-    new THREE.MeshLambertMaterial({ color: 0x3a2a1a })
-  );
-  hair.position.y = 1.7;
-  man.add(hair);
-
-  // Two arms.
-  const manArmGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.7, 6);
-  const manArmL = new THREE.Mesh(manArmGeo, new THREE.MeshLambertMaterial({ color: 0xa04a2a }));
-  manArmL.position.set(-0.45, 1.0, 0);
-  man.add(manArmL);
-  const manArmR = manArmL.clone();
-  manArmR.position.x = 0.45;
-  man.add(manArmR);
-
-  // Two legs.
-  const manLegGeo = new THREE.CylinderGeometry(0.1, 0.1, 0.7, 6);
-  const manLegL = new THREE.Mesh(manLegGeo, new THREE.MeshLambertMaterial({ color: 0x2b3a55 }));
-  manLegL.position.set(-0.15, 0.25, 0);
-  man.add(manLegL);
-  const manLegR = manLegL.clone();
-  manLegR.position.x = 0.15;
-  man.add(manLegR);
-
-  man.position.set(LANE_X[0] - 0.6, 0, 4.0);
-  scene.add(man);
-
-  // -----------------------------------------------------------------------
-  // Coffee bean collectibles
-  // -----------------------------------------------------------------------
-  // Floating beans that the cup can collect by jumping into. Each
-  // bean is a small group: an oval (scaled sphere) + a darker line
-  // down the middle. They rotate slowly and bob in place.
   const beans = [];
-  function makeBean() {
-    const group = new THREE.Group();
-    const body = new THREE.Mesh(
-      new THREE.SphereGeometry(0.13, 10, 8),
-      new THREE.MeshLambertMaterial({ color: 0x4a2a10 })
-    );
-    body.scale.set(1, 0.6, 0.7);
-    group.add(body);
-    // The center line — a thinner sphere, slightly larger in z, lighter
-    // color, so it looks like a coffee bean crease.
-    const crease = new THREE.Mesh(
-      new THREE.SphereGeometry(0.135, 10, 6),
-      new THREE.MeshBasicMaterial({ color: 0x8a5a2c })
-    );
-    crease.scale.set(0.4, 0.6, 0.72);
-    group.add(crease);
-    // Subtle glow ring under the bean (small bright sphere).
-    const halo = new THREE.Mesh(
-      new THREE.SphereGeometry(0.20, 8, 6),
-      new THREE.MeshBasicMaterial({ color: 0xffe5b0, transparent: true, opacity: 0.30 })
-    );
-    group.add(halo);
-    return {
-      mesh: group,
-      lane: 1,
-      z: -50,
-      y: 1.0,             // floats at jump height
-      rot: 0,             // accumulated rotation
-      active: false,
-    };
-  }
   for (let i = 0; i < BEAN_POOL_SIZE; i++) {
     const b = makeBean();
     b.mesh.visible = false;
