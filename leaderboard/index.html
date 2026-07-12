@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Global Leaderboard · CodeCup Arcade</title>
+  </head>
+  <body>
+    <div class="shell">
+      <header class="shell-header">
+        <div class="shell-badge">🌍 Global ranks</div>
+        <h1 class="shell-title">Leaderboard</h1>
+        <p class="shell-subtitle">Top runs from coffee legends worldwide.</p>
+        <nav class="shell-nav">
+          <a class="btn btn-secondary" href="/">← Arcade</a>
+        </nav>
+      </header>
+
+      <div id="lbTabs" class="shell-nav" role="tablist" aria-label="Games"></div>
+      <p id="lbStatus" class="shell-footer-note" style="text-align: center"></p>
+
+      <div class="hero-panel" style="overflow: auto">
+        <table style="width: 100%; border-collapse: collapse; font-weight: 700">
+          <thead>
+            <tr style="text-align: left; color: #6b3a14">
+              <th style="padding: 8px">#</th>
+              <th style="padding: 8px">Player</th>
+              <th style="padding: 8px">Score</th>
+            </tr>
+          </thead>
+          <tbody id="lbBody"></tbody>
+        </table>
+      </div>
+
+      <footer class="shell-footer">
+        <p class="shell-footer-note">Login & personal history coming on this platform.</p>
+      </footer>
+    </div>
+    <script type="module" src="/src/shell/leaderboard.ts"></script>
+  </body>
+</html>

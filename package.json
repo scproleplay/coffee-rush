@@ -1,0 +1,23 @@
+{
+  "name": "codecup-arcade",
+  "private": true,
+  "version": "2.0.0-platform",
+  "type": "module",
+  "description": "CodeCup Arcade — multi-game platform (Vite + TypeScript + Supabase-ready)",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc -b --noEmit"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.50.0",
+    "three": "^0.160.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/three": "^0.160.0",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5"
+  }
+}

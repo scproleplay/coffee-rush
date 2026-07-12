@@ -1,5 +1,34 @@
-# Local Claude Code plans / scratch (not part of the game)
+# Local Claude Code plans / scratch
 .claude/ce-3d-plan.md
 .claude/polish-v1.3-plan.md
 .claude/commit_msg.txt
 .claude/settings.local.json
+.claude/ce-live-response.network-response
+.claude/*.network-response
+
+# Dependencies & build
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Env (never commit secrets; anon key may be public but keep .env.local private)
+.env
+.env.*
+!.env.example
+
+# Logs & editor
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+tsconfig.tsbuildinfo

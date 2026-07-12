@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reaction Timer ⚡</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <h1 class="title">Reaction Timer ⚡</h1>
+      <p class="subtitle">Wait for green, then click as fast as you can.</p>
+    </header>
+
+    <main class="rt-main" aria-label="Reaction timer">
+      <button id="playArea" class="rt-play-area is-idle" type="button" aria-label="Start reaction timer">
+        <div class="rt-play-area-inner">
+          <span id="rtMessage" class="rt-play-area-msg">Tap to Start</span>
+          <span id="rtResultTime" class="rt-play-area-time" hidden></span>
+          <span id="rtRating" class="rt-play-area-rating" hidden></span>
+        </div>
+      </button>
+
+      <div id="rtResultActions" class="rt-result-actions" hidden>
+        <button id="rtTryAgain" class="btn btn-primary" type="button">Try Again</button>
+        <button id="rtShare" class="btn btn-share" type="button" hidden>📋 Share Score</button>
+        <a id="rtBackHome" class="btn btn-secondary" href="./coffee-rush.html">Play Coffee Rush ☕</a>
+      </div>
+
+      <section class="lb-section" aria-label="Global leaderboard">
+        <span class="lb-heading">🌍 Global Leaderboard</span>
+        <ol id="lbListRT" class="lb-list" aria-live="polite" aria-busy="true">
+          <li class="lb-empty">Loading…</li>
+        </ol>
+        <div class="lb-form">
+          <input id="lbNicknameRT" class="lb-input" type="text" maxlength="12" placeholder="Nickname" aria-label="Nickname (max 12 characters)" autocomplete="off" />
+          <button id="lbSubmitRT" class="btn btn-primary lb-submit" type="button">Submit Score</button>
+          <span id="lbStatusRT" class="lb-status" aria-live="polite"></span>
+        </div>
+      </section>
+
+      <div id="rtCopiedToast" class="copied-toast" aria-live="polite"></div>
+
+      <section class="rt-stats" aria-label="Stats">
+        <div class="rt-stat-item">
+          <span class="rt-stat-label">Best</span>
+          <span id="rtBest" class="rt-stat-value">—</span>
+        </div>
+        <div class="rt-stat-item">
+          <span class="rt-stat-label">Last</span>
+          <span id="rtLast" class="rt-stat-value">—</span>
+        </div>
+        <div class="rt-stat-item">
+          <span class="rt-stat-label">Tries</span>
+          <span id="rtTries" class="rt-stat-value">0</span>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <a href="https://www.buymeacoffee.com/sunboys" class="bmc-btn" target="_blank" rel="noopener noreferrer" aria-label="Support CodeCup Studio">☕ Support CodeCup Studio</a>
+      <p class="footer-note">Made with love and caffeine.</p>
+      <p class="footer-version">Reaction Timer v1.0</p>
+      <button id="rtResetBest" class="btn-reset" type="button" aria-label="Reset best reaction time and tries">Reset Best</button>
+      <p class="arcade-back-line"><a class="arcade-back-pill" href="/" aria-label="Back to CodeCup Arcade">← Back to Arcade</a></p>
+    </footer>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script src="leaderboard-client.js"></script>
+  <script src="./reaction-timer.js"></script>
+</body>
+</html>

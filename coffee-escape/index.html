@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Coffee Escape ☕🏃 · CodeCup Arcade</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏃</text></svg>"
+    />
+  </head>
+  <body>
+    <div class="app ce-app">
+      <header class="header">
+        <h1 class="title">Coffee Escape ☕🏃</h1>
+        <p class="subtitle">He wants his coffee. You want freedom.</p>
+      </header>
+
+      <main class="arcade-main" aria-label="Coffee Escape game">
+        <div id="ceStage" class="ce-stage" aria-label="Game play area">
+          <canvas
+            id="ceCanvas"
+            class="ce-canvas"
+            aria-label="Coffee Escape play field"
+          ></canvas>
+
+          <div id="ceHint" class="ce-floating-cta" aria-hidden="true">
+            <span class="ce-floating-cta-desktop"
+              >SPACE / ↑ jump · A / D lanes · SHIFT boost</span
+            >
+            <span class="ce-floating-cta-mobile">Swipe ↑ jump · ← → lanes</span>
+          </div>
+
+          <div id="ceHud" class="ce-hud" hidden>
+            <div class="ce-hud-item">
+              <span class="ce-hud-label">Score</span>
+              <span id="ceScore" class="ce-hud-value">0</span>
+            </div>
+            <div class="ce-hud-item ce-hud-best">
+              <span class="ce-hud-label">Best</span>
+              <span id="ceBestHud" class="ce-hud-value">0</span>
+            </div>
+          </div>
+
+          <div class="ce-actions-bar">
+            <button
+              id="ceBoostBtn"
+              class="ce-boost-btn"
+              type="button"
+              aria-label="Boost"
+            >
+              <span class="ce-btn-icon" aria-hidden="true">⚡</span>
+              <span>BOOST</span>
+              <div class="ce-boost-fill" id="ceBoostFill"></div>
+            </button>
+            <button
+              id="ceJumpBtn"
+              class="ce-jump-btn"
+              type="button"
+              aria-label="Jump"
+            >
+              <span class="ce-btn-icon" aria-hidden="true">⤴</span>
+              <span>JUMP</span>
+            </button>
+          </div>
+
+          <div class="ce-boost-hud-label">CAFFEINE</div>
+          <div class="ce-boost-hud" aria-hidden="true">
+            <div class="ce-boost-hud-fill" id="ceBoostHudFill"></div>
+          </div>
+
+          <div id="ceStartOverlay" class="ce-overlay" hidden>
+            <div class="ce-card">
+              <h2>☕ Coffee Escape</h2>
+              <p class="ce-tagline">He wants his coffee. You want freedom.</p>
+              <p style="font-size: 0.88rem; color: #8a5a2c; margin-bottom: 10px">
+                <span class="ce-hint-desktop"
+                  >Desktop: A/D or ← → to move · Space/↑ to jump · Shift to
+                  boost.</span
+                >
+                <span class="ce-hint-mobile"
+                  >Mobile: Swipe ← → to move · Swipe ↑ to jump.</span
+                >
+              </p>
+              <p style="font-size: 0.78rem; color: #a08060; margin: 0 0 6px">
+                Avoid obstacles. Collect caffeine. Escape as long as you can.
+              </p>
+              <div class="ce-actions">
+                <button
+                  id="ceStartBtn"
+                  class="btn btn-primary btn-large"
+                  type="button"
+                >
+                  Start Running ☕
+                </button>
+                <a class="btn btn-secondary" href="/">Back to Arcade</a>
+              </div>
+              <div class="best-row" style="margin-top: 14px">
+                <span class="best-label">Best Score:</span>
+                <span id="ceBestStart" class="best-value">0</span>
+              </div>
+            </div>
+          </div>
+
+          <div id="ceGameOverOverlay" class="ce-overlay" hidden>
+            <div class="ce-card">
+              <h2 id="ceOverTitle">Caught! ☕😱</h2>
+              <div id="ceNewBest" class="ce-new-best" hidden>NEW BEST!</div>
+              <div class="ce-result-grid">
+                <div class="ce-result-item" id="ceFinalScoreItem">
+                  <span class="ce-result-label">Score</span>
+                  <span id="ceFinalScore" class="ce-result-value final">0</span>
+                </div>
+                <div class="ce-result-item" id="ceFinalBestItem">
+                  <span class="ce-result-label">Best</span>
+                  <span id="ceFinalBest" class="ce-result-value">0</span>
+                </div>
+              </div>
+              <div class="ce-lb-submit" id="ceLbSubmit" hidden>
+                <label class="ce-lb-label" for="ceLbNick"
+                  >Nickname (1–12 chars)</label
+                >
+                <div class="ce-lb-row">
+                  <input
+                    id="ceLbNick"
+                    class="ce-lb-input"
+                    type="text"
+                    maxlength="12"
+                    autocomplete="off"
+                    spellcheck="false"
+                    placeholder="Your nickname"
+                  />
+                  <button id="ceLbSubmitBtn" class="ce-lb-btn" type="button">
+                    Submit
+                  </button>
+                </div>
+                <div id="ceLbStatus" class="ce-lb-status" aria-live="polite"></div>
+              </div>
+              <div class="ce-actions">
+                <button id="ceTryAgainBtn" class="btn btn-primary" type="button">
+                  Try Again
+                </button>
+                <a class="btn btn-secondary" href="/">Back to Arcade</a>
+              </div>
+            </div>
+          </div>
+
+          <div id="ceRunStamp" class="ce-run-stamp" aria-hidden="true">RUN!</div>
+        </div>
+      </main>
+
+      <footer class="footer ce-footer">
+        <div class="ce-footer-row">
+          <a
+            href="https://www.buymeacoffee.com/sunboys"
+            class="bmc-btn"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Support CodeCup Studio"
+            >☕ Support CodeCup Studio</a
+          >
+          <a
+            class="ce-footer-pill"
+            href="/leaderboard/"
+            aria-label="View global leaderboard"
+            >🌍 Leaderboard</a
+          >
+          <a class="ce-footer-pill" href="/" aria-label="Back to CodeCup Arcade"
+            >← Back to Arcade</a
+          >
+        </div>
+        <div class="ce-footer-row ce-footer-meta">
+          <span class="footer-note">Made with love and caffeine.</span>
+          <span class="footer-version">Coffee Escape · Platform</span>
+          <button
+            id="ceResetBest"
+            class="btn-reset"
+            type="button"
+            aria-label="Reset best score"
+          >
+            Reset Best
+          </button>
+        </div>
+      </footer>
+    </div>
+
+    <script type="module" src="/src/games/coffee-escape/main.ts"></script>
+  </body>
+</html>

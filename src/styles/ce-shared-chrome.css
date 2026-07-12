@@ -1,0 +1,82 @@
+/* Minimal shared chrome for CE page (title/footer) while game CSS owns the stage.
+   Full arcade shell tokens imported so CE doesn't depend on legacy style.css. */
+@import './tokens.css';
+
+body {
+  margin: 0;
+}
+
+.app.ce-app {
+  /* game CSS also defines .ce-app — both are fine */
+}
+
+/* Buttons used on start/game-over cards */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 999px;
+  border: 2px solid transparent;
+  font-weight: 800;
+  text-decoration: none;
+  padding: 12px 20px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.btn-primary {
+  background: linear-gradient(180deg, #ffb347 0%, #ff7a00 100%);
+  color: #fff;
+  border-color: #e06a00;
+  box-shadow: 0 6px 0 #c45a00, 0 10px 20px rgba(255, 90, 31, 0.28);
+}
+
+.btn-secondary {
+  background: linear-gradient(180deg, #ffffff 0%, #fff4dc 100%);
+  color: #3a1f00;
+  border-color: #ffb347;
+}
+
+.btn-large {
+  padding: 14px 26px;
+  font-size: 1.05rem;
+}
+
+.btn-reset {
+  background: transparent;
+  border: 1px dashed rgba(107, 58, 20, 0.35);
+  color: rgba(107, 58, 20, 0.75);
+  border-radius: 999px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 2px 8px;
+  font-size: 0.72rem;
+}
+
+.best-row {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 700;
+  color: #5a3a14;
+}
+
+.best-value {
+  color: #b25e00;
+  font-weight: 900;
+}
+
+.bmc-btn {
+  display: inline-block;
+  background: linear-gradient(180deg, #ffdd00, #ffb000);
+  color: #3a1f00;
+  font-weight: 800;
+  text-decoration: none;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 2px solid #e09a00;
+  box-shadow: 0 4px 0 #c98600;
+}
