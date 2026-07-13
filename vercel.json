@@ -10,6 +10,14 @@
       ]
     }
   ],
+  "redirects": [
+    { "source": "/coffee-rush.html", "destination": "/coffee-rush/", "permanent": true },
+    { "source": "/reaction-timer.html", "destination": "/reaction-timer/", "permanent": true },
+    { "source": "/memory-match.html", "destination": "/memory-match/", "permanent": true },
+    { "source": "/math-rush.html", "destination": "/math-rush/", "permanent": true },
+    { "source": "/coffee-escape.html", "destination": "/coffee-escape/", "permanent": true },
+    { "source": "/leaderboard.html", "destination": "/leaderboard/", "permanent": true }
+  ],
   "rewrites": [
     { "source": "/coffee-escape", "destination": "/coffee-escape/index.html" },
     { "source": "/coffee-rush", "destination": "/coffee-rush/index.html" },

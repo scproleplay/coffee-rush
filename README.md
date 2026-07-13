@@ -13,7 +13,7 @@ Platform paths (Vite multi-page app on branch `platform/vite-migration`):
 - Coffee Escape ☕🏃 — `/coffee-escape/`
 
 Production site (legacy HTML until merge/deploy):
-https://codecup-coffee-rush.netlify.app/
+https://codecuparcade.com/
 
 Local platform:
 
@@ -27,7 +27,7 @@ npm run dev
 Each game has a global top-100 leaderboard. After finishing a game, enter a nickname (1–12 characters, no other personal info is collected) and submit. Your best result will appear in the list.
 
 Leaderboard page:
-https://codecup-coffee-rush.netlify.app/leaderboard.html
+https://codecuparcade.com/leaderboard/
 
 Sort rules:
 - Coffee Rush — highest score wins.

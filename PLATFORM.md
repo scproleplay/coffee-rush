@@ -76,7 +76,7 @@ index.html
 | Math Rush | ✅ platform module |
 | Profile page (guest nickname) | ✅ stub — auth-ready |
 | Supabase Auth UI | ⏳ Phase C |
-| Merge to main | ❌ blocked until mobile QA |
+| Merge to main | ✅ shipped |
 
 ## QA
 

@@ -17,10 +17,8 @@ export interface GameDefinition {
   name: string;
   emoji: string;
   tagline: string;
-  /** Public path once migrated into the Vite app */
+  /** Public path in the Vite multi-page app */
   href: string;
-  /** Legacy static path during migration (public/legacy) */
-  legacyHref?: string;
   engine: GameEngine;
   /** true when the Vite/TS module is the live entry */
   platformReady: boolean;
@@ -35,7 +33,6 @@ export const GAMES: GameDefinition[] = [
     emoji: '☕',
     tagline: 'Catch coffee cups before time runs out.',
     href: '/coffee-rush/',
-    legacyHref: '/legacy/coffee-rush.html',
     engine: 'dom',
     platformReady: true,
     featured: true,
@@ -47,7 +44,6 @@ export const GAMES: GameDefinition[] = [
     emoji: '⚡',
     tagline: 'Wait for green, then tap as fast as you can.',
     href: '/reaction-timer/',
-    legacyHref: '/legacy/reaction-timer.html',
     engine: 'dom',
     platformReady: true,
     accent: '#ffb000',
@@ -58,7 +54,6 @@ export const GAMES: GameDefinition[] = [
     emoji: '🧠',
     tagline: 'Match all pairs in as few moves as possible.',
     href: '/memory-match/',
-    legacyHref: '/legacy/memory-match.html',
     engine: 'dom',
     platformReady: true,
     accent: '#7c5cff',
@@ -69,7 +64,6 @@ export const GAMES: GameDefinition[] = [
     emoji: '➕',
     tagline: 'Solve as many problems as you can in 60 seconds.',
     href: '/math-rush/',
-    legacyHref: '/legacy/math-rush.html',
     engine: 'dom',
     platformReady: true,
     accent: '#2ecc71',
