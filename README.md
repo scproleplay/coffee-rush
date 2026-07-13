@@ -2,6 +2,12 @@
 
 A small collection of browser games by CodeCup Studio.
 
+## Project layout
+
+- `pages/` — HTML entry pages (one folder per URL)
+- `src/` — TypeScript games, shell, shared code
+- `public/` — images and static assets
+
 ## Games
 
 Platform paths (Vite multi-page app on branch `platform/vite-migration`):
