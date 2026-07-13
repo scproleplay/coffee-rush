@@ -3,6 +3,7 @@ import { GAMES, type GameId } from '@shared/config/games';
 import {
   fetchTop100,
   formatGameValue,
+  LEADERBOARD_UNAVAILABLE_MSG,
   leaderboardErrorMessage,
   type LeaderboardGameId,
 } from '@shared/leaderboard/client';
@@ -43,10 +44,7 @@ async function load(game: GameId): Promise<void> {
   tableBody.replaceChildren();
 
   if (!isSupabaseConfigured()) {
-    setStatus(
-      'Leaderboard is not connected. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY on Vercel (and rebuild).',
-      true,
-    );
+    setStatus(LEADERBOARD_UNAVAILABLE_MSG, true);
     return;
   }
 

@@ -43,28 +43,43 @@ export class LeaderboardError extends Error {
   }
 }
 
-/** User-facing copy for leaderboard failures (shell + games). */
+/** Stable user-facing copy when the cloud leaderboard cannot be reached. */
+export const LEADERBOARD_UNAVAILABLE_MSG =
+  'Online leaderboards are temporarily unavailable. Local scores still work.';
+
+/** User-facing copy for leaderboard failures (shell + games). Never surface raw TypeErrors. */
 export function leaderboardErrorMessage(err: unknown): string {
   if (err instanceof LeaderboardError) {
     switch (err.code) {
       case 'not_configured':
-        return 'Leaderboard is not connected yet (server config missing).';
+        return LEADERBOARD_UNAVAILABLE_MSG;
       case 'network':
-        return 'Leaderboard is offline — check your connection and try again.';
+        return LEADERBOARD_UNAVAILABLE_MSG;
       case 'validation':
+        // Keep validation specific (nickname rules, etc.)
         return err.message;
+      case 'server':
+        return LEADERBOARD_UNAVAILABLE_MSG;
       default:
-        return err.message || 'Leaderboard is temporarily unavailable.';
+        return LEADERBOARD_UNAVAILABLE_MSG;
     }
   }
   if (err instanceof Error && err.message) {
     const m = err.message.toLowerCase();
-    if (m.includes('fetch') || m.includes('network') || m.includes('failed to fetch')) {
-      return 'Leaderboard is offline — check your connection and try again.';
+    if (
+      m.includes('fetch') ||
+      m.includes('network') ||
+      m.includes('failed to fetch') ||
+      m.includes('typeerror') ||
+      m.includes('load failed') ||
+      m.includes('supabase')
+    ) {
+      return LEADERBOARD_UNAVAILABLE_MSG;
     }
-    return err.message;
+    // Avoid leaking raw exception text to players
+    return LEADERBOARD_UNAVAILABLE_MSG;
   }
-  return 'Leaderboard is temporarily unavailable.';
+  return LEADERBOARD_UNAVAILABLE_MSG;
 }
 
 let client: SupabaseClient | null = null;
