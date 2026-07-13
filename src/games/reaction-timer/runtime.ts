@@ -1,6 +1,7 @@
 import {
   fetchTop100,
   formatGameValue,
+  leaderboardErrorMessage,
   submitScore,
   type ScoreRow,
 } from '@shared/leaderboard/client';
@@ -207,7 +208,7 @@ async function loadLeaderboard(): Promise<void> {
   const res = await fetchTop100('reaction-timer');
   lbList.setAttribute('aria-busy', 'false');
   if (res.error) {
-    lbList.innerHTML = `<li class="lb-error">Couldn't load leaderboard.</li>`;
+    lbList.innerHTML = `<li class="lb-error">${leaderboardErrorMessage(res.error)}</li>`;
     return;
   }
   const nick = (lbNickname.value || '').trim() || lastSubmittedNick || loadGuestNickname();
@@ -243,7 +244,7 @@ async function handleSubmit(): Promise<void> {
     await loadLeaderboard();
   } else {
     lbStatus.classList.add('is-error');
-    lbStatus.textContent = "Couldn't submit — try again.";
+    lbStatus.textContent = leaderboardErrorMessage(res.error) || "Couldn't submit — try again.";
   }
 }
 

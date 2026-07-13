@@ -3,8 +3,10 @@ import { GAMES, type GameId } from '@shared/config/games';
 import {
   fetchTop100,
   formatGameValue,
+  leaderboardErrorMessage,
   type LeaderboardGameId,
 } from '@shared/leaderboard/client';
+import { isSupabaseConfigured } from '@shared/config/env';
 
 const tabsEl = document.getElementById('lbTabs');
 const tableBody = document.getElementById('lbBody');
@@ -12,8 +14,11 @@ const statusEl = document.getElementById('lbStatus');
 
 let active: LeaderboardGameId = 'coffee-escape';
 
-function setStatus(msg: string): void {
-  if (statusEl) statusEl.textContent = msg;
+function setStatus(msg: string, isError = false): void {
+  if (!statusEl) return;
+  statusEl.textContent = msg;
+  statusEl.classList.toggle('is-error', isError);
+  statusEl.style.color = isError ? '#c0392b' : '';
 }
 
 function renderTabs(): void {
@@ -35,11 +40,20 @@ function renderTabs(): void {
 
 async function load(game: GameId): Promise<void> {
   if (!tableBody) return;
-  setStatus('Loading…');
   tableBody.replaceChildren();
+
+  if (!isSupabaseConfigured()) {
+    setStatus(
+      'Leaderboard is not connected. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY on Vercel (and rebuild).',
+      true,
+    );
+    return;
+  }
+
+  setStatus('Loading…');
   const { data, error } = await fetchTop100(game);
   if (error) {
-    setStatus(`Could not load leaderboard: ${error.message}`);
+    setStatus(leaderboardErrorMessage(error), true);
     return;
   }
   if (!data.length) {

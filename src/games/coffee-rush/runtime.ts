@@ -4,6 +4,7 @@
 import {
   fetchTop100,
   formatGameValue,
+  leaderboardErrorMessage,
   submitScore,
   type ScoreRow,
 } from '@shared/leaderboard/client';
@@ -297,7 +298,7 @@ async function loadLeaderboard(): Promise<void> {
   const res = await fetchTop100('coffee-rush');
   dom.lbList.setAttribute('aria-busy', 'false');
   if (res.error) {
-    dom.lbList.innerHTML = `<li class="lb-error">Couldn't load leaderboard.</li>`;
+    dom.lbList.innerHTML = `<li class="lb-error">${leaderboardErrorMessage(res.error)}</li>`;
     return;
   }
   const currentNick = (dom.lbNickname.value || '').trim() || lastSubmittedNick || loadGuestNickname();
@@ -324,7 +325,7 @@ async function handleSubmit(): Promise<void> {
     await loadLeaderboard();
   } else {
     dom.lbStatus.classList.add('is-error');
-    dom.lbStatus.textContent = "Couldn't submit — try again.";
+    dom.lbStatus.textContent = leaderboardErrorMessage(res.error) || "Couldn't submit — try again.";
   }
 }
 

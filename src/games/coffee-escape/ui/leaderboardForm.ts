@@ -1,3 +1,4 @@
+import { leaderboardErrorMessage } from '@shared/leaderboard/client';
 import type { CeDom } from './domRefs';
 
 export interface LeaderboardFormApi {
@@ -69,7 +70,7 @@ export function createLeaderboardForm(
         if (LB_SUBMIT_BTN) LB_SUBMIT_BTN.disabled = true;
       } else if (LB_STATUS_EL) {
         LB_STATUS_EL.textContent =
-          res?.error?.message || 'Submit failed. Please try again.';
+          leaderboardErrorMessage(res?.error) || 'Submit failed. Please try again.';
         LB_STATUS_EL.classList.add('is-error');
         LB_STATUS_EL.classList.remove('is-ok');
       }

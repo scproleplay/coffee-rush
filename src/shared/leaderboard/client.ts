@@ -27,12 +27,55 @@ export interface SubmitScorePayload {
   userId?: string;
 }
 
+export type LeaderboardErrorCode =
+  | 'not_configured'
+  | 'network'
+  | 'server'
+  | 'validation';
+
+export class LeaderboardError extends Error {
+  readonly code: LeaderboardErrorCode;
+
+  constructor(code: LeaderboardErrorCode, message: string) {
+    super(message);
+    this.name = 'LeaderboardError';
+    this.code = code;
+  }
+}
+
+/** User-facing copy for leaderboard failures (shell + games). */
+export function leaderboardErrorMessage(err: unknown): string {
+  if (err instanceof LeaderboardError) {
+    switch (err.code) {
+      case 'not_configured':
+        return 'Leaderboard is not connected yet (server config missing).';
+      case 'network':
+        return 'Leaderboard is offline — check your connection and try again.';
+      case 'validation':
+        return err.message;
+      default:
+        return err.message || 'Leaderboard is temporarily unavailable.';
+    }
+  }
+  if (err instanceof Error && err.message) {
+    const m = err.message.toLowerCase();
+    if (m.includes('fetch') || m.includes('network') || m.includes('failed to fetch')) {
+      return 'Leaderboard is offline — check your connection and try again.';
+    }
+    return err.message;
+  }
+  return 'Leaderboard is temporarily unavailable.';
+}
+
 let client: SupabaseClient | null = null;
 
 function getClient(): SupabaseClient {
   if (client) return client;
   if (!isSupabaseConfigured()) {
-    throw new Error('Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.');
+    throw new LeaderboardError(
+      'not_configured',
+      'Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY (local .env and Vercel project env).',
+    );
   }
   const { url, anonKey } = getSupabaseConfig();
   client = createClient(url, anonKey, {
@@ -65,11 +108,35 @@ function getSort(game: LeaderboardGameId): {
   }
 }
 
+function toLeaderboardError(err: unknown): LeaderboardError {
+  if (err instanceof LeaderboardError) return err;
+  const msg = err instanceof Error ? err.message : String(err);
+  const lower = msg.toLowerCase();
+  if (
+    lower.includes('failed to fetch') ||
+    lower.includes('network') ||
+    lower.includes('load failed') ||
+    lower.includes('fetch')
+  ) {
+    return new LeaderboardError('network', msg);
+  }
+  return new LeaderboardError('server', msg || 'Leaderboard request failed.');
+}
+
 export async function fetchTop100(game: LeaderboardGameId): Promise<{
   data: ScoreRow[];
-  error: Error | null;
+  error: LeaderboardError | null;
 }> {
   try {
+    if (!isSupabaseConfigured()) {
+      return {
+        data: [],
+        error: new LeaderboardError(
+          'not_configured',
+          'Supabase env vars missing in this build.',
+        ),
+      };
+    }
     const sort = getSort(game);
     const sb = getClient();
     let query = sb.from('leaderboard_scores').select('*').eq('game', game).limit(100);
@@ -81,31 +148,49 @@ export async function fetchTop100(game: LeaderboardGameId): Promise<{
       query = query.order(sort.secondary.column, { ascending: sort.secondary.ascending });
     }
     const { data, error } = await query;
-    if (error) return { data: [], error: new Error(error.message) };
+    if (error) {
+      return { data: [], error: new LeaderboardError('server', error.message) };
+    }
     return { data: (data as ScoreRow[]) || [], error: null };
   } catch (err) {
-    return { data: [], error: err instanceof Error ? err : new Error(String(err)) };
+    return { data: [], error: toLeaderboardError(err) };
   }
 }
 
 export async function submitScore(payload: SubmitScorePayload): Promise<{
   ok: boolean;
-  error: Error | null;
+  error: LeaderboardError | null;
 }> {
   try {
+    if (!isSupabaseConfigured()) {
+      return {
+        ok: false,
+        error: new LeaderboardError(
+          'not_configured',
+          'Supabase env vars missing in this build.',
+        ),
+      };
+    }
     const nickname = (payload.nickname || '').trim();
     if (nickname.length < 1 || nickname.length > 12) {
-      return { ok: false, error: new Error('Nickname must be 1–12 characters.') };
+      return {
+        ok: false,
+        error: new LeaderboardError('validation', 'Nickname must be 1–12 characters.'),
+      };
     }
     const row: ScoreRow = {
       game: payload.game,
       nickname,
     };
-    if (typeof payload.score === 'number' && Number.isFinite(payload.score)) row.score = payload.score;
+    if (typeof payload.score === 'number' && Number.isFinite(payload.score)) {
+      row.score = payload.score;
+    }
     if (typeof payload.reactionTime === 'number' && Number.isFinite(payload.reactionTime)) {
       row.reaction_time = payload.reactionTime;
     }
-    if (typeof payload.moves === 'number' && Number.isFinite(payload.moves)) row.moves = payload.moves;
+    if (typeof payload.moves === 'number' && Number.isFinite(payload.moves)) {
+      row.moves = payload.moves;
+    }
     if (typeof payload.timeSeconds === 'number' && Number.isFinite(payload.timeSeconds)) {
       row.time_seconds = payload.timeSeconds;
     }
@@ -113,10 +198,12 @@ export async function submitScore(payload: SubmitScorePayload): Promise<{
 
     const sb = getClient();
     const { error } = await sb.from('leaderboard_scores').insert([row]);
-    if (error) return { ok: false, error: new Error(error.message) };
+    if (error) {
+      return { ok: false, error: new LeaderboardError('server', error.message) };
+    }
     return { ok: true, error: null };
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err : new Error(String(err)) };
+    return { ok: false, error: toLeaderboardError(err) };
   }
 }
 
@@ -128,7 +215,8 @@ export function formatGameValue(game: LeaderboardGameId, row: ScoreRow): string 
     return row.reaction_time == null ? '—' : `${row.reaction_time} ms`;
   }
   if (game === 'memory-match') {
-    const moves = row.moves == null ? '—' : `${row.moves} ${row.moves === 1 ? 'move' : 'moves'}`;
+    const moves =
+      row.moves == null ? '—' : `${row.moves} ${row.moves === 1 ? 'move' : 'moves'}`;
     const t =
       row.time_seconds == null ? '' : ` · ${formatTimeSeconds(row.time_seconds)}`;
     return moves + t;
