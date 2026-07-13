@@ -30,7 +30,6 @@ import { makeBean } from './entities/bean';
 import { getCeDom } from './ui/domRefs';
 import {
   isKindAvailable,
-  nextSpawnDelay,
   pickKind as purePickKind,
   pickLane as purePickLane,
   pickZ as purePickZ,
@@ -63,6 +62,8 @@ import {
 } from './systems/collisionLogic';
 import { isNewBest, pickGameOverTitle } from './systems/gameFlow';
 import { attachInputController } from './systems/inputController';
+import { updateFrame } from './systems/updateFrame';
+import { renderFrame } from './systems/renderFrame';
 import {
   initObstaclePool as initObstaclePoolFactory,
   rebuildObstacle as rebuildObstacleFactory,
@@ -678,305 +679,53 @@ if (isPair) {
   const _tmpVec = new THREE.Vector3();
 
   function update(dt) {
-    state.worldTime += dt;
-    // Difficulty: speed curve. The first 5 seconds are gentle
-    // (BASE_SPEED) so the player can learn the controls, then
-    // speed ramps up at ~0.6 units/sec until it hits MAX_SPEED
-    // around 55s in.
-    state.speed = speedAtTime(state.worldTime);
-    // Score climbs with time (beans add via collectBean).
-    state.score = scoreFromTime(state.worldTime);
-
-    // Lane + jump — pure helpers (tested)
-    const p = state.player;
-    Object.assign(p, tickLaneMotion(p, dt, LANE_X));
-    const jumped = tickJump({
-      y: p.y,
-      vy: p.vy,
-      onGround: p.onGround,
-      airT: p.airT || 0,
-    }, dt);
-    p.y = jumped.y;
-    p.vy = jumped.vy;
-    p.onGround = jumped.onGround;
-    p.airT = jumped.airT;
-    p.runAnim = tickRunAnim(p.runAnim, dt, state.speed);
-
-    // -------- Cup position, orientation, and animation --------
-    // The cup is built facing the camera (face on local +Z, which is
-    // world +Z — the same direction the camera looks at). So:
-    //   cup.rotation.x = forward tilt + forward tumble (in air)
-    //   cup.rotation.z = bank on lane change
-    cup.position.x = p.laneX;
-    cup.position.y = p.y;
-
-    // Run-cycle: swing arms and legs in alternation, plus a small
-    // vertical bob on the whole cup.
-    const swing = Math.sin(p.runAnim) * 1.0;
-    const bob = p.onGround ? Math.abs(Math.sin(p.runAnim * 2)) * 0.06 : 0;
-    armLGroup.rotation.x = swing;
-    armRGroup.rotation.x = -swing;
-    legLGroup.rotation.x = -swing * 0.7;
-    legRGroup.rotation.x = swing * 0.7;
-
-    // When airborne, tuck the legs and arms slightly (a "happy
-    // jump" pose). The cup itself does a forward tumble below.
-    if (!p.onGround) {
-      const tuck = Math.min(1, p.vy / JUMP_VY + 0.4);
-      legLGroup.rotation.x = -1.0 * tuck - 0.3;
-      legRGroup.rotation.x = -1.0 * tuck - 0.3;
-      armLGroup.rotation.x = -1.5 * tuck - 0.2;
-      armRGroup.rotation.x = 1.5 * tuck + 0.2;
-    }
-
-    const bank = laneBank(p.laneSwitchT, p.laneFromX, p.laneToX);
-    const tiltX = cupTiltX(p.onGround, p.airT || 0);
-    cup.rotation.x = tiltX;
-    cup.rotation.z = bank;
-
-    // Run bob applied to world Y after all the rotation is set.
-    cup.position.y = p.y + bob;
-
-    // Steam: each particle bobs up and slightly sideways.
-    for (const child of steamGroup.children) {
-      const ph = child.userData.phase || 0;
-      const t = state.worldTime * 2 + ph;
-      child.position.y = (t * 0.4 % 0.6) + 0.05;
-      child.position.x = (ph - 1) * 0.08 + Math.sin(t * 1.5) * 0.02;
-      const k = 1 - ((t * 0.4) % 0.6) / 0.6;
-      child.scale.setScalar(0.4 + k * 0.9);
-    }
-
-    // Man runs in place (he's behind the cup, animated relative to the camera).
-    const manSwing = Math.sin(p.runAnim * 0.9) * 0.7;
-    manArmL.rotation.x = -manSwing;
-    manArmR.rotation.x = manSwing;
-    manLegL.rotation.x = manSwing;
-    manLegR.rotation.x = -manSwing;
-    man.position.y = Math.abs(Math.sin(p.runAnim * 1.8)) * 0.05;
-
-    // Spawn obstacles. The interval ramps down from SPAWN_INTERVAL_START
-    // (0.95s) to SPAWN_INTERVAL_MIN (0.45s) over SPAWN_RAMP_SECONDS
-    // (25s), then stays at the minimum.
-    state.nextSpawn -= dt;
-    if (state.nextSpawn <= 0) {
-      spawnNext();
-      state.nextSpawn = nextSpawnDelay(state.worldTime);
-    }
-
-    // Move obstacles toward the cup and recycle.
-    for (const o of state.obstacles) {
-      if (!o.mesh.visible) continue;
-      o.z += state.speed * dt;
-      o.mesh.position.z = o.z;
-      if (o.z > OBSTACLE_END_Z) {
-        o.mesh.visible = false;
-      }
-    }
-
-    // Collision (Axis-Aligned Bounding Box).
-    // The cup's position.y is its base; build the box so it sits on
-    // the ground (y=0) and extends up to y≈1.1.
-    _playerBox.setFromCenterAndSize(
-      new THREE.Vector3(cup.position.x, cup.position.y + 0.55, cup.position.z),
-      new THREE.Vector3(0.7, 1.1, 0.7)
-    );
-    for (const o of state.obstacles) {
-      if (!o.mesh.visible) continue;
-      if (!blocksPlayerLane(o.lane, p.lane, !!o.wide)) continue;
-      _obBox.setFromObject(o.mesh);
-      if (_playerBox.intersectsBox(_obBox)) {
-        // Boost mode: pass through obstacles. The cup still dodges
-        // (gets +1 score and a small flash), but no game over.
-        if (state.boost.active) {
-          state.score += 1;
-          state.flash = 0.15;
-          // Briefly push the obstacle off to the side so the
-          // player doesn't re-collide with the same one next frame.
-          o.lane = -1;
-          continue;
-        }
-        // Crash!
-        state.shake = 0.45;
-        state.flash = 0.25;
-        state.gameOver = true;
-        setTimeout(gameOver, 0);
-        return;
-      }
-    }
-
-    // Scroll the floor / walls / ceiling by moving their offset.
-    floorTex.offset.y = (state.worldTime * state.speed) / 4;
-    wallTex.offset.x = (state.worldTime * state.speed) / 6;
-    ceilingTex.offset.y = (state.worldTime * state.speed) / 6;
-    // Scroll the wall decorations past the camera and recycle them.
-    for (const d of decorItems) {
-      d.position.z += state.speed * dt;
-      // Recycle: when it has scrolled past the camera, send it back
-      // to the front of the visible range.
-      if (d.position.z > 8) {
-        d.position.z -= decorItems.length * DECOR_SPACING;
-      }
-    }
-
-    // Camera follows the cup with a slight x lag and a vertical bob
-    // (subtle, ~3 cm) for a "running" feel. The bob is faster when
-    // boost is active.
-    const bobAmp = state.boost.active ? 0.10 : 0.035;
-    const bobFreq = state.boost.active ? 14 : 9;
-    const camBob = Math.sin(state.worldTime * bobFreq) * bobAmp;
-    camera.position.x += (p.laneX * 0.45 - camera.position.x) * Math.min(1, dt * 8);
-    camera.position.y = cameraBaseY + p.y * 0.4 + camBob;
-    camera.position.z = cameraBaseZ;
-    _tmpVec.set(p.laneX * 0.2, 1.0 + p.y * 0.2 + camBob, -8);
-    camera.lookAt(_tmpVec);
-    // FOV punch on boost (slight zoom-out for a sense of speed)
-    const targetFov = state.boost.active ? 78 : 70;
-    camera.fov += (targetFov - camera.fov) * Math.min(1, dt * 4);
-    camera.updateProjectionMatrix();
-
-    // Screen shake
-    if (state.shake > 0) {
-      camera.position.x += (Math.random() - 0.5) * state.shake;
-      camera.position.y += (Math.random() - 0.5) * state.shake;
-    }
-
-    state.shake = Math.max(0, state.shake - dt * 2.2);
-    state.flash = Math.max(0, state.flash - dt * 3);
-
-    // Contact shadow under the cup. Shrinks and fades as the cup
-    // rises (when jumping), grows back on landing. Stays at the
-    // cup's lane x.
-    const shadowScale = Math.max(0.4, 1 - p.y * 0.4);
-    contactShadow.scale.set(shadowScale, shadowScale, 1);
-    contactShadow.material.opacity = 0.42 * shadowScale;
-    contactShadow.position.x = p.laneX;
-    contactShadow.position.z = 0;
-
-    // Boost glow around the cup. Pulses opacity in/out, follows the
-    // cup position. Hidden when not active.
-    boostGlow.position.set(p.laneX, 0.5 + p.y, 0);
-    const glowTarget = state.boost.active ? 0.28 + 0.07 * Math.sin(state.worldTime * 8) : 0;
-    boostGlow.material.opacity += (glowTarget - boostGlow.material.opacity) * Math.min(1, dt * 6);
-    // Also tint the fog slightly blue when boost is active.
-    if (state.boost.active) {
-      scene.fog.color.lerp(new THREE.Color(0x9ed5ff), Math.min(1, dt * 3));
-    } else {
-      scene.fog.color.lerp(new THREE.Color(0xffd9a8), Math.min(1, dt * 3));
-    }
-
-    // Bean spawn + collision. Beans are more frequent than before
-    // (2.2-3.8s) so the hallway always has a collectible between
-    // hazards. Obstacle spawns can also drop a bean (see
-    // spawnNext) so density stays high.
-    state.nextBean -= dt;
-    if (state.nextBean <= 0) {
-      spawnBean();
-      state.nextBean = nextBeanDelay(BEAN_INTERVAL_MIN, BEAN_INTERVAL_MAX);
-    }
-    for (const b of state.beans) {
-      if (!b.active) continue;
-      b.z += state.speed * dt;
-      b.rot += dt * 1.5;
-      b.mesh.position.z = b.z;
-      b.mesh.position.x = LANE_X[b.lane];
-      b.mesh.position.y = b.y + Math.sin(b.rot * 1.2) * 0.06;
-      b.mesh.rotation.y = b.rot;
-      // Recycle when past camera
-      if (beanRecyclePastCamera(b.z)) {
-        b.active = false;
-        b.mesh.visible = false;
-        continue;
-      }
-      if (canCollectBean({
-        beanLane: b.lane,
-        beanZ: b.z,
-        playerLane: p.lane,
-        playerY: p.y,
-      })) {
-        collectBean(b);
-      }
-    }
-
-    // Ambient motes: gentle drift in y, recycle when past camera.
-    for (const m of state.motes) {
-      m.position.y += Math.sin(state.worldTime * 0.7 + m.userData.phase) * 0.002;
-      m.position.z += state.speed * dt * 0.6; // motes drift toward camera slower than the floor
-      if (m.position.z > 8) {
-        m.position.z = -80 - Math.random() * 10;
-        m.position.x = (Math.random() - 0.5) * 6;
-      }
-    }
-
-    // Boost particles: emit while active, update positions.
-    if (state.boost.active) {
-      state.nextBoostParticle -= dt;
-      if (state.nextBoostParticle <= 0) {
-        emitBoostParticle();
-        state.nextBoostParticle = 0.04;
-      }
-    }
-    for (const p of state.boostParticles) {
-      if (p.life <= 0) continue;
-      p.life -= dt;
-      p.mesh.position.y += p.vy * dt;
-      p.mesh.position.z += state.speed * dt * 0.3;
-      p.mesh.material.opacity = Math.max(0, (p.life / p.maxLife) * 0.8);
-      p.mesh.scale.setScalar(0.5 + (1 - p.life / p.maxLife) * 0.6);
-      if (p.life <= 0) p.mesh.visible = false;
-    }
-
-    // Dust particles (bean bursts, future use). Simple Verlet-ish
-    // update with gravity, no rotation, no collision.
-    for (const d of dustPool) {
-      if (d.life <= 0) continue;
-      d.life -= dt;
-      d.vy -= 5 * dt;            // mild gravity
-      d.x += d.vx * dt;
-      d.y += d.vy * dt;
-      d.z += d.vz * dt;
-      d.mesh.position.set(d.x, d.y, d.z);
-      d.mesh.material.opacity = Math.max(0, d.life / d.maxLife);
-      d.mesh.scale.setScalar(0.5 + (1 - d.life / d.maxLife) * 0.6);
-      if (d.life <= 0) d.mesh.visible = false;
-    }
-
-    // Boost meter — pure tick (tested)
-    {
-      const b = tickBoost({
-        active: state.boost.active,
-        timer: state.boost.timer,
-        meter: state.boost.meter,
-        max: state.boost.max,
-        cost: state.boost.cost,
-        duration: state.boost.duration,
-      }, dt);
-      state.boost.active = b.active;
-      state.boost.timer = b.timer;
-      state.boost.meter = b.meter;
-    }
-    // Update visual fills
-    if (BOOST_FILL) BOOST_FILL.style.height = (state.boost.meter / state.boost.max * 100) + '%';
-    if (BOOST_HUD_FILL) BOOST_HUD_FILL.style.width = (state.boost.meter / state.boost.max * 100) + '%';
-    if (BOOST_BTN) BOOST_BTN.classList.toggle('is-active', state.boost.active);
-
-    SCORE_EL.textContent = String(state.score);
+    updateFrame({
+      state,
+      dt,
+      cup,
+      armLGroup,
+      armRGroup,
+      legLGroup,
+      legRGroup,
+      steamGroup,
+      contactShadow,
+      man,
+      manArmL,
+      manArmR,
+      manLegL,
+      manLegR,
+      scene,
+      camera,
+      cameraBaseY,
+      cameraBaseZ,
+      floorTex,
+      wallTex,
+      ceilingTex,
+      decorItems,
+      DECOR_SPACING,
+      boostGlow,
+      dustPool,
+      spawnNext,
+      spawnBean,
+      collectBean,
+      emitBoostParticle,
+      onCrash: () => { setTimeout(gameOver, 0); },
+      scoreEl: SCORE_EL,
+      boostFill: BOOST_FILL,
+      boostHudFill: BOOST_HUD_FILL,
+      boostBtn: BOOST_BTN,
+      playerBox: _playerBox,
+      obBox: _obBox,
+      tmpVec: _tmpVec,
+    });
   }
 
   // -----------------------------------------------------------------------
   // Render
   // -----------------------------------------------------------------------
   function render() {
-    renderer.render(scene, camera);
-      if (state.flash > 0) {
-        // White flash overlay on top of the canvas
-        const r = STAGE.getBoundingClientRect();
-        const el = document.createElement('div');
-        el.style.cssText = `position:absolute;inset:0;background:rgba(255,255,255,${state.flash * 1.2});pointer-events:none;z-index:3;`;
-        STAGE.appendChild(el);
-        setTimeout(() => el.remove(), 60);
-      }
-    }
+    renderFrame({ state, renderer, scene, camera, stage: STAGE });
+  }
 
   // -----------------------------------------------------------------------
   // Init
