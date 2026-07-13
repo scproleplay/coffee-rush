@@ -3,57 +3,63 @@
 **Production:** https://codecuparcade.com  
 **Stack:** Vite 6 + TypeScript + Supabase (scores) + Vercel
 
-## Vision
+## Vite best-practice layout (what we use)
 
-A multi-game **platform** kids and teens love:
+```
+codecup-arcade/                 # Vite project root
+├── pages/                      # HTML entries ONLY (one page per URL)
+│   ├── index.html              # → /
+│   ├── coffee-rush/index.html  # → /coffee-rush/
+│   ├── coffee-escape/
+│   ├── reaction-timer/
+│   ├── memory-match/
+│   ├── math-rush/
+│   ├── leaderboard/
+│   └── profile/
+├── src/                        # ALL application code
+│   ├── shell/                  # home / leaderboard / profile scripts
+│   ├── shared/                 # auth, leaderboard client, storage, config
+│   ├── games/                  # per-game modules (logic, not HTML)
+│   ├── styles/
+│   └── vite-env.d.ts
+├── public/                     # static assets (copied as-is to dist/)
+├── package.json
+├── vite.config.ts
+├── tsconfig.json
+├── vitest.config.ts
+└── vercel.json
+```
 
-- App shell (home, leaderboard, profile / future auth)
-- Game modules with **best engine per title** (Three.js, DOM, later Phaser/Godot if needed)
-- Supabase for scores; **auth-ready** identity without rewriting games
+### Why HTML files exist
 
-## Why each game has an HTML file (Vite)
-
-Vite builds **for the browser**. Every URL needs an HTML document that loads a JS module:
+Vite builds **for the browser**. Every URL needs an HTML document that loads a module:
 
 ```html
 <script type="module" src="/src/games/coffee-rush/main.ts"></script>
 ```
 
-| Piece | Role |
-|-------|------|
-| `pages/.../index.html` | Page shell (layout, buttons) |
-| `src/games/...` | Game logic (TypeScript) |
-| Vite build | Bundles TS → JS into `dist/` |
+| Folder | Role |
+|--------|------|
+| `pages/` | Page shell only (markup, buttons) |
+| `src/` | Real logic (TypeScript) |
+| `public/` | Images / static files |
+| `dist/` | Build output (gitignored) |
 
-Players do **not** play “HTML-only” games — HTML is just the entry; logic is in `src/`.
+This matches Vite’s multi-page app model: **HTML entries + `src` modules**, with the project root as Vite’s root so `/src/...` and `/public` resolve naturally.
 
-## Layout
+### Rules
 
-```
-pages/                   # HTML entries only (one folder per URL)
-  index.html             # → /
-  coffee-rush/           # → /coffee-rush/
-  coffee-escape/
-  reaction-timer/
-  memory-match/
-  math-rush/
-  leaderboard/
-  profile/
-src/                     # all TypeScript + CSS
-  shell/                 # home, leaderboard, profile scripts
-  shared/                # auth session, leaderboard client, storage, config
-  games/                 # per-game modules
-  styles/
-public/                  # static assets (images)
-```
-
-Vite `root` = `pages/` so URLs stay clean. `public/` and `src/` resolve from the repo root.
+1. **Game-local first** — put code in `src/games/<id>/` until 2+ games need it, then `src/shared/`.
+2. **No game logic in HTML** — only structure + one module script tag.
+3. **Best engine per title** — Three.js for Escape; DOM for the rest (Phaser/Godot later if needed).
+4. **Auth-ready** — use `src/shared` leaderboard/session APIs.
+5. **Never rename** localStorage keys (see table below).
 
 ## Commands
 
 ```bash
 npm install
-npm run dev        # http://localhost:5173
+npm run dev      # http://localhost:5173
 npm run build
 npm run preview
 npm test
@@ -64,18 +70,10 @@ npm test
 | Surface | Status |
 |---------|--------|
 | Shell + 5 games + leaderboard + profile | ✅ live |
-| Coffee Escape modular runtime (~291 lines) | ✅ |
+| Vite pages/ + src/ layout | ✅ |
+| Coffee Escape modular runtime | ✅ |
 | Vitest | ✅ |
 | Supabase Auth UI | ⏳ next |
-| Mobile QA polish | ⏳ ongoing |
-
-## Architecture rules
-
-1. **Game-local first** — only lift to `src/shared/` when 2+ games need it.
-2. **Best engine per title** — Three for CE; DOM for Rush/Reaction/Memory/Math.
-3. **Auth-ready** — games use shared leaderboard/session APIs.
-4. **Preserve storage keys** — never rename localStorage keys below.
-5. **Thin HTML + rich src/** — do not put game logic in HTML.
 
 ## Storage keys (do not rename)
 

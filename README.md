@@ -10,7 +10,7 @@ A small collection of browser games by CodeCup Studio.
 
 ## Games
 
-Platform paths (Vite multi-page app on branch `platform/vite-migration`):
+Platform paths:
 
 - Coffee Rush ☕ — `/coffee-rush/`
 - Reaction Timer ⚡ — `/reaction-timer/`
