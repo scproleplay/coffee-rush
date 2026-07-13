@@ -78,6 +78,10 @@ index.html
 | Supabase Auth UI | ⏳ Phase C |
 | Merge to main | ❌ blocked until mobile QA |
 
+## QA
+
+See [QA.md](./QA.md) for the pre-merge checklist (desktop + mobile).
+
 ## Next milestones
 
 1. Mobile smoke QA on all five games + shell  
@@ -160,4 +164,4 @@ DOM games (Rush etc.) follow the same idea at smaller scale: `config` + `systems
 | `obstaclePool` | ✅ |
 | `updateFrame` / `renderFrame` | ✅ |
 | `spawnController` + lifecycle UI | ✅ |
-| runtime size | **~402 lines** (target <400 hit) |
+| runtime size | **~291 lines** (under 400 target) |
