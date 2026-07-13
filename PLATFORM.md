@@ -159,4 +159,5 @@ DOM games (Rush etc.) follow the same idea at smaller scale: `config` + `systems
 | `inputController` + pointer gestures | ✅ |
 | `obstaclePool` | ✅ |
 | `updateFrame` / `renderFrame` | ✅ |
-| runtime size | ~793 lines (was ~2500 → ~1300 → ~1045 → ~793) |
+| `spawnController` + lifecycle UI | ✅ |
+| runtime size | **~402 lines** (target <400 hit) |
