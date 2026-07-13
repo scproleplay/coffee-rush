@@ -24,7 +24,6 @@ import { createScene } from './engine/scene';
 import { createHallway } from './engine/hallway';
 import { createFxPools } from './engine/fxPools';
 import { OBSTACLE_KINDS } from './entities/obstacleKinds';
-import { buildObstacleMeshes } from './entities/buildObstacleMeshes';
 import { createCup } from './entities/cup';
 import { createMan } from './entities/man';
 import { makeBean } from './entities/bean';
@@ -63,6 +62,12 @@ import {
   canCollectBean,
 } from './systems/collisionLogic';
 import { isNewBest, pickGameOverTitle } from './systems/gameFlow';
+import { attachInputController } from './systems/inputController';
+import {
+  initObstaclePool as initObstaclePoolFactory,
+  rebuildObstacle as rebuildObstacleFactory,
+  firstHiddenObstacle,
+} from './entities/obstaclePool';
 
 const PlatformLeaderboard = {
   async submitScore(payload) {
@@ -268,43 +273,8 @@ function startCoffeeEscape() {
     p.mesh.visible = true;
   }
 
-  // -----------------------------------------------------------------------
-  // Obstacle factory — coffee/office themed obstacles
-  // -----------------------------------------------------------------------
-  // We define obstacle kinds + their metadata (width, height, wide
-  // flag, color) in one place. Each kind is built from primitives.
-  // `wide: true` means the obstacle blocks 2 adjacent lanes (the
-  // player has to switch lanes to clear it). Other obstacles block
-  // a single lane and are cleared by jumping.
-  // OBSTACLE_KINDS imported from ./entities/obstacleKinds
-  // Tall obstacles (jumpHeight > 0.7) only spawn after 20s of run time.
-  function kindAvailable(kind) {
-    return isKindAvailable(kind, state.worldTime);
-  }
-  // buildObstacleMeshes imported from ./entities/buildObstacleMeshes
-  function makeObstacle(kind) {
-    const mesh = buildObstacleMeshes(kind);
-    return {
-      kind: kind,
-      lane: 1,
-      z: OBSTACLE_START_Z,
-      mesh: mesh,
-      wide: !!OBSTACLE_KINDS[kind] && OBSTACLE_KINDS[kind].wide,
-    };
-  }
-
-  // Pre-allocate a pool of obstacles so we never create/destroy mid-run.
-  function initObstaclePool() {
-    const kinds = Object.keys(OBSTACLE_KINDS);
-    for (let i = 0; i < OBSTACLE_POOL_SIZE; i++) {
-      const kind = kinds[i % kinds.length];
-      const ob = makeObstacle(kind);
-      ob.mesh.visible = false;
-      scene.add(ob.mesh);
-      state.obstacles.push(ob);
-    }
-  }
-  initObstaclePool();
+    // Obstacle pool (entity factory)
+  initObstaclePoolFactory(scene, state.obstacles);
 
   // -----------------------------------------------------------------------
   // Spawn logic
@@ -338,7 +308,7 @@ if (isPair) {
   // the last obstacle's lane when possible, and ensures the new
   // z is far enough away that the player has reaction time.
   function spawnSingleObstacle() {
-    const ob = state.obstacles.find(o => !o.mesh.visible);
+    const ob = firstHiddenObstacle(state.obstacles);
     if (!ob) return;
 
     const kind = pickKind();
@@ -369,7 +339,7 @@ if (isPair) {
     // commit to the safe lane early.
     const baseZ = OBSTACLE_START_Z - Math.random() * 3;
     for (let i = 0; i < 2; i++) {
-      const ob = state.obstacles.find(o => !o.mesh.visible);
+      const ob = firstHiddenObstacle(state.obstacles);
       if (!ob) continue;
       const kind = pickKind();
       rebuildObstacle(ob, kind);
@@ -405,19 +375,7 @@ if (isPair) {
   }
 
   function rebuildObstacle(ob, kind) {
-    // Clear the old group, then build a fresh one matching the new kind.
-    while (ob.mesh.children.length) {
-      const c = ob.mesh.children.pop();
-      if (c.geometry) c.geometry.dispose();
-      if (c.material) c.material.dispose();
-    }
-    ob.kind = kind;
-    ob.wide = !!(OBSTACLE_KINDS[kind] && OBSTACLE_KINDS[kind].wide);
-    // buildObstacleMeshes returns a fresh Group; steal its children.
-    const fresh = buildObstacleMeshes(kind);
-    while (fresh.children.length) {
-      ob.mesh.add(fresh.children[0]);
-    }
+    rebuildObstacleFactory(ob, kind);
   }
 
   // -----------------------------------------------------------------------
@@ -463,222 +421,21 @@ if (isPair) {
   }
 
   // -----------------------------------------------------------------------
-  // Input
-  // -----------------------------------------------------------------------
-  // Swipe / tap detection thresholds.
-  const SWIPE_MIN_PX = 24;        // minimum drag to count as a swipe
-  const SWIPE_MAX_MS = 1000;      // longer than this = drag, not swipe
-  const TAP_MAX_MS = 250;         // quick tap (used for zone-based taps)
+  // Input controller (keyboard / pointer / JUMP / BOOST)
+  // beginRun/restart are defined later — use wrappers that call them.
+  let beginRunRef = () => {};
+  let restartRef = () => {};
+  const inputCtl = attachInputController({
+    state,
+    canvas: CANVAS,
+    stage: STAGE,
+    jumpBtn: JUMP_BTN,
+    boostBtn: BOOST_BTN,
+    isStartVisible: () => !!(START_OVERLAY && !START_OVERLAY.hidden),
+    onBeginRun: () => beginRunRef(),
+    onRestart: () => restartRef(),
+  });
 
-  function tryJump() {
-    if (!canJump({ running: state.running, gameOver: state.gameOver, onGround: state.player.onGround })) return;
-    const imp = applyJumpImpulse(state.player.onGround);
-    if (!imp) return;
-    state.player.vy = imp.vy;
-    state.player.onGround = imp.onGround;
-  }
-
-  function tryLane(target) {
-    if (!canChangeLane({ running: state.running, gameOver: state.gameOver })) return;
-    if (target < 0 || target > 2) return;
-    if (state.player.targetLane === target) return;
-    state.player.targetLane = target;
-    state.player.laneFromX = state.player.laneX;
-    state.player.laneToX = LANE_X[target];
-    state.player.laneSwitchT = 0;
-  }
-
-  function tryBoost() {
-    if (!canBoost({
-      running: state.running,
-      gameOver: state.gameOver,
-      boostActive: state.boost.active,
-      meter: state.boost.meter,
-      cost: state.boost.cost,
-    })) return;
-    const started = pureStartBoost({
-      active: state.boost.active,
-      meter: state.boost.meter,
-      cost: state.boost.cost,
-      duration: state.boost.duration,
-    });
-    if (!started) return;
-    state.boost.active = started.active;
-    state.boost.timer = started.timer;
-  }
-
-  function onKeyDown(e) {
-    if (e.code === 'Space' || e.code === 'ArrowUp' || e.key === ' ') {
-      e.preventDefault();
-      tryJump();
-    } else if (e.code === 'ArrowLeft' || e.code === 'KeyA') {
-      e.preventDefault();
-      tryLane(state.player.targetLane - 1);
-    } else if (e.code === 'ArrowRight' || e.code === 'KeyD') {
-      e.preventDefault();
-      tryLane(state.player.targetLane + 1);
-    } else if (e.code === 'ShiftLeft' || e.code === 'ShiftRight' || e.key === 'Shift') {
-      e.preventDefault();
-      tryBoost();
-    } else if (e.code === 'Enter') {
-      if (!state.running && !state.gameOver && !START_OVERLAY.hidden) {
-        e.preventDefault();
-        beginRun();
-      } else if (state.gameOver) {
-        e.preventDefault();
-        restart();
-      }
-    }
-  }
-
-  // Pointer handling on the stage canvas. We support:
-  //   - tap on the left/right third of the canvas = lane change
-  //   - tap on the center third = jump
-  //   - quick swipe left/right = lane change (the tap fires first, so
-  //     a quick swipe is the same as a tap in that direction)
-  //   - swipe UP = jump
-  //   - swipe DOWN = ignored (don't accidentally jump)
-  // Tap on the action buttons (JUMP / BOOST) is handled by their own
-  // click + pointerdown handlers.
-  //
-  // Mobile reliability notes (iOS Safari is the worst offender):
-  //   - touch-action: none on the stage + canvas prevents the
-  //     browser from interpreting touches as pan / zoom, which
-  //     would otherwise steal swipes and add a 300ms tap delay.
-  //   - We call e.preventDefault() in pointerdown to suppress the
-  //     default 300ms-click behavior. This is the standard iOS
-  //     fix.
-  //   - We use a 250ms fallback timer after pointerdown so a tap
-  //     still registers even if pointerup is delayed or
-  //     intercepted (e.g. by a system gesture).
-  function onStagePointerDown(e) {
-    // Skip if the touch is on a real button or link — those have
-    // their own handlers. We use closest() so the test works for
-    // child elements inside the buttons (e.g. the <span> icon).
-    if (e.target.closest && e.target.closest('button, a')) return;
-    if (!state.running || state.gameOver) return;
-    // Prevent default to kill the iOS 300ms tap delay and any
-    // browser scroll/zoom on this touch. This is the most
-    // important reliability fix for iOS Safari.
-    e.preventDefault();
-    // Record the start position and time. The action fires on
-    // pointerup OR a 250ms fallback (whichever comes first), so
-    // taps always register even if pointerup is suppressed.
-    state.pointerStartX = e.clientX;
-    state.pointerStartY = e.clientY;
-    state.pointerStartT = performance.now();
-    state.pointerActive = true;
-    state.pointerDidMove = false;
-    state.pointerConsumed = false;
-    // Clear any previous fallback timer.
-    if (state.pointerFallbackTimer) {
-      clearTimeout(state.pointerFallbackTimer);
-    }
-    // Fallback: if pointerup doesn't fire within 250ms, treat
-    // the touch as a tap on the spot the user pressed.
-    state.pointerFallbackTimer = setTimeout(() => {
-      if (state.pointerActive && !state.pointerConsumed) {
-        processPointerEnd(state.pointerStartX, state.pointerStartY, 0);
-      }
-    }, 250);
-  }
-
-  function onStagePointerMove(e) {
-    if (!state.pointerActive) return;
-    const dx = (e.clientX || 0) - (state.pointerStartX || 0);
-    const dy = (e.clientY || 0) - (state.pointerStartY || 0);
-    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) state.pointerDidMove = true;
-  }
-
-  // Shared action handler. Called from onStagePointerUp AND from
-  // the 250ms fallback timer in onStagePointerDown. dx/dy are the
-  // displacement from the start; dt is the elapsed time (0 for
-  // the fallback, which always fires a tap).
-  function processPointerEnd(endX, endY, dt) {
-    state.pointerActive = false;
-    state.pointerConsumed = true;
-    if (state.pointerFallbackTimer) {
-      clearTimeout(state.pointerFallbackTimer);
-      state.pointerFallbackTimer = null;
-    }
-    const dx = (endX || 0) - (state.pointerStartX || 0);
-    const dy = (endY || 0) - (state.pointerStartY || 0);
-    const elapsed = dt || (performance.now() - (state.pointerStartT || 0));
-
-    // Swipe detection: a quick horizontal or vertical drag.
-    if (state.pointerDidMove && elapsed < SWIPE_MAX_MS) {
-      if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > SWIPE_MIN_PX) {
-        if (dx < 0) tryLane(state.player.targetLane - 1);
-        else tryLane(state.player.targetLane + 1);
-        return;
-      }
-      if (dy < -SWIPE_MIN_PX) {
-        tryJump();
-        return;
-      }
-      return;
-    }
-
-    // Tap detection: minimal movement, short time, OR a fallback
-    // (dt=0 means the fallback fired).
-    if (!state.pointerDidMove || Math.abs(dx) < 6 && Math.abs(dy) < 6) {
-      const rect = CANVAS.getBoundingClientRect();
-      const x = (endX || state.pointerStartX) - rect.left;
-      const third = rect.width / 3;
-      if (x < third) tryLane(state.player.targetLane - 1);
-      else if (x > 2 * third) tryLane(state.player.targetLane + 1);
-      else tryJump();
-    }
-  }
-
-  function onStagePointerUp(e) {
-    if (!state.pointerActive) return;
-    processPointerEnd(e.clientX, e.clientY, 0);
-  }
-
-  // pointercancel and pointerleave are safety nets. If the OS
-  // interrupts the gesture (e.g. system gesture, notification),
-  // pointerup might not fire. The 250ms fallback will still fire.
-  // We also clear the active flag here so a stray cancel doesn't
-  // leave the input in a stuck state.
-  function onStagePointerCancel() {
-    if (!state.pointerActive) return;
-    // Don't fire an action here — the fallback timer will handle
-    // it if pointerup is truly missing. Just clean up.
-    state.pointerActive = false;
-    if (state.pointerFallbackTimer) {
-      clearTimeout(state.pointerFallbackTimer);
-      state.pointerFallbackTimer = null;
-    }
-  }
-
-  // Action buttons (JUMP / BOOST). Same tap pattern as the overlay
-  // buttons above: bind to click + pointerdown with a dedupe
-  // guard on the SAME function so neither path runs twice.
-  const gameTapHandler = (action) => (e) => {
-    if (e && e.preventDefault) e.preventDefault();
-    const now = performance.now();
-    if (now - (action._lastTap || 0) < 500) return;
-    action._lastTap = now;
-    action();
-  };
-  // Same pattern for the leaderboard submit button (kept separate
-  // from gameTapHandler so the dedupe is independent).
-  const lbTapHandler = (action) => (e) => {
-    if (e && e.preventDefault) e.preventDefault();
-    const now = performance.now();
-    if (now - (action._lastTap || 0) < 500) return;
-    action._lastTap = now;
-    action();
-  };
-  JUMP_BTN.addEventListener('click', gameTapHandler(() => tryJump()));
-  JUMP_BTN.addEventListener('pointerdown', gameTapHandler(() => tryJump()));
-  if (BOOST_BTN) {
-    BOOST_BTN.addEventListener('click', gameTapHandler(() => tryBoost()));
-    BOOST_BTN.addEventListener('pointerdown', gameTapHandler(() => tryBoost()));
-  }
-
-  // -----------------------------------------------------------------------
   // Global leaderboard submit (Coffee Escape)
   // -----------------------------------------------------------------------
   // Tracks whether the current run's score was already submitted
@@ -770,12 +527,7 @@ if (isPair) {
     state.flash = 0;
     // Clear any pending pointer fallback timer so a stale tap
     // doesn't fire on the new run.
-    if (state.pointerFallbackTimer) {
-      clearTimeout(state.pointerFallbackTimer);
-      state.pointerFallbackTimer = null;
-    }
-    state.pointerActive = false;
-    state.pointerConsumed = false;
+    inputCtl.clearPointer();
     state.player.lane = 1;
     state.player.targetLane = 1;
     state.player.laneX = LANE_X[1];
@@ -805,6 +557,7 @@ if (isPair) {
   }
 
   function beginRun() {
+    // assigned below for input controller
     resetWorld();
     // Reset the global leaderboard submit state so a new run can
     // submit its score again. The form is shown on game over.
@@ -886,9 +639,11 @@ if (isPair) {
   // pickGameOverTitle imported from ./systems/gameFlow
 
   function restart() {
-    GAME_OVER_OVERLAY.hidden = true;
+    if (GAME_OVER_OVERLAY) GAME_OVER_OVERLAY.hidden = true;
     beginRun();
   }
+  beginRunRef = beginRun;
+  restartRef = restart;
 
   // -----------------------------------------------------------------------
   // Main loop
@@ -1229,59 +984,41 @@ if (isPair) {
   function init() {
     loadBest();
     updateBestDisplays();
-    document.addEventListener('keydown', onKeyDown);
-    // Stage pointer events for gameplay. touch-action: none on
-    // the stage + canvas + e.preventDefault() in pointerdown
-    // gives us instant, reliable taps on iOS Safari and Android
-    // Chrome.
-    STAGE.addEventListener('pointerdown', onStagePointerDown);
-    STAGE.addEventListener('pointermove', onStagePointerMove);
-    STAGE.addEventListener('pointerup', onStagePointerUp);
-    STAGE.addEventListener('pointercancel', onStagePointerCancel);
-    // iOS Safari gesture events: kill pinch-zoom and rotation
-    // during gameplay. Without this, two-finger gestures on iOS
-    // can interfere with swipes.
+    // Gameplay keyboard/pointer/JUMP/BOOST: attachInputController (above).
+    // Overlay buttons only here.
     STAGE.addEventListener('gesturestart', e => e.preventDefault());
     STAGE.addEventListener('gesturechange', e => e.preventDefault());
-    // Button handlers. We bind to BOTH 'click' and 'pointerdown'
-    // and use a "recently fired" guard on the SAME function so
-    // neither path runs the action twice. The pointerdown handler
-    // fires the action immediately (no 300ms iOS tap delay) and
-    // calls e.preventDefault() to suppress the default browser
-    // behavior. The click event might also fire afterwards
-    // (depending on the browser); the guard ensures the action
-    // only runs once per tap.
-    // Keyboard activation (Enter/Space) still works because the
-    // document-level keydown handler routes to the right action
-    // based on the currently visible overlay.
-    const tapHandler = (action) => (e) => {
-      if (e && e.preventDefault) e.preventDefault();
-      const now = performance.now();
-      if (now - (action._lastTap || 0) < 500) return;
-      action._lastTap = now;
-      action();
+    const tapHandler = (action) => {
+      let last = 0;
+      return (e) => {
+        if (e && e.preventDefault) e.preventDefault();
+        const now = performance.now();
+        if (now - last < 500) return;
+        last = now;
+        action();
+      };
     };
     const bindTap = (btn, action) => {
-      btn.addEventListener('click', tapHandler(action));
-      btn.addEventListener('pointerdown', tapHandler(action));
+      if (!btn) return;
+      const h = tapHandler(action);
+      btn.addEventListener('click', h);
+      btn.addEventListener('pointerdown', h);
     };
     bindTap(START_BTN, beginRun);
     bindTap(TRY_AGAIN_BTN, restart);
-    RESET_BEST_BTN.addEventListener('click', () => {
-      state.best = 0;
-      saveBest(0);
-      updateBestDisplays();
-    });
-    // Global leaderboard submit form (in the game-over card).
+    if (RESET_BEST_BTN) {
+      RESET_BEST_BTN.addEventListener('click', () => {
+        state.best = 0;
+        saveBest(0);
+        updateBestDisplays();
+      });
+    }
     if (LB_SUBMIT_BTN) {
-      // Same tap pattern as the other buttons: bind to both
-      // 'click' and 'pointerdown' with a dedupe guard to kill the
-      // iOS 300ms tap delay and avoid double-fires.
-      LB_SUBMIT_BTN.addEventListener('click', lbTapHandler(submitToLeaderboard));
-      LB_SUBMIT_BTN.addEventListener('pointerdown', lbTapHandler(submitToLeaderboard));
+      const h = tapHandler(submitToLeaderboard);
+      LB_SUBMIT_BTN.addEventListener('click', h);
+      LB_SUBMIT_BTN.addEventListener('pointerdown', h);
     }
     if (LB_NICK_EL) {
-      // Submit when the user presses Enter in the nickname input.
       LB_NICK_EL.addEventListener('keydown', e => {
         if (e.key === 'Enter') {
           e.preventDefault();

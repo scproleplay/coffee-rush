@@ -149,3 +149,14 @@ ui/*         dom
 ```
 
 DOM games (Rush etc.) follow the same idea at smaller scale: `config` + `systems/*` (tested) + `runtime` + `main`.
+
+### CE runtime progress
+
+| Slice | Status |
+|-------|--------|
+| Pure systems + tests | ✅ |
+| Entities + scene/hallway/fx | ✅ |
+| `inputController` + pointer gestures | ✅ |
+| `obstaclePool` | ✅ |
+| `updateFrame` / `renderFrame` | ⏳ next |
+| runtime size | ~1045 lines (was ~2500 → ~1300 → ~1045) |
