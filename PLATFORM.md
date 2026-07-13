@@ -90,6 +90,13 @@ npm test
 
 See [QA.md](./QA.md).
 
+## Supabase leaderboard
+
+- Table: `public.leaderboard_scores` (RLS on; anon SELECT allowed).
+- Env (Vercel + local `.env`): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`.
+- Correct project host: `https://lsvctdcydndfdncbvneq.supabase.co` (watch for typo `…nddf…`).
+- Coffee Escape guest **inserts** need SQL: `supabase/fix_coffee_escape_insert_policy.sql` (run in SQL Editor once).
+
 ## Next milestones
 
 1. Mobile smoke on production  
