@@ -32,3 +32,6 @@ pnpm-debug.log*
 *.sln
 *.sw?
 tsconfig.tsbuildinfo
+
+# Local Claude plans
+.claude/modernize-legacy-games-plan.md

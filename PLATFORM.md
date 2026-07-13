@@ -17,6 +17,7 @@ A real multi-game **platform** kids and teens love:
 |-------|--------|
 | Build | Vite 6 + TypeScript |
 | 3D | Three.js (ES modules) |
+| DOM games | Typed modules + shared chrome CSS |
 | Backend | Supabase (anon key via `VITE_*` env) |
 | Deploy | Vercel (`dist/`) — only after merge |
 
@@ -28,7 +29,7 @@ npm run dev        # http://localhost:5173
 npm run build
 npm run preview
 npm run typecheck
-npm test           # Vitest unit tests (TDD for pure CE/shared logic)
+npm test           # Vitest unit tests
 npm run test:watch
 ```
 
@@ -44,10 +45,18 @@ src/
     config/              # game registry, env
     ui/
   games/
-    coffee-escape/       # first platform citizen (Three.js)
-  styles/                # design tokens + shell chrome
-public/legacy/           # not-yet-migrated games (static)
+    coffee-escape/       # Three.js endless runner
+    coffee-rush/         # DOM clicker
+    reaction-timer/
+    memory-match/
+    math-rush/
+  styles/                # tokens, shell, legacy-arcade.css
+public/legacy/           # rollback static copies
 coffee-escape/index.html
+coffee-rush/index.html
+reaction-timer/index.html
+memory-match/index.html
+math-rush/index.html
 leaderboard/index.html
 index.html
 ```
@@ -60,65 +69,83 @@ index.html
 | Shell homepage | ✅ |
 | Leaderboard page | ✅ |
 | Auth contracts (guest) | ✅ ready for Phase B login |
-| Coffee Escape module | ✅ Phase B split started |
-| CE `engine/constants`, `engine/textures`, `engine/types` | ✅ |
-| CE `entities/obstacleKinds`, `buildObstacleMeshes` | ✅ |
-| CE `entities/cup`, `man`, `bean` (game-local only) | ✅ |
-| CE `systems/spawnLogic` + `inputLogic` (pure, tested) | ✅ |
-| CE `systems/pacingLogic`, `playerMotion`, `collisionLogic` | ✅ |
-| CE `entities/decor` | ✅ |
-| Vitest harness (`npm test`) | ✅ 47 tests |
+| Coffee Escape (Three.js) | ✅ platform citizen |
+| Coffee Rush | ✅ platform module |
+| Reaction Timer | ✅ platform module |
+| Memory Match | ✅ platform module |
+| Math Rush | ✅ platform module |
 | Profile page (guest nickname) | ✅ stub — auth-ready |
-| Coffee Rush / others | ⏳ legacy under `/legacy/` |
 | Supabase Auth UI | ⏳ Phase C |
-| Merge to main | ❌ blocked until QA |
+| Merge to main | ❌ blocked until mobile QA |
 
 ## Next milestones
 
-1. Continue CE split: cup/man entities, input/spawn/update systems, remove `@ts-nocheck`  
-2. Migrate Coffee Rush (Phaser or polished canvas module)  
-3. Supabase Auth + `user_id` on scores (profile already exists)  
-4. Kid/teen visual pass (motion, sound, avatars)  
-5. QA on mobile → merge `platform/vite-migration` → `main`
+1. Mobile smoke QA on all five games + shell  
+2. Supabase Auth + `user_id` on scores  
+3. Kid/teen visual polish pass (motion, sound, avatars)  
+4. Optional: retire `public/legacy/` or add old-URL redirects  
+5. Merge `platform/vite-migration` → `main` after QA  
 
+## Storage keys (do not rename)
 
-## Why `runtime.ts` is still large (~1.3k) and how we split further
+| Game | Keys |
+|------|------|
+| Coffee Rush | `coffeeRushBestScore`, `coffeeRushSoundOn`, `coffeeRushAchievements` |
+| Reaction Timer | `reactionTimerBestMs` |
+| Memory Match | `memoryMatchBestMoves`, `memoryMatchBestMs` |
+| Math Rush | `mathRushBestScore` |
+| Coffee Escape | (see CE constants) |
+| Guest nick | `codecup-guest-nickname` |
 
-TypeScript does **not** require one file. A big runtime is normal *during* migration when it still owns:
+## Architecture rules (do not violate)
 
-1. **Game loop orchestration** (`update` / `render` / `requestAnimationFrame`)
-2. **Mutable run state** (player, pools, timers)
-3. **DOM event wiring** (pointer/keyboard/buttons)
-4. **Three.js object mutation** (positions, materials each frame)
+1. **Game-local first** — only lift to `src/shared/` when 2+ games truly need the same contract.
+2. **Best engine per title** — Three.js for CE; DOM modules for Rush/Reaction/Memory/Math (no forced Phaser rewrite).
+3. **Auth-ready** — games call shared leaderboard/session APIs; login plugs into shell later without game rewrites.
+4. **Preserve player data** — never rename localStorage keys (see table above).
+5. **One vertical slice at a time** — extract → test → wire → build → smoke; do not break other games.
+6. **No merge to `main`** until mobile QA on all five games + shell.
 
-### Preferred split pattern (what we use)
+## Coffee Escape module layout (reference pattern)
+
+```
+src/games/coffee-escape/
+  engine/     constants, scene, hallway, textures, fxPools, types
+  entities/   cup, man, bean, decor, obstacles
+  systems/    pure rules + Vitest tests (spawn, input, pacing, motion, collision, gameFlow)
+  ui/         domRefs
+  runtime.ts  orchestration loop (still large — see below)
+  main.ts     entry
+```
+
+## Why `runtime.ts` can still be large
+
+TypeScript does **not** require one file. A big runtime is normal while it owns:
+
+1. Game loop orchestration (`update` / `render` / `rAF`)
+2. Mutable run state (player, pools, timers)
+3. DOM event wiring
+4. Engine object mutation each frame
+
+### Preferred split pattern
 
 | Kind | Where | Style |
 |------|--------|--------|
 | Pure rules (testable) | `systems/*.ts` | functions |
-| Mesh builders | `entities/*.ts`, `engine/*` | factories returning handles |
-| Scene shell | `engine/scene.ts`, `engine/hallway.ts` | factories |
-| DOM lookup | `ui/domRefs.ts` | one object of refs |
-| Orchestration | `runtime.ts` → later `Game.ts` class optional | thin wire-up |
+| Mesh / DOM builders | `entities/*`, `engine/*` | factories |
+| DOM lookup | `ui/domRefs.ts` | one refs object |
+| Orchestration | `runtime.ts` (optional later `Game` class for lifecycle only) | thin wire-up |
 
-### Do we need classes?
+**Classes are optional** — factories + pure functions + thin orchestrator preferred over deep OOP.
 
-**Not required.** Prefer:
-
-- **Factories** (`createCup`, `createHallway`) — clear ownership, easy tests of pure parts
-- **Pure functions** for rules — TDD-friendly
-- **Optional** `class CoffeeEscapeGame` later only if it helps group lifecycle (`start/stop/dispose`) — not for every system
-
-Avoid a deep OOP hierarchy (harder for non-game-devs, easier to break).
-
-### Target shape
+### Target for CE runtime
 
 ```
-runtime.ts          < 400 lines  (loop + wire only)
-systems/*           pure + tested
-entities/*          builders
-engine/*            scene, hallway, fx, constants
-ui/*                dom refs, overlays helpers
+runtime.ts   < ~400 lines eventually
+systems/*    pure + tested
+entities/*   builders
+engine/*     scene, hallway, fx
+ui/*         dom
 ```
 
-Next slices: input controller module, obstacle pool module, update/render split.
+DOM games (Rush etc.) follow the same idea at smaller scale: `config` + `systems/*` (tested) + `runtime` + `main`.

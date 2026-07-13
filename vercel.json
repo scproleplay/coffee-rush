@@ -12,6 +12,10 @@
   ],
   "rewrites": [
     { "source": "/coffee-escape", "destination": "/coffee-escape/index.html" },
+    { "source": "/coffee-rush", "destination": "/coffee-rush/index.html" },
+    { "source": "/reaction-timer", "destination": "/reaction-timer/index.html" },
+    { "source": "/memory-match", "destination": "/memory-match/index.html" },
+    { "source": "/math-rush", "destination": "/math-rush/index.html" },
     { "source": "/leaderboard", "destination": "/leaderboard/index.html" },
     { "source": "/profile", "destination": "/profile/index.html" }
   ]

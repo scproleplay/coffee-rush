@@ -24,6 +24,10 @@ export default defineConfig({
       input: {
         main: path.resolve(root, 'index.html'),
         coffeeEscape: path.resolve(root, 'coffee-escape/index.html'),
+        coffeeRush: path.resolve(root, 'coffee-rush/index.html'),
+        reactionTimer: path.resolve(root, 'reaction-timer/index.html'),
+        memoryMatch: path.resolve(root, 'memory-match/index.html'),
+        mathRush: path.resolve(root, 'math-rush/index.html'),
         leaderboard: path.resolve(root, 'leaderboard/index.html'),
         profile: path.resolve(root, 'profile/index.html'),
       },

@@ -4,14 +4,23 @@ A small collection of browser games by CodeCup Studio.
 
 ## Games
 
-- [Coffee Rush ☕](https://codecup-coffee-rush.netlify.app/coffee-rush.html) — Catch coffee cups before time runs out.
-- [Reaction Timer ⚡](https://codecup-coffee-rush.netlify.app/reaction-timer.html) — Wait for green, then click as fast as you can.
-- [Memory Match 🧠](https://codecup-coffee-rush.netlify.app/memory-match.html) — Match all 8 pairs in as few moves and as little time as possible.
-- [Math Rush ➕](https://codecup-coffee-rush.netlify.app/math-rush.html) — Solve as many problems as you can in 60 seconds.
-- [Coffee Escape ☕🏃](https://codecup-coffee-rush.netlify.app/coffee-escape.html) — A freshly poured cup sprints through a house to escape a tired man who wants his coffee.
+Platform paths (Vite multi-page app on branch `platform/vite-migration`):
 
-Arcade homepage:
+- Coffee Rush ☕ — `/coffee-rush/`
+- Reaction Timer ⚡ — `/reaction-timer/`
+- Memory Match 🧠 — `/memory-match/`
+- Math Rush ➕ — `/math-rush/`
+- Coffee Escape ☕🏃 — `/coffee-escape/`
+
+Production site (legacy HTML until merge/deploy):
 https://codecup-coffee-rush.netlify.app/
+
+Local platform:
+
+```bash
+npm install
+npm run dev
+```
 
 ## Global Leaderboard 🌍
 
