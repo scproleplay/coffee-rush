@@ -1,6 +1,8 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { getSupabaseConfig, isSupabaseConfigured } from '../config/env';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { isSupabaseConfigured } from '../config/env';
 import type { GameId } from '../config/games';
+import { getSupabase } from '../supabase/client';
+import { validateNickname } from '../auth/nickname';
 
 export type LeaderboardGameId = GameId;
 
@@ -27,22 +29,7 @@ export interface SubmitScorePayload {
   userId?: string;
 }
 
-/** Matches Supabase RLS: 1–12 chars, letters/digits/space/_/- only. */
-const NICKNAME_RE = /^[A-Za-z0-9 _-]+$/;
-
-export function validateNickname(raw: string): { ok: true; nickname: string } | { ok: false; message: string } {
-  const nickname = (raw || '').trim();
-  if (nickname.length < 1 || nickname.length > 12) {
-    return { ok: false, message: 'Nickname must be 1–12 characters.' };
-  }
-  if (!NICKNAME_RE.test(nickname)) {
-    return {
-      ok: false,
-      message: 'Nickname can only use letters, numbers, spaces, _ and -.',
-    };
-  }
-  return { ok: true, nickname };
-}
+export { validateNickname } from '../auth/nickname';
 
 export type LeaderboardErrorCode =
   | 'not_configured'
@@ -99,20 +86,14 @@ export function leaderboardErrorMessage(err: unknown): string {
   return LEADERBOARD_UNAVAILABLE_MSG;
 }
 
-let client: SupabaseClient | null = null;
-
 function getClient(): SupabaseClient {
-  if (client) return client;
-  if (!isSupabaseConfigured()) {
+  const client = getSupabase();
+  if (!client) {
     throw new LeaderboardError(
       'not_configured',
       'Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY (local .env and Vercel project env).',
     );
   }
-  const { url, anonKey } = getSupabaseConfig();
-  client = createClient(url, anonKey, {
-    auth: { persistSession: true, autoRefreshToken: true },
-  });
   return client;
 }
 
@@ -227,9 +208,19 @@ export async function submitScore(payload: SubmitScorePayload): Promise<{
     if (typeof payload.timeSeconds === 'number' && Number.isFinite(payload.timeSeconds)) {
       row.time_seconds = payload.timeSeconds;
     }
-    if (payload.userId) row.user_id = payload.userId;
-
     const sb = getClient();
+    // Prefer explicit payload.userId; else attach logged-in session user.
+    let uid = payload.userId;
+    if (!uid) {
+      try {
+        const { data } = await sb.auth.getSession();
+        uid = data.session?.user?.id;
+      } catch {
+        /* guest */
+      }
+    }
+    if (uid) row.user_id = uid;
+
     const { error } = await sb.from('leaderboard_scores').insert([row]);
     if (error) {
       return { ok: false, error: new LeaderboardError('server', error.message) };

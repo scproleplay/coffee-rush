@@ -1,6 +1,6 @@
 import '@styles/shell.css';
 import { GAMES } from '@shared/config/games';
-import { initAuth, getSession } from '@shared/auth/session';
+import { initAuth, getSession, onSessionChange } from '@shared/auth/session';
 
 function renderGameCards(root: HTMLElement): void {
   const list = document.createElement('ul');
@@ -56,16 +56,24 @@ function renderGameCards(root: HTMLElement): void {
   root.replaceChildren(list);
 }
 
+function paintGreet(): void {
+  const greet = document.getElementById('shellGreet');
+  if (!greet) return;
+  const session = getSession();
+  const nick = session.identity?.nickname;
+  if (session.isAuthenticated && nick) {
+    greet.textContent = `Welcome back, ${nick}! (signed in) Ready for another run?`;
+  } else if (nick) {
+    greet.textContent = `Welcome back, ${nick}! Ready for another run?`;
+  } else {
+    greet.textContent = 'Jump in. Chase high scores. Become a caffeine legend.';
+  }
+}
+
 async function boot(): Promise<void> {
   await initAuth();
-  const session = getSession();
-  const greet = document.getElementById('shellGreet');
-  if (greet) {
-    const nick = session.identity?.nickname;
-    greet.textContent = nick
-      ? `Welcome back, ${nick}! Ready for another run?`
-      : 'Jump in. Chase high scores. Become a caffeine legend.';
-  }
+  paintGreet();
+  onSessionChange(() => paintGreet());
 
   const grid = document.getElementById('gameGrid');
   if (grid) renderGameCards(grid);

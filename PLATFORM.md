@@ -97,6 +97,18 @@ See [QA.md](./QA.md).
 - Correct project host: `https://lsvctdcydndfdncbvneq.supabase.co` (watch for typo `…nddf…`).
 - Coffee Escape guest **inserts** need SQL: `supabase/fix_coffee_escape_insert_policy.sql` (run in SQL Editor once).
 
+## Auth MVP (magic link)
+
+Configure in Supabase Dashboard (see also `supabase/auth_profiles_mvp.sql`):
+
+| Setting | Value |
+|---------|--------|
+| Site URL | `https://codecuparcade.com` |
+| Redirect URLs | `https://codecuparcade.com/profile/**`, `http://localhost:5173/profile/**` |
+| Email | Enable Email provider + magic link |
+
+App: optional login on `/profile/`; guests still play; scores attach `user_id` when signed in.
+
 ## Next milestones
 
 1. Mobile smoke on production  

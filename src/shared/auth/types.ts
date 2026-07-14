@@ -1,7 +1,6 @@
 /**
- * Auth & identity contracts — designed so login can land without rewriting games.
- * Phase A: guest sessions (nickname only).
- * Phase B: Supabase Auth user + profile.
+ * Auth & identity contracts.
+ * Guest mode always works. Logged-in users add userId + cloud nickname.
  */
 
 export type UserId = string;
@@ -25,14 +24,11 @@ export interface Profile {
   userId: UserId;
   nickname: string;
   avatarUrl?: string;
-  createdAt: string;
+  createdAt?: string;
 }
 
-/** Future-facing session API every game / shell feature should use. */
 export interface AuthSession {
   identity: Identity | null;
-  /** true once Supabase Auth is wired and a session exists */
   isAuthenticated: boolean;
-  /** placeholder for Phase B */
   accessToken?: string;
 }
