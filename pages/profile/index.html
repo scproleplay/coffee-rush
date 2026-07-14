@@ -76,8 +76,21 @@
           <p id="loginStatus" class="shell-footer-note" style="margin-top: 12px"></p>
         </div>
         <div id="signedInBlock" hidden>
+          <div class="admin-role-row" id="adminRoleRow" hidden>
+            <span class="admin-badge" id="adminBadge">Admin</span>
+            <span class="admin-role-text" id="adminRoleText"></span>
+          </div>
           <p id="signedInEmail" style="font-weight: 700; color: #6b3a14; margin: 0 0 12px"></p>
-          <button id="signOutBtn" class="btn btn-secondary" type="button">Sign out</button>
+          <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center">
+            <a
+              id="adminPanelLink"
+              class="btn btn-ghost"
+              href="/admin/"
+              hidden
+              >Admin Panel</a
+            >
+            <button id="signOutBtn" class="btn btn-secondary" type="button">Sign out</button>
+          </div>
         </div>
       </section>
 

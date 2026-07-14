@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin · CodeCup Arcade</title>
+  </head>
+  <body>
+    <div class="shell">
+      <header class="shell-header">
+        <div class="shell-badge" id="adminHeaderBadge">🔒 Admin</div>
+        <h1 class="shell-title">Admin Panel</h1>
+        <p class="shell-subtitle" id="adminSubtitle">Checking access…</p>
+        <nav class="shell-nav">
+          <a class="btn btn-secondary" href="/profile/">← Profile</a>
+          <a class="btn btn-ghost" href="/">Arcade</a>
+        </nav>
+      </header>
+
+      <section class="hero-panel" id="adminGate" aria-live="polite">
+        <h2 id="adminGateTitle">Please wait</h2>
+        <p id="adminGateBody">Verifying your account…</p>
+      </section>
+
+      <section class="hero-panel" id="adminContent" hidden>
+        <h2>Tools</h2>
+        <p>
+          No live admin tools yet — this is a safe placeholder so the entry
+          point exists without exposing dangerous actions.
+        </p>
+        <p class="shell-footer-note" id="adminRoleLine" style="margin-top: 8px"></p>
+        <button class="btn btn-secondary" type="button" disabled title="Not available yet">
+          Coming soon
+        </button>
+      </section>
+
+      <footer class="shell-footer">
+        <p class="shell-footer-note">
+          Access is based on <code>admin_users</code> + your signed-in user id only.
+        </p>
+      </footer>
+    </div>
+    <script type="module" src="/src/shell/admin.ts"></script>
+  </body>
+</html>

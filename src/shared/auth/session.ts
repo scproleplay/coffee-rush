@@ -1,12 +1,21 @@
-import type { AuthSession, GuestIdentity, Identity, Profile, RegisteredIdentity } from './types';
+import type {
+  AdminRole,
+  AuthSession,
+  GuestIdentity,
+  Identity,
+  Profile,
+  RegisteredIdentity,
+} from './types';
 import { getSupabase } from '../supabase/client';
 import { validateNickname } from './nickname';
+import { fetchAdminRole } from './admin';
 
 const GUEST_NICK_KEY = 'codecup-guest-nickname';
 
 let current: AuthSession = {
   identity: null,
   isAuthenticated: false,
+  adminRole: null,
 };
 
 let initPromise: Promise<AuthSession> | null = null;
@@ -62,7 +71,7 @@ export function saveGuestNickname(nickname: string): GuestIdentity {
     return { kind: 'guest', nickname: nick };
   }
   const identity: GuestIdentity = { kind: 'guest', nickname: nick };
-  setSession({ identity, isAuthenticated: false });
+  setSession({ identity, isAuthenticated: false, adminRole: null });
   return identity;
 }
 
@@ -79,6 +88,16 @@ export function getUserIdForScore(): string | undefined {
     return current.identity.userId;
   }
   return undefined;
+}
+
+/** True only when signed in and admin_users has a row for this user_id. */
+export function isAdmin(): boolean {
+  return Boolean(current.isAuthenticated && current.adminRole);
+}
+
+export function getAdminRole(): AdminRole | null {
+  if (!current.isAuthenticated) return null;
+  return current.adminRole ?? null;
 }
 
 async function fetchProfile(userId: string): Promise<Profile | null> {
@@ -139,6 +158,7 @@ async function applyUser(user: {
     const session: AuthSession = {
       identity: nick ? { kind: 'guest', nickname: nick } : null,
       isAuthenticated: false,
+      adminRole: null,
     };
     setSession(session);
     return session;
@@ -152,9 +172,12 @@ async function applyUser(user: {
       /* ignore */
     }
   }
+  // Admin only from admin_users by auth uid — fail closed on errors.
+  const adminRole = await fetchAdminRole(user.id);
   const session: AuthSession = {
     identity,
     isAuthenticated: true,
+    adminRole,
   };
   setSession(session);
   return session;
@@ -168,7 +191,11 @@ export async function initAuth(): Promise<AuthSession> {
   initPromise = (async () => {
     const nick = loadGuestNickname();
     if (nick) {
-      setSession({ identity: { kind: 'guest', nickname: nick }, isAuthenticated: false });
+      setSession({
+        identity: { kind: 'guest', nickname: nick },
+        isAuthenticated: false,
+        adminRole: null,
+      });
     }
 
     const sb = getSupabase();
@@ -235,6 +262,7 @@ export async function signOut(): Promise<void> {
   setSession({
     identity: nick ? { kind: 'guest', nickname: nick } : null,
     isAuthenticated: false,
+    adminRole: null,
   });
 }
 
@@ -263,6 +291,7 @@ export async function saveNickname(raw: string): Promise<{ ok: boolean; message:
     setSession({
       isAuthenticated: true,
       identity: { ...current.identity, nickname: nick },
+      adminRole: current.adminRole ?? null,
     });
     return { ok: true, message: `Saved! You’re “${nick}” (signed in).` };
   }

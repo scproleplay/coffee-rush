@@ -316,3 +316,47 @@
   text-transform: uppercase;
   color: var(--c-ink-soft);
 }
+
+/* Profile admin badge — only shown when admin_users matches auth uid */
+.admin-role-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 12px;
+}
+
+.admin-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 6px 12px;
+  border-radius: var(--r-pill);
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: linear-gradient(135deg, #fff7d6 0%, #ffe08a 100%);
+  color: #7a4a00;
+  border: 2px solid rgba(201, 140, 0, 0.55);
+  box-shadow: 0 2px 0 rgba(180, 120, 0, 0.2);
+}
+
+.admin-badge[data-role='owner'] {
+  background: linear-gradient(135deg, #fff1c4 0%, #ffc94a 100%);
+  border-color: rgba(214, 140, 0, 0.7);
+  color: #6b3a00;
+}
+
+.admin-badge[data-role='admin'] {
+  background: linear-gradient(135deg, #eef4ff 0%, #c9dbff 100%);
+  border-color: rgba(70, 110, 200, 0.45);
+  color: #243f86;
+}
+
+.admin-role-text {
+  font-weight: 800;
+  color: var(--c-ink-soft);
+  font-size: 0.92rem;
+}

@@ -20,11 +20,35 @@ const guestLoginBlock = document.getElementById('guestLoginBlock');
 const signedInBlock = document.getElementById('signedInBlock');
 const signedInEmail = document.getElementById('signedInEmail');
 const signOutBtn = document.getElementById('signOutBtn');
+const adminRoleRow = document.getElementById('adminRoleRow');
+const adminBadge = document.getElementById('adminBadge');
+const adminRoleText = document.getElementById('adminRoleText');
+const adminPanelLink = document.getElementById('adminPanelLink') as HTMLAnchorElement | null;
 
 function setStatus(el: HTMLElement | null, msg: string, ok = true): void {
   if (!el) return;
   el.textContent = msg;
   el.style.color = ok ? '#0d7a3f' : '#c0392b';
+}
+
+function paintAdminControls(): void {
+  const session = getSession();
+  const role =
+    session.isAuthenticated && session.adminRole ? session.adminRole : null;
+
+  if (!role) {
+    if (adminRoleRow) adminRoleRow.hidden = true;
+    if (adminPanelLink) adminPanelLink.hidden = true;
+    return;
+  }
+
+  if (adminRoleRow) adminRoleRow.hidden = false;
+  if (adminBadge) {
+    adminBadge.textContent = role === 'owner' ? 'Owner' : 'Admin';
+    adminBadge.dataset.role = role;
+  }
+  if (adminRoleText) adminRoleText.textContent = `Role: ${role}`;
+  if (adminPanelLink) adminPanelLink.hidden = false;
 }
 
 function paint(): void {
@@ -52,6 +76,8 @@ function paint(): void {
     if (guestLoginBlock) guestLoginBlock.hidden = !isSupabaseConfigured();
     if (signedInBlock) signedInBlock.hidden = true;
   }
+
+  paintAdminControls();
 }
 
 form?.addEventListener('submit', (e) => {

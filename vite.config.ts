@@ -25,6 +25,8 @@ function pagesDevUrls(): Plugin {
     '/leaderboard/': '/pages/leaderboard/index.html',
     '/profile': '/pages/profile/index.html',
     '/profile/': '/pages/profile/index.html',
+    '/admin': '/pages/admin/index.html',
+    '/admin/': '/pages/admin/index.html',
   };
 
   return {
@@ -113,6 +115,7 @@ export default defineConfig({
         mathRush: path.resolve(pagesDir, 'math-rush/index.html'),
         leaderboard: path.resolve(pagesDir, 'leaderboard/index.html'),
         profile: path.resolve(pagesDir, 'profile/index.html'),
+        admin: path.resolve(pagesDir, 'admin/index.html'),
       },
     },
     target: 'es2022',
