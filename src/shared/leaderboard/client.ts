@@ -27,6 +27,23 @@ export interface SubmitScorePayload {
   userId?: string;
 }
 
+/** Matches Supabase RLS: 1–12 chars, letters/digits/space/_/- only. */
+const NICKNAME_RE = /^[A-Za-z0-9 _-]+$/;
+
+export function validateNickname(raw: string): { ok: true; nickname: string } | { ok: false; message: string } {
+  const nickname = (raw || '').trim();
+  if (nickname.length < 1 || nickname.length > 12) {
+    return { ok: false, message: 'Nickname must be 1–12 characters.' };
+  }
+  if (!NICKNAME_RE.test(nickname)) {
+    return {
+      ok: false,
+      message: 'Nickname can only use letters, numbers, spaces, _ and -.',
+    };
+  }
+  return { ok: true, nickname };
+}
+
 export type LeaderboardErrorCode =
   | 'not_configured'
   | 'network'
@@ -186,13 +203,14 @@ export async function submitScore(payload: SubmitScorePayload): Promise<{
         ),
       };
     }
-    const nickname = (payload.nickname || '').trim();
-    if (nickname.length < 1 || nickname.length > 12) {
+    const nickCheck = validateNickname(payload.nickname || '');
+    if (!nickCheck.ok) {
       return {
         ok: false,
-        error: new LeaderboardError('validation', 'Nickname must be 1–12 characters.'),
+        error: new LeaderboardError('validation', nickCheck.message),
       };
     }
+    const nickname = nickCheck.nickname;
     const row: ScoreRow = {
       game: payload.game,
       nickname,

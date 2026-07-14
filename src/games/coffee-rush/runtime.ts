@@ -5,6 +5,7 @@ import {
   fetchTop100,
   formatGameValue,
   leaderboardErrorMessage,
+  validateNickname,
   submitScore,
   type ScoreRow,
 } from '@shared/leaderboard/client';
@@ -306,12 +307,13 @@ async function loadLeaderboard(): Promise<void> {
 }
 
 async function handleSubmit(): Promise<void> {
-  const nick = (dom.lbNickname.value || '').trim();
-  if (nick.length < 1 || nick.length > 12) {
-    dom.lbStatus.textContent = 'Nickname must be 1-12 characters.';
+  const nickCheck = validateNickname(dom.lbNickname.value || '');
+  if (!nickCheck.ok) {
+    dom.lbStatus.textContent = nickCheck.message;
     dom.lbStatus.classList.add('is-error');
     return;
   }
+  const nick = nickCheck.nickname;
   dom.lbStatus.classList.remove('is-error');
   dom.lbStatus.textContent = 'Submitting…';
   dom.lbSubmit.disabled = true;

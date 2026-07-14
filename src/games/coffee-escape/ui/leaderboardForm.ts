@@ -1,4 +1,8 @@
-import { leaderboardErrorMessage } from '@shared/leaderboard/client';
+import {
+  leaderboardErrorMessage,
+  validateNickname,
+} from '@shared/leaderboard/client';
+import { loadGuestNickname, saveGuestNickname } from '@shared/auth/session';
 import type { CeDom } from './domRefs';
 
 export interface LeaderboardFormApi {
@@ -31,7 +35,11 @@ export function createLeaderboardForm(
       LB_STATUS_EL.textContent = '';
       LB_STATUS_EL.classList.remove('is-ok', 'is-error');
     }
-    if (LB_NICK_EL) LB_NICK_EL.value = '';
+    // Prefill profile / guest nickname (do not wipe on each game over)
+    if (LB_NICK_EL) {
+      const saved = loadGuestNickname();
+      if (saved && !LB_NICK_EL.value.trim()) LB_NICK_EL.value = saved;
+    }
   }
 
   function hide(): void {
@@ -41,11 +49,12 @@ export function createLeaderboardForm(
 
   function submit(score: number): void {
     if (!LB_NICK_EL) return;
-    const nickname = LB_NICK_EL.value.trim();
-    if (nickname.length < 1 || nickname.length > 12) {
+    const nickCheck = validateNickname(LB_NICK_EL.value);
+    if (!nickCheck.ok) {
       if (LB_STATUS_EL) {
-        LB_STATUS_EL.textContent = 'Nickname must be 1–12 characters.';
+        LB_STATUS_EL.textContent = nickCheck.message;
         LB_STATUS_EL.classList.add('is-error');
+        LB_STATUS_EL.classList.remove('is-ok');
       }
       return;
     }
@@ -56,12 +65,14 @@ export function createLeaderboardForm(
     }
     void submitScore({
       game: 'coffee-escape',
-      nickname,
+      nickname: nickCheck.nickname,
       score,
     }).then((res) => {
       if (LB_SUBMIT_BTN) LB_SUBMIT_BTN.disabled = false;
       if (res && res.ok) {
         scoreSubmitted = true;
+        saveGuestNickname(nickCheck.nickname);
+        if (LB_NICK_EL) LB_NICK_EL.value = nickCheck.nickname;
         if (LB_STATUS_EL) {
           LB_STATUS_EL.textContent = 'Submitted! View it on the leaderboard.';
           LB_STATUS_EL.classList.add('is-ok');
