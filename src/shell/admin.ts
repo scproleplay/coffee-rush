@@ -26,6 +26,8 @@ const refreshBtn = document.getElementById('adminRefreshBtn') as HTMLButtonEleme
 let loadSeq = 0;
 let lastAllowed = false;
 let redirectedLoggedOut = false;
+/** False until initAuth() fully resolves — avoids bounce on guest-nick pre-seed. */
+let authReady = false;
 
 function setLoadStatus(msg: string, isError = false): void {
   if (!loadStatus) return;
@@ -110,8 +112,12 @@ async function loadStats(): Promise<void> {
 /**
  * Gate:
  * - admin/owner (admin_users by auth uid) → dashboard
- * - logged out → redirect to Profile (login)
+ * - logged out (after auth ready) → redirect to Profile (login)
  * - signed in, not admin → Access denied (no nickname/email checks)
+ *
+ * Important: do NOT redirect until authReady. initAuth() briefly seeds a guest
+ * identity from localStorage before Supabase session resolves; redirecting on
+ * that intermediate state bounced owners back to Profile.
  */
 function paintGate(): void {
   const session = getSession();
@@ -146,6 +152,16 @@ function paintGate(): void {
   if (gate) gate.hidden = false;
   clearOverview();
 
+  // Still resolving Supabase session — stay on gate, never bounce yet.
+  if (!authReady) {
+    if (headerBadge) headerBadge.textContent = '🔒 Admin';
+    if (subtitle) subtitle.textContent = 'Checking access…';
+    if (gateTitle) gateTitle.textContent = 'Please wait';
+    if (gateBody) gateBody.textContent = 'Verifying your account…';
+    if (gateLinks) gateLinks.hidden = true;
+    return;
+  }
+
   // Logged out → send to Profile to sign in (magic link)
   if (!session.isAuthenticated) {
     if (headerBadge) headerBadge.textContent = '🔒 Admin';
@@ -178,6 +194,20 @@ refreshBtn?.addEventListener('click', () => {
   void loadStats();
 });
 
+// Subscribe first so late auth events (e.g. INITIAL_SESSION) still repaint.
 onSessionChange(() => paintGate());
 
-void initAuth().then(() => paintGate());
+void (async () => {
+  try {
+    await initAuth();
+    // Supabase may emit onAuthStateChange slightly after getSession resolves.
+    // Wait one macrotask so owner sessions aren't treated as guest mid-bootstrap.
+    await new Promise<void>((resolve) => {
+      window.setTimeout(resolve, 80);
+    });
+  } catch {
+    /* fail closed below */
+  }
+  authReady = true;
+  paintGate();
+})();

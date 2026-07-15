@@ -34,6 +34,8 @@ function setStatus(el: HTMLElement | null, msg: string, ok = true): void {
   el.style.color = ok ? '#0d7a3f' : '#c0392b';
 }
 
+const ADMIN_HREF = '/admin/';
+
 function paintAdminControls(): void {
   const session = getSession();
   const role =
@@ -51,7 +53,12 @@ function paintAdminControls(): void {
     adminBadge.dataset.role = role;
   }
   if (adminRoleText) adminRoleText.textContent = `Role: ${role}`;
-  if (adminPanelLink) adminPanelLink.hidden = false;
+  if (adminPanelLink) {
+    // Always re-assert the real admin route (never nickname-based).
+    adminPanelLink.href = ADMIN_HREF;
+    adminPanelLink.setAttribute('href', ADMIN_HREF);
+    adminPanelLink.hidden = false;
+  }
 }
 
 function paint(): void {
@@ -119,6 +126,16 @@ signOutBtn?.addEventListener('click', () => {
     setStatus(loginStatus, 'Signed out. You’re a guest again.', true);
     paint();
   })();
+});
+
+// Hard navigation to /admin/ so the multi-page shell always leaves Profile.
+adminPanelLink?.addEventListener('click', (e) => {
+  // Only force navigation for plain left-clicks (allow open-in-new-tab etc.).
+  if (e.defaultPrevented) return;
+  if (e.button !== 0) return;
+  if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+  e.preventDefault();
+  window.location.assign(ADMIN_HREF);
 });
 
 onSessionChange(() => paint());
