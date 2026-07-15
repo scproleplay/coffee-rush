@@ -55,8 +55,9 @@ export interface SwipeThresholds {
 }
 
 export const DEFAULT_SWIPE: SwipeThresholds = {
-  minPx: 24,
-  maxMs: 1000,
+  /** Slightly lower than before so short-finger swipes still register on phones */
+  minPx: 18,
+  maxMs: 1200,
 };
 
 /**

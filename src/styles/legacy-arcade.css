@@ -667,7 +667,9 @@ body {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1px;
-  padding: 4px 10px;
+  /* Keep dashed look but meet ~44px tap height on phones */
+  padding: 10px 14px;
+  min-height: 44px;
   border: 1.5px dashed #b34a00;
   border-radius: 999px;
   cursor: pointer;

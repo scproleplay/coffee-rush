@@ -39,6 +39,11 @@ body {
   min-height: 100%;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+  overflow-x: hidden;
+}
+
 body {
   font-family: var(--font);
   color: var(--c-ink);
@@ -47,6 +52,8 @@ body {
     radial-gradient(900px 500px at 100% 0%, #ffc9a0 0%, transparent 50%),
     linear-gradient(180deg, #fff9ef 0%, var(--c-cream) 40%, #ffe8c8 100%);
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
 }
 
 a {

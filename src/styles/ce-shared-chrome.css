@@ -52,8 +52,11 @@ body {
   border-radius: 999px;
   font-weight: 700;
   cursor: pointer;
-  padding: 2px 8px;
-  font-size: 0.72rem;
+  padding: 10px 14px;
+  min-height: 44px;
+  font-size: 0.78rem;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .best-row {

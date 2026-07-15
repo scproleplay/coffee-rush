@@ -141,11 +141,18 @@ function startCoffeeEscape() {
     });
   }
 
+  function setPlayingChrome(on: boolean): void {
+    // Lock page scroll while swiping the stage (mobile browsers).
+    document.body.classList.toggle('ce-playing', on);
+    document.documentElement.classList.toggle('ce-playing', on);
+  }
+
   function beginRun() {
     resetWorld();
     lbForm.resetSubmitted();
     lbForm.hide();
     state.running = true;
+    setPlayingChrome(true);
     if (START_OVERLAY) START_OVERLAY.hidden = true;
     if (GAME_OVER_OVERLAY) GAME_OVER_OVERLAY.hidden = true;
     if (HUD) HUD.hidden = false;
@@ -156,6 +163,7 @@ function startCoffeeEscape() {
   }
 
   function gameOver() {
+    setPlayingChrome(false);
     presentGameOver({ state, dom, lb: lbForm });
   }
 

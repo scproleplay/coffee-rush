@@ -99,6 +99,11 @@ export function attachInputController(deps: InputControllerDeps): InputControlle
     if (t?.closest?.('button, a')) return;
     if (!state.running || state.gameOver) return;
     e.preventDefault();
+    try {
+      stage.setPointerCapture?.(e.pointerId);
+    } catch {
+      /* some browsers reject capture mid-gesture */
+    }
     state.pointerStartX = e.clientX;
     state.pointerStartY = e.clientY;
     state.pointerStartT = performance.now();
@@ -108,6 +113,7 @@ export function attachInputController(deps: InputControllerDeps): InputControlle
     if (state.pointerFallbackTimer) {
       clearTimeout(state.pointerFallbackTimer);
     }
+    // Slightly longer fallback: slow taps still become a jump/lane action
     state.pointerFallbackTimer = setTimeout(() => {
       if (state.pointerActive && !state.pointerConsumed) {
         processPointerEnd(
@@ -116,11 +122,12 @@ export function attachInputController(deps: InputControllerDeps): InputControlle
           true,
         );
       }
-    }, 250);
+    }, 280);
   }
 
   function onStagePointerMove(e: PointerEvent): void {
     if (!state.pointerActive) return;
+    e.preventDefault();
     const dx = e.clientX - (state.pointerStartX || 0);
     const dy = e.clientY - (state.pointerStartY || 0);
     if (Math.abs(dx) > 4 || Math.abs(dy) > 4) state.pointerDidMove = true;
@@ -128,6 +135,7 @@ export function attachInputController(deps: InputControllerDeps): InputControlle
 
   function onStagePointerUp(e: PointerEvent): void {
     if (!state.pointerActive) return;
+    e.preventDefault();
     processPointerEnd(e.clientX, e.clientY, false);
   }
 
@@ -142,9 +150,11 @@ export function attachInputController(deps: InputControllerDeps): InputControlle
 
   const wrap = createTapDedupe(500);
   window.addEventListener('keydown', onKeyDown);
-  stage.addEventListener('pointerdown', onStagePointerDown);
-  stage.addEventListener('pointermove', onStagePointerMove);
-  stage.addEventListener('pointerup', onStagePointerUp);
+  // Non-passive so preventDefault can block page scroll while swiping the stage
+  const ptrOpts: AddEventListenerOptions = { passive: false };
+  stage.addEventListener('pointerdown', onStagePointerDown, ptrOpts);
+  stage.addEventListener('pointermove', onStagePointerMove, ptrOpts);
+  stage.addEventListener('pointerup', onStagePointerUp, ptrOpts);
   stage.addEventListener('pointercancel', onStagePointerCancel);
   stage.addEventListener('pointerleave', onStagePointerCancel);
 
@@ -175,6 +185,7 @@ export function attachInputController(deps: InputControllerDeps): InputControlle
       stage.removeEventListener('pointerup', onStagePointerUp);
       stage.removeEventListener('pointercancel', onStagePointerCancel);
       stage.removeEventListener('pointerleave', onStagePointerCancel);
+      // note: passive flag is not part of listener identity in browsers
       if (jumpBtn) {
         jumpBtn.removeEventListener('click', onJump);
         jumpBtn.removeEventListener('pointerdown', onJump);

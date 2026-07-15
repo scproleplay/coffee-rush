@@ -32,10 +32,19 @@ export function createSpawnController(state: GameState): SpawnController {
     if (!b) return;
     b.lane = Math.floor(Math.random() * 3);
     b.z = -55 - Math.random() * 10;
-    b.y = 0.9 + Math.random() * 0.4;
+    // Jump-only collectibles: height must clear minHeight (0.2) but stay
+    // inside a normal jump arc (JUMP_VY=9 / GRAVITY=22 → peak ≈ 1.84).
+    // Keep beans mid-jump so they read clearly and are reachable first try.
+    b.y = 0.85 + Math.random() * 0.35; // ~0.85–1.20
     b.rot = Math.random() * Math.PI * 2;
     b.active = true;
     b.mesh.visible = true;
+    b.mesh.position.set(
+      // LANE_X is applied in updateFrame; keep group origin clean
+      b.mesh.position.x,
+      b.y,
+      b.z,
+    );
   }
 
   function spawnSingleObstacle(): void {

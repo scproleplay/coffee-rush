@@ -5,10 +5,27 @@
        through to desktop. */
     .ce-app {
       max-width: 1100px;
+      width: 100%;
       margin: 0 auto;
       -webkit-text-size-adjust: 100%;
       /* Generous top padding so the title is never clipped. */
       padding: 28px 20px 16px;
+      box-sizing: border-box;
+      overflow-x: hidden;
+    }
+
+    /* While a run is active, stop the document from scrolling under swipes. */
+    html.ce-playing,
+    body.ce-playing {
+      overflow: hidden;
+      overscroll-behavior: none;
+      touch-action: none;
+      height: 100%;
+    }
+    @media (max-width: 400px) {
+      .ce-app {
+        padding: 16px 12px 12px;
+      }
     }
 
     /* On Coffee Escape the main element does NOT stretch with
@@ -52,19 +69,24 @@
     }
     @media (max-aspect-ratio: 1/1) {
       /* Portrait phones: keep the stage short so the page (header +
-         stage + footer) fits in the viewport. ~52vh leaves room for
-         the header, footer, and any browser chrome. */
+         stage + footer) fits better in the viewport. */
       .ce-stage {
         aspect-ratio: auto;
-        height: 52vh;
-        max-height: 560px;
-        min-height: 320px;
+        height: 48vh;
+        max-height: 520px;
+        min-height: 240px;
       }
     }
     @media (max-aspect-ratio: 1/1) and (max-width: 380px) {
       /* Very small portrait phones: slightly more height to keep the
          cup readable, but still leaves room for the rest of the page. */
-      .ce-stage { height: 58vh; }
+      .ce-stage { height: 50vh; min-height: 220px; }
+    }
+    @media (max-aspect-ratio: 1/1) and (max-height: 640px) {
+      /* Short phones (SE / small Android): prioritize fitting without
+         forcing the whole page to scroll during play. */
+      .ce-stage { height: 42vh; min-height: 200px; max-height: 360px; }
+      .ce-app { padding-top: 12px; padding-bottom: 8px; }
     }
     @media (max-aspect-ratio: 1/1) and (min-height: 700px) {
       /* Tablets in portrait (iPad, etc): cap so the page fits without

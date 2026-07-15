@@ -23,23 +23,16 @@
           This nickname shows on the global leaderboard. Guests save it on this
           device; signed-in players also save it to their account.
         </p>
-        <form id="profileForm" style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px">
+        <form id="profileForm" class="shell-form-row">
           <label class="sr-only" for="profileNick">Nickname</label>
           <input
             id="profileNick"
+            class="shell-field"
             type="text"
             maxlength="12"
             placeholder="1–12 characters"
             autocomplete="username"
-            style="
-              flex: 1;
-              min-width: 180px;
-              padding: 12px 16px;
-              border-radius: 999px;
-              border: 2px solid #ffb347;
-              font: inherit;
-              font-weight: 700;
-            "
+            enterkeyhint="done"
           />
           <button class="btn btn-primary" type="submit">Save nickname</button>
         </form>
@@ -53,23 +46,17 @@
           login is optional.
         </p>
         <div id="guestLoginBlock">
-          <form id="loginForm" style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px">
+          <form id="loginForm" class="shell-form-row">
             <label class="sr-only" for="loginEmail">Email</label>
             <input
               id="loginEmail"
+              class="shell-field"
               type="email"
               required
               placeholder="you@email.com"
               autocomplete="email"
-              style="
-                flex: 1;
-                min-width: 200px;
-                padding: 12px 16px;
-                border-radius: 999px;
-                border: 2px solid #ffb347;
-                font: inherit;
-                font-weight: 600;
-              "
+              inputmode="email"
+              enterkeyhint="send"
             />
             <button class="btn btn-primary" type="submit">Email me a login link</button>
           </form>
