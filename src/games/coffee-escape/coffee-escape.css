@@ -1,17 +1,40 @@
-/* Coffee Escape — game styles (migrated from inline HTML) */
-    /* Coffee Escape — self-contained game styles.
-       Designed mobile-first: the stage fills the available width and
-       uses a flexible aspect ratio so it stays usable on 320px phones
-       through to desktop. */
-    .ce-app {
-      max-width: 1100px;
+/* Coffee Escape — self-contained layout + chrome.
+   Page shell is centered on desktop; mobile controls stay compact
+   and clear of the caffeine meter / hints. */
+
+    /* Ensure the page itself can center the app column. */
+    html.ce-page,
+    body:has(.ce-app) {
       width: 100%;
-      margin: 0 auto;
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+    body:has(.ce-app) {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100%;
+    }
+
+    .ce-app,
+    .app.ce-app {
+      /* Reasonable game column — avoids ultrawide stretch + left bias */
+      width: min(100%, 960px);
+      max-width: 960px;
+      margin-left: auto;
+      margin-right: auto;
       -webkit-text-size-adjust: 100%;
-      /* Generous top padding so the title is never clipped. */
-      padding: 28px 20px 16px;
+      /* Top padding keeps title fully on-screen (no crop under browser UI) */
+      padding: 20px 16px 18px;
+      padding-top: max(20px, env(safe-area-inset-top, 0px));
+      padding-bottom: max(14px, env(safe-area-inset-bottom, 0px));
+      padding-left: max(16px, env(safe-area-inset-left, 0px));
+      padding-right: max(16px, env(safe-area-inset-right, 0px));
       box-sizing: border-box;
       overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
     }
 
     /* While a run is active, stop the document from scrolling under swipes. */
@@ -23,41 +46,33 @@
       height: 100%;
     }
     @media (max-width: 400px) {
-      .ce-app {
-        padding: 16px 12px 12px;
+      .ce-app,
+      .app.ce-app {
+        padding: 12px 10px 12px;
+        padding-top: max(12px, env(safe-area-inset-top, 0px));
+        padding-bottom: max(10px, env(safe-area-inset-bottom, 0px));
       }
     }
 
-    /* On Coffee Escape the main element does NOT stretch with
-       flex: 1 (the shared .arcade-main has flex: 1). The main
-       takes its content's natural height, so the header, stage,
-       and footer stack naturally from the top — no vertical
-       centering, no big gap above the header. The footer sits
-       directly below the game. */
+    /* Stack header → stage → footer; do not flex-grow main into empty space. */
     .ce-app .arcade-main {
       flex: 0 0 auto;
+      width: 100%;
+      display: block;
+      margin: 0 auto;
     }
 
-    /* The stage is the 3D canvas. It fills the page width up to 860px.
-       On portrait phones, we use a fixed height in vh so the entire
-       page (header + stage + footer) fits in the viewport on a single
-       screen without scrolling. The Three.js renderer reads the
-       rendered size to set its camera aspect ratio. */
+    /* Game viewport: full column width, capped, always centered. */
     .ce-stage {
       position: relative;
       width: 100%;
-      /* Removed the 860px max-width cap so the stage fills the
-         full page content width (up to 888px on desktop with
-         16px padding each side). The 16:9 aspect ratio caps the
-         height, so the stage is now ~500px tall on desktop
-         instead of ~484px — a modest but noticeable improvement. */
-      margin: 0 auto;
+      max-width: 900px;
+      margin-left: auto;
+      margin-right: auto;
       aspect-ratio: 16 / 9;
       background: #fff7e6;
       border-radius: 20px;
       overflow: hidden;
-      /* Polished frame: warm shadow that matches the theme, plus a
-         subtle 1px orange-tinted border to read as a "viewport." */
       border: 1px solid rgba(178, 94, 0, 0.18);
       box-shadow:
         0 1px 2px rgba(180, 90, 0, 0.10),
@@ -68,108 +83,110 @@
       -webkit-user-select: none;
     }
     @media (max-aspect-ratio: 1/1) {
-      /* Portrait phones: keep the stage short so the page (header +
-         stage + footer) fits better in the viewport. */
+      /* Portrait phones: shorter stage so chrome still fits. */
       .ce-stage {
         aspect-ratio: auto;
-        height: 48vh;
-        max-height: 520px;
-        min-height: 240px;
+        height: 46vh;
+        max-height: 480px;
+        min-height: 220px;
       }
     }
     @media (max-aspect-ratio: 1/1) and (max-width: 380px) {
-      /* Very small portrait phones: slightly more height to keep the
-         cup readable, but still leaves room for the rest of the page. */
-      .ce-stage { height: 50vh; min-height: 220px; }
+      .ce-stage { height: 44vh; min-height: 210px; max-height: 400px; }
     }
     @media (max-aspect-ratio: 1/1) and (max-height: 640px) {
-      /* Short phones (SE / small Android): prioritize fitting without
-         forcing the whole page to scroll during play. */
-      .ce-stage { height: 42vh; min-height: 200px; max-height: 360px; }
-      .ce-app { padding-top: 12px; padding-bottom: 8px; }
+      .ce-stage { height: 40vh; min-height: 190px; max-height: 340px; }
+      .ce-app,
+      .app.ce-app { padding-top: max(10px, env(safe-area-inset-top, 0px)); padding-bottom: 8px; }
     }
     @media (max-aspect-ratio: 1/1) and (min-height: 700px) {
-      /* Tablets in portrait (iPad, etc): cap so the page fits without
-         scrolling. */
-      .ce-stage { max-height: 520px; }
+      .ce-stage { max-height: 500px; }
     }
-    @media (min-width: 1024px) and (min-aspect-ratio: 4/3) {
-      /* Desktop / landscape: larger stage for immersion. */
-      .ce-stage { aspect-ratio: 16 / 9; height: auto; max-height: 680px; }
+    @media (min-width: 900px) and (min-aspect-ratio: 4/3) {
+      .ce-stage {
+        aspect-ratio: 16 / 9;
+        height: auto;
+        max-height: min(560px, 62vh);
+        max-width: 900px;
+      }
     }
 
     canvas.ce-canvas {
       display: block;
       width: 100%;
       height: 100%;
-      /* The stage already has touch-action: none, but the canvas
-         inside it has its own touch behavior. Set this on the
-         canvas too so the browser doesn't try to start a pan or
-         zoom gesture on a touch, which can swallow swipes and
-         add the iOS 300ms tap delay. */
       touch-action: none;
     }
 
-    /* Header — override the shared .title / .subtitle (which are
-       white-on-warm-gradient, low contrast) with darker, warmer
-       text that reads clearly on the cream background. */
+    /* Header — fully visible, centered, never clipped. */
     .ce-app .header {
-      margin-bottom: 10px;
-      margin-top: 4px;
+      margin: 0 0 12px;
+      padding: 2px 8px 0;
       text-align: center;
-      padding: 0 4px;
       box-sizing: border-box;
+      width: 100%;
       max-width: 100%;
+      flex: 0 0 auto;
     }
     .ce-app .title {
       color: #3a1f00;
       font-weight: 900;
       letter-spacing: -0.01em;
       text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
-      font-size: clamp(1.35rem, 5.2vw, 2rem);
-      line-height: 1.15;
-      margin: 0 0 4px;
+      font-size: clamp(1.25rem, 4.2vw, 1.85rem);
+      line-height: 1.2;
+      margin: 0 0 6px;
+      padding: 0;
       overflow-wrap: anywhere;
+      word-break: break-word;
       max-width: 100%;
+      text-align: center;
     }
     .ce-app .subtitle {
       color: #6b3a14;
       font-weight: 600;
-      font-size: clamp(0.82rem, 3.2vw, 1rem);
-      line-height: 1.3;
-      margin: 0;
-      max-width: 36ch;
-      margin-left: auto;
-      margin-right: auto;
+      font-size: clamp(0.8rem, 2.6vw, 0.98rem);
+      line-height: 1.35;
+      margin: 0 auto;
+      max-width: 40ch;
+      text-align: center;
     }
 
-    /* Action button bar — fixed at the bottom-right of the stage.
-       Two circular buttons side by side: BOOST on the left, JUMP on
-       the right. Both have a 64×64 minimum hit target for a11y.
-       Hidden on devices with a real keyboard (desktop). */
+    /* —— Mobile action buttons (BOOST / JUMP) ——
+       Compact, bottom-right, clear of caffeine meter (left) and
+       control hint (center). Hidden on fine-pointer desktop. */
     .ce-actions-bar {
       position: absolute;
-      right: 14px;
-      bottom: 14px;
+      right: max(10px, env(safe-area-inset-right, 0px));
+      bottom: max(10px, env(safe-area-inset-bottom, 0px));
       display: flex;
-      gap: 10px;
+      flex-direction: row;
+      gap: 8px;
       z-index: 4;
+      /* Keep left ~half of stage free for meter / hint */
+      max-width: 46%;
+      justify-content: flex-end;
     }
-    @media (hover: hover) and (pointer: fine) {
-      .ce-actions-bar { display: none; }
+    /* Desktop / mouse: keyboard controls only — never show fat touch buttons */
+    @media (hover: hover) and (pointer: fine), (min-width: 900px) {
+      .ce-actions-bar { display: none !important; }
     }
     .ce-jump-btn,
     .ce-boost-btn {
-      width: 76px;
-      height: 76px;
-      min-width: 64px;
-      min-height: 64px;
+      /* Default phone size — tappable but not huge */
+      width: 56px;
+      height: 56px;
+      min-width: 48px;
+      min-height: 48px;
+      max-width: 60px;
+      max-height: 60px;
       border-radius: 50%;
       border: none;
       color: #fff;
       font-weight: 800;
-      font-size: 0.85rem;
-      box-shadow: 0 6px 14px rgba(0, 0, 0, 0.25);
+      font-size: 0.62rem;
+      letter-spacing: 0.02em;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.22);
       cursor: pointer;
       touch-action: manipulation;
       -webkit-tap-highlight-color: transparent;
@@ -179,8 +196,10 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 2px;
+      gap: 1px;
       line-height: 1;
+      padding: 0;
+      flex: 0 0 auto;
     }
     .ce-jump-btn { background: linear-gradient(180deg, #ffb347, #ff8800); }
     .ce-boost-btn {
@@ -190,12 +209,11 @@
     }
     .ce-jump-btn:active,
     .ce-boost-btn:active {
-      transform: translateY(2px);
-      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
+      transform: translateY(1px);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22);
     }
     .ce-jump-btn .ce-btn-icon,
-    .ce-boost-btn .ce-btn-icon { font-size: 1.4rem; line-height: 1; }
-    /* Fill bar inside the boost button. */
+    .ce-boost-btn .ce-btn-icon { font-size: 1.05rem; line-height: 1; }
     .ce-boost-fill {
       position: absolute;
       left: 0;
@@ -208,21 +226,37 @@
     }
     .ce-boost-btn.is-active { animation: ce-boost-pulse 0.4s ease-in-out infinite; }
     @keyframes ce-boost-pulse {
-      0%, 100% { box-shadow: 0 6px 14px rgba(0, 0, 0, 0.25), 0 0 0 0 rgba(78, 192, 255, 0.6); }
-      50%      { box-shadow: 0 6px 14px rgba(0, 0, 0, 0.25), 0 0 0 10px rgba(78, 192, 255, 0); }
+      0%, 100% { box-shadow: 0 4px 10px rgba(0, 0, 0, 0.22), 0 0 0 0 rgba(78, 192, 255, 0.55); }
+      50%      { box-shadow: 0 4px 10px rgba(0, 0, 0, 0.22), 0 0 0 8px rgba(78, 192, 255, 0); }
     }
-    /* Extra-small phones: shrink the buttons a bit. */
-    @media (max-width: 360px) {
-      .ce-jump-btn, .ce-boost-btn { width: 68px; height: 68px; }
+    /* Narrow phones: slightly smaller, still ≥44px target */
+    @media (max-width: 390px) {
+      .ce-jump-btn, .ce-boost-btn {
+        width: 52px;
+        height: 52px;
+        min-width: 48px;
+        min-height: 48px;
+        font-size: 0.58rem;
+      }
+      .ce-jump-btn .ce-btn-icon,
+      .ce-boost-btn .ce-btn-icon { font-size: 0.98rem; }
+      .ce-actions-bar { gap: 6px; right: 8px; bottom: 8px; }
+    }
+    @media (max-width: 320px) {
+      .ce-jump-btn, .ce-boost-btn {
+        width: 48px;
+        height: 48px;
+        font-size: 0.52rem;
+      }
     }
 
-    /* Boost meter (bar in the bottom-left of the stage) */
+    /* Boost meter — bottom-LEFT, never under action buttons */
     .ce-boost-hud {
       position: absolute;
-      left: 12px;
-      bottom: 16px;
-      width: 130px;
-      height: 16px;
+      left: max(10px, env(safe-area-inset-left, 0px));
+      bottom: max(12px, env(safe-area-inset-bottom, 0px));
+      width: min(120px, 32vw);
+      height: 14px;
       background: linear-gradient(180deg, #ffffff 0%, #fff7e0 100%);
       border: 1.5px solid #4ec0ff;
       border-radius: 999px;
@@ -241,9 +275,9 @@
     }
     .ce-boost-hud-label {
       position: absolute;
-      left: 12px;
-      bottom: 36px;
-      font-size: 0.75rem;
+      left: max(10px, env(safe-area-inset-left, 0px));
+      bottom: calc(12px + 18px);
+      font-size: 0.68rem;
       font-weight: 800;
       color: #2080d0;
       text-transform: uppercase;
@@ -253,8 +287,8 @@
       text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
     }
     @media (max-width: 380px) {
-      .ce-boost-hud { width: 100px; height: 14px; }
-      .ce-boost-hud-label { font-size: 0.66rem; bottom: 32px; }
+      .ce-boost-hud { width: min(96px, 30vw); height: 12px; }
+      .ce-boost-hud-label { font-size: 0.6rem; bottom: calc(10px + 16px); }
     }
 
     /* Generic overlay used by intro, start, and game-over */
@@ -611,12 +645,7 @@
       .ce-lb-btn { padding: 7px 12px; font-size: 0.88rem; }
     }
 
-    /* Floating control hint — small compact overlay inside the
-       stage, anchored at the bottom-center. Absolutely positioned
-       so it doesn't participate in the page's flex layout (the
-       page main is `display: flex` and we don't want the hint to
-       become a sibling flex item that stretches to full height).
-       pointer-events: none so taps fall through to the canvas. */
+    /* Floating control hint — bottom-center of stage, clear of buttons. */
     .ce-floating-cta {
       position: absolute;
       left: 50%;
@@ -626,17 +655,18 @@
       background: linear-gradient(180deg, #ffffff 0%, #fff7e0 100%);
       border: 1.5px solid #ffb347;
       border-radius: 999px;
-      padding: 6px 14px;
+      padding: 5px 12px;
       color: #5a3a14;
       font-weight: 700;
-      font-size: 0.78rem;
+      font-size: 0.72rem;
       letter-spacing: 0.01em;
       box-shadow: 0 2px 6px rgba(180, 90, 0, 0.20);
       text-align: center;
       white-space: nowrap;
-      /* Cap width so the pill never spans the whole canvas. Leaves
-         room for the JUMP/BOOST action buttons on the right. */
-      max-width: calc(100% - 180px);
+      /* Leave room for caffeine (left) + action buttons (right) */
+      max-width: min(280px, calc(100% - 160px));
+      overflow: hidden;
+      text-overflow: ellipsis;
       pointer-events: none;
       z-index: 2;
     }
@@ -644,47 +674,55 @@
       0%, 100% { opacity: 1; }
       50% { opacity: 0.85; }
     }
-    /* Mobile: position the hint above the action buttons (which sit
-       at the bottom-right) and make it smaller. Swap the text to
-       the touch/swipe variant. */
-    @media (max-width: 380px) {
+    /* Touch / narrow: mobile copy only; lift above compact action buttons */
+    @media (max-width: 720px), (hover: none) and (pointer: coarse) {
       .ce-floating-cta {
-        font-size: 0.72rem;
-        padding: 5px 12px;
-        /* Sit above the JUMP/BOOST buttons (which are 76px tall + 14px
-           from the bottom = 90px from the bottom). */
-        bottom: 100px;
-        max-width: calc(100% - 32px);
+        font-size: 0.66rem;
+        padding: 4px 10px;
+        /* 52–56px buttons + 8–10px bottom ≈ sit above them */
+        bottom: 72px;
+        left: 50%;
+        transform: translateX(-50%);
+        max-width: min(240px, calc(100% - 24px));
+        white-space: normal;
+        line-height: 1.25;
       }
-      .ce-floating-cta-desktop { display: none; }
+      .ce-floating-cta-desktop { display: none !important; }
       .ce-floating-cta-mobile  { display: inline; }
     }
-    /* Desktop: show the keyboard hint, hide the touch hint. */
-    @media (min-width: 381px) {
+    /* Desktop / fine pointer: keyboard hint only */
+    @media (hover: hover) and (pointer: fine) and (min-width: 721px) {
+      .ce-floating-cta {
+        bottom: 14px;
+        max-width: min(420px, calc(100% - 48px));
+        white-space: nowrap;
+      }
       .ce-floating-cta-desktop { display: inline; }
-      .ce-floating-cta-mobile  { display: none; }
+      .ce-floating-cta-mobile  { display: none !important; }
     }
 
-    /* Start-screen control hints — same responsive pattern as the
-       floating CTA. Desktop shows keyboard, mobile shows swipe. */
+    /* Start-screen control hints */
     .ce-hint-desktop { display: inline; }
     .ce-hint-mobile  { display: none; }
-    @media (hover: none) and (pointer: coarse) {
+    @media (hover: none) and (pointer: coarse), (max-width: 720px) {
       .ce-hint-desktop { display: none; }
       .ce-hint-mobile  { display: inline; }
     }
 
-    /* Footer — tight 2-row layout so the page feels connected to
-       the game. Tighter spacing, smaller text, row of action pills. */
+    /* Footer — centered under the game column, not cramped into stage. */
     .ce-app .ce-footer {
-      /* Tighter top margin so the footer sits closer to the stage.
-         Was 14px; now 10px. */
-      margin-top: 10px;
-      padding: 0;
+      margin-top: 14px;
+      margin-left: auto;
+      margin-right: auto;
+      padding: 0 4px;
+      width: 100%;
+      max-width: 900px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
+      flex: 0 0 auto;
+      box-sizing: border-box;
     }
     .ce-app .ce-footer-row {
       display: flex;
@@ -692,6 +730,7 @@
       justify-content: center;
       align-items: center;
       gap: 8px;
+      width: 100%;
     }
     .ce-app .ce-footer-meta {
       gap: 10px;

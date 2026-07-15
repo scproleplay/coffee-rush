@@ -6,8 +6,27 @@ body {
   margin: 0;
 }
 
+/* Center the CE column on wide viewports (shared chrome + game CSS). */
+html:has(.ce-app),
+body:has(.ce-app) {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+body:has(.ce-app) {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100%;
+}
+
 .app.ce-app {
-  /* game CSS also defines .ce-app — both are fine */
+  width: min(100%, 960px);
+  max-width: 960px;
+  margin-left: auto;
+  margin-right: auto;
+  box-sizing: border-box;
 }
 
 /* Buttons used on start/game-over cards */
