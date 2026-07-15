@@ -71,19 +71,25 @@
 
           <div id="ceStartOverlay" class="ce-overlay" hidden>
             <div class="ce-card">
+              <div class="ce-start-hero" aria-hidden="true">
+                <span class="ce-start-cup">☕</span>
+                <span class="ce-start-chase">🏃</span>
+              </div>
               <h2>☕ Coffee Escape</h2>
               <p class="ce-tagline">He wants his coffee. You want freedom.</p>
-              <p style="font-size: 0.88rem; color: #8a5a2c; margin-bottom: 10px">
+              <p class="ce-story">
+                You’re a living coffee cup racing through a house — kitchen,
+                hallway, living room — while a tired man tries to catch his
+                brew. Jump furniture, dodge clutter, sip caffeine boosts, and
+                keep running.
+              </p>
+              <p class="ce-controls-hint">
                 <span class="ce-hint-desktop"
-                  >Desktop: A/D or ← → to move · Space/↑ to jump · Shift to
-                  boost.</span
+                  >Desktop: A/D or ← → lanes · Space/↑ jump · Shift boost</span
                 >
                 <span class="ce-hint-mobile"
-                  >Mobile: Swipe ← → to move · Swipe ↑ to jump.</span
+                  >Mobile: Swipe ← → lanes · Swipe ↑ jump · Boost button</span
                 >
-              </p>
-              <p style="font-size: 0.78rem; color: #a08060; margin: 0 0 6px">
-                Avoid obstacles. Collect caffeine. Escape as long as you can.
               </p>
               <div class="ce-actions">
                 <button
@@ -104,7 +110,10 @@
 
           <div id="ceGameOverOverlay" class="ce-overlay" hidden>
             <div class="ce-card">
-              <h2 id="ceOverTitle">Caught! ☕😱</h2>
+              <h2 id="ceOverTitle">Caught in the house! ☕😱</h2>
+              <p class="ce-over-blurb">
+                The tired man almost got his coffee. Escape farther next time.
+              </p>
               <div id="ceNewBest" class="ce-new-best" hidden>NEW BEST!</div>
               <div class="ce-result-grid">
                 <div class="ce-result-item" id="ceFinalScoreItem">
@@ -171,7 +180,7 @@
         </div>
         <div class="ce-footer-row ce-footer-meta">
           <span class="footer-note">Made with love and caffeine.</span>
-          <span class="footer-version">Coffee Escape · Platform</span>
+          <span class="footer-version">Coffee Escape · House Chase</span>
           <button
             id="ceResetBest"
             class="btn-reset"

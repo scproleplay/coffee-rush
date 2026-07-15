@@ -9,13 +9,14 @@ export interface SceneBundle {
 }
 
 /**
- * Three.js scene bootstrap (CE-local).
+ * Three.js scene bootstrap (CE-local) — warm house interior lighting.
  * Canvas must already exist in the DOM.
  */
 export function createScene(canvas: HTMLCanvasElement): SceneBundle {
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xfff1d6);
-  scene.fog = new THREE.Fog(0xffd9a8, 22, 90);
+  // Warm cream house atmosphere (not cool office)
+  scene.background = new THREE.Color(0xffefd6);
+  scene.fog = new THREE.Fog(0xffd9a8, 18, 78);
 
   const camera = new THREE.PerspectiveCamera(70, 16 / 9, 0.1, 200);
   const cameraBaseY = 2.6;
@@ -29,20 +30,32 @@ export function createScene(canvas: HTMLCanvasElement): SceneBundle {
     alpha: false,
   });
   renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
-  renderer.setClearColor(0xfff1d6, 1);
+  renderer.setClearColor(0xffefd6, 1);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-  const hemi = new THREE.HemisphereLight(0xfff1d6, 0xb87333, 0.7);
+  // Soft ambient house light
+  const hemi = new THREE.HemisphereLight(0xfff4e0, 0x8a5a30, 0.78);
   scene.add(hemi);
-  const sun = new THREE.DirectionalLight(0xffe5b0, 0.95);
-  sun.position.set(4, 10, -3);
+
+  // Warm key light (afternoon window feel)
+  const sun = new THREE.DirectionalLight(0xffe2b0, 1.0);
+  sun.position.set(3.5, 9, -2);
   scene.add(sun);
-  const fill = new THREE.DirectionalLight(0xc8d8ff, 0.3);
-  fill.position.set(-5, 6, 2);
+
+  // Gentle cool fill from opposite side (shadow depth without going office-blue)
+  const fill = new THREE.DirectionalLight(0xffd8c0, 0.28);
+  fill.position.set(-5, 5, 2);
   scene.add(fill);
-  const rim = new THREE.PointLight(0xffb070, 0.4, 8, 2);
-  rim.position.set(0, 0.5, 2);
+
+  // Warm rim near camera / cup
+  const rim = new THREE.PointLight(0xffb070, 0.5, 10, 2);
+  rim.position.set(0, 0.6, 2);
   scene.add(rim);
+
+  // Ceiling wash — soft overhead house lamps
+  const ceilingWash = new THREE.PointLight(0xffe8c8, 0.35, 40, 2);
+  ceilingWash.position.set(0, 5.2, -20);
+  scene.add(ceilingWash);
 
   return { scene, camera, renderer, cameraBaseY, cameraBaseZ };
 }

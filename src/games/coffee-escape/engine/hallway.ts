@@ -5,8 +5,12 @@ import {
   makeWallTexture,
 } from './textures';
 import {
+  makeArmchair,
+  makeCabinet,
+  makeDoor,
   makePictureFrame,
   makePlant,
+  makeRug,
   makeSideTable,
   makeWallLamp,
 } from '../entities/decor';
@@ -20,9 +24,8 @@ export interface HallwayBundle {
 }
 
 /**
- * Build the scrolling hallway shell + side decor pool (CE-local).
- * Restored as a factory so runtime stays thin and hallway can't be
- * accidentally deleted mid-refactor again.
+ * Build the scrolling house interior shell + side decor pool (CE-local).
+ * Visual-only: does not change lane collision or obstacle gameplay.
  */
 export function createHallway(scene: THREE.Scene): HallwayBundle {
   const floorTex = makeFloorTexture();
@@ -59,47 +62,134 @@ export function createHallway(scene: THREE.Scene): HallwayBundle {
   ceiling.position.z = -80;
   scene.add(ceiling);
 
+  // Soft runner rug down the center of the hall (visual only — not collidable)
+  const runnerMat = new THREE.MeshLambertMaterial({ color: 0xa84838 });
+  const runner = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 200), runnerMat);
+  runner.rotation.x = -Math.PI / 2;
+  runner.position.set(0, 0.01, -80);
+  scene.add(runner);
+  const runnerEdgeMat = new THREE.MeshLambertMaterial({ color: 0xe8d0a0 });
+  for (const x of [-0.72, 0.72]) {
+    const edge = new THREE.Mesh(new THREE.PlaneGeometry(0.08, 200), runnerEdgeMat);
+    edge.rotation.x = -Math.PI / 2;
+    edge.position.set(x, 0.012, -80);
+    scene.add(edge);
+  }
+
+  // Baseboards (skirt boards) — classic house interior
+  const baseMat = new THREE.MeshLambertMaterial({ color: 0xf0e0c0 });
+  const baseL = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.22, 200), baseMat);
+  baseL.position.set(-2.94, 0.11, -80);
+  scene.add(baseL);
+  const baseR = baseL.clone();
+  baseR.position.x = 2.94;
+  scene.add(baseR);
+  // Darker top cap on baseboard
+  const capMat = new THREE.MeshLambertMaterial({ color: 0xd4b890 });
+  const capL = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.04, 200), capMat);
+  capL.position.set(-2.94, 0.24, -80);
+  scene.add(capL);
+  const capR = capL.clone();
+  capR.position.x = 2.94;
+  scene.add(capR);
+
+  // Crown molding under ceiling
+  const crownMat = new THREE.MeshLambertMaterial({ color: 0xf5e8d0 });
+  const crownL = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.12, 200), crownMat);
+  crownL.position.set(-2.94, 5.9, -80);
+  scene.add(crownL);
+  const crownR = crownL.clone();
+  crownR.position.x = 2.94;
+  scene.add(crownR);
+
+  // Soft side floor rails (lane guides) — keep for gameplay readability
   const railMat = new THREE.MeshLambertMaterial({ color: 0x8a5a2c });
-  const railGeo = new THREE.BoxGeometry(0.08, 0.05, 200);
+  const railGeo = new THREE.BoxGeometry(0.06, 0.03, 200);
   const railL = new THREE.Mesh(railGeo, railMat);
-  railL.position.set(-0.8, 0.025, -80);
+  railL.position.set(-0.8, 0.02, -80);
   scene.add(railL);
   const railR = railL.clone();
   railR.position.x = 0.8;
   scene.add(railR);
 
-  const skirtMat = new THREE.MeshLambertMaterial({ color: 0x5a3a14 });
-  const skirtL = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.18, 200), skirtMat);
-  skirtL.position.set(-2.96, 0.09, -80);
-  scene.add(skirtL);
-  const skirtR = skirtL.clone();
-  skirtR.position.x = 2.96;
-  scene.add(skirtR);
+  // Warm hanging pendant lights along the hall (static shell, scrolls via fog feel)
+  const pendantMat = new THREE.MeshLambertMaterial({
+    color: 0xffe8c0,
+    emissive: 0xffaa60,
+    emissiveIntensity: 0.45,
+  });
+  for (let i = 0; i < 8; i++) {
+    const shade = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.28, 10), pendantMat);
+    shade.position.set(0, 5.55, -10 - i * 18);
+    shade.rotation.x = Math.PI;
+    scene.add(shade);
+    const cord = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.015, 0.015, 0.4, 4),
+      new THREE.MeshLambertMaterial({ color: 0x4a3020 }),
+    );
+    cord.position.set(0, 5.85, -10 - i * 18);
+    scene.add(cord);
+  }
 
-  const DECOR_SPACING = 8;
+  // Scrolling side decor — denser house props (doors, frames, furniture, rugs)
+  const DECOR_SPACING = 6.5;
   const decorItems: THREE.Object3D[] = [];
-  for (let i = 0; i < 26; i++) {
-    const side = i % 2 === 0 ? 'left' : 'right';
-    const decorType = i % 4;
+  const COUNT = 32;
+
+  for (let i = 0; i < COUNT; i++) {
+    const side: 'left' | 'right' = i % 2 === 0 ? 'left' : 'right';
+    const pattern = i % 8;
     let item: THREE.Object3D;
-    if (decorType === 0) {
+
+    if (pattern === 0) {
+      item = makeDoor(side);
+      item.scale.setScalar(1);
+      item.position.x = side === 'left' ? -2.9 : 2.9;
+      item.position.y = 0;
+      // Face inward slightly
+      item.rotation.y = side === 'left' ? Math.PI / 2 : -Math.PI / 2;
+    } else if (pattern === 1) {
       item = makePictureFrame(i % 4, side);
-    } else if (decorType === 1) {
-      item = makeWallLamp();
-    } else if (decorType === 2) {
-      item = makePlant();
-    } else {
-      item = makeSideTable();
-    }
-    item.scale.setScalar(1.5);
-    if (decorType === 0 || decorType === 1) {
+      item.scale.setScalar(1.55);
       item.rotation.y = side === 'left' ? -Math.PI / 2 : Math.PI / 2;
       item.position.x = side === 'left' ? -2.95 : 2.95;
-      item.position.y = 2.6;
-    } else {
+      item.position.y = 2.75;
+    } else if (pattern === 2) {
+      item = makeWallLamp();
+      item.scale.setScalar(1.4);
+      item.rotation.y = side === 'left' ? -Math.PI / 2 : Math.PI / 2;
+      item.position.x = side === 'left' ? -2.92 : 2.92;
+      item.position.y = 2.9;
+    } else if (pattern === 3) {
+      item = makeArmchair();
+      item.scale.setScalar(1.15);
+      item.position.x = side === 'left' ? -2.15 : 2.15;
+      item.position.y = 0;
+      item.rotation.y = side === 'left' ? Math.PI / 2 : -Math.PI / 2;
+    } else if (pattern === 4) {
+      item = makeCabinet();
+      item.scale.setScalar(1.2);
+      item.position.x = side === 'left' ? -2.25 : 2.25;
+      item.position.y = 0;
+      item.rotation.y = side === 'left' ? Math.PI / 2 : -Math.PI / 2;
+    } else if (pattern === 5) {
+      item = makeSideTable();
+      item.scale.setScalar(1.35);
       item.position.x = side === 'left' ? -2.2 : 2.2;
       item.position.y = 0;
+    } else if (pattern === 6) {
+      item = makePlant();
+      item.scale.setScalar(1.5);
+      item.position.x = side === 'left' ? -2.25 : 2.25;
+      item.position.y = 0;
+    } else {
+      item = makeRug();
+      item.scale.setScalar(1.1);
+      item.position.x = side === 'left' ? -1.9 : 1.9;
+      item.position.y = 0;
+      item.rotation.y = Math.PI / 2;
     }
+
     item.position.z = -i * DECOR_SPACING;
     scene.add(item);
     decorItems.push(item);

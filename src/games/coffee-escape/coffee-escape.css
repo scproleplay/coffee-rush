@@ -113,16 +113,34 @@
     /* Header — override the shared .title / .subtitle (which are
        white-on-warm-gradient, low contrast) with darker, warmer
        text that reads clearly on the cream background. */
-    .ce-app .header { margin-bottom: 10px; margin-top: 4px; }
+    .ce-app .header {
+      margin-bottom: 10px;
+      margin-top: 4px;
+      text-align: center;
+      padding: 0 4px;
+      box-sizing: border-box;
+      max-width: 100%;
+    }
     .ce-app .title {
       color: #3a1f00;
       font-weight: 900;
       letter-spacing: -0.01em;
       text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+      font-size: clamp(1.35rem, 5.2vw, 2rem);
+      line-height: 1.15;
+      margin: 0 0 4px;
+      overflow-wrap: anywhere;
+      max-width: 100%;
     }
     .ce-app .subtitle {
       color: #6b3a14;
       font-weight: 600;
+      font-size: clamp(0.82rem, 3.2vw, 1rem);
+      line-height: 1.3;
+      margin: 0;
+      max-width: 36ch;
+      margin-left: auto;
+      margin-right: auto;
     }
 
     /* Action button bar — fixed at the bottom-right of the stage.
@@ -298,11 +316,66 @@
       font-style: italic;
       margin: 0 0 10px;
     }
+    /* Phase 1: start story + soft chaser silhouette (no cutscene). */
+    .ce-start-hero {
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      gap: 10px;
+      margin: 0 0 6px;
+      min-height: 42px;
+      line-height: 1;
+      user-select: none;
+      pointer-events: none;
+    }
+    .ce-start-cup {
+      font-size: 2.1rem;
+      filter: drop-shadow(0 2px 0 rgba(180, 90, 0, 0.2));
+      animation: ce-cup-wiggle 1.6s ease-in-out infinite;
+    }
+    .ce-start-chase {
+      font-size: 1.55rem;
+      opacity: 0.55;
+      transform: translateY(2px);
+      filter: grayscale(0.35) contrast(0.9);
+      animation: ce-chase-bob 1.2s ease-in-out infinite;
+    }
+    @keyframes ce-cup-wiggle {
+      0%, 100% { transform: translateX(0) rotate(-4deg); }
+      50% { transform: translateX(3px) rotate(4deg); }
+    }
+    @keyframes ce-chase-bob {
+      0%, 100% { transform: translateY(2px) translateX(0); }
+      50% { transform: translateY(0) translateX(2px); }
+    }
+    .ce-story {
+      font-size: 0.86rem !important;
+      color: #6b4220 !important;
+      margin: 0 0 10px !important;
+      line-height: 1.45 !important;
+      max-width: 36ch;
+      margin-left: auto !important;
+      margin-right: auto !important;
+    }
+    .ce-controls-hint {
+      font-size: 0.82rem !important;
+      color: #8a5a2c !important;
+      margin: 0 0 4px !important;
+    }
+    .ce-over-blurb {
+      font-size: 0.84rem !important;
+      color: #8a5a2c !important;
+      margin: 0 0 10px !important;
+      font-style: italic;
+    }
     @media (max-width: 380px) {
       .ce-card { padding: 18px 16px 16px; }
       .ce-card h2 { font-size: 1.4rem; }
       .ce-card p { font-size: 0.92rem; }
       .ce-card .ce-tagline { font-size: 0.88rem; }
+      .ce-story { font-size: 0.8rem !important; max-width: none; }
+      .ce-start-cup { font-size: 1.8rem; }
+      .ce-start-chase { font-size: 1.35rem; }
     }
 
     /* "RUN!" stamp — appears briefly on the first run, animates in

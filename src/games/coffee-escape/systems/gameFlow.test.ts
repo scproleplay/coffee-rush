@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { isNewBest, pickGameOverTitle } from './gameFlow';
 
 describe('pickGameOverTitle', () => {
-  it('tiers by score', () => {
-    expect(pickGameOverTitle(0)).toContain('Spat');
-    expect(pickGameOverTitle(50)).toContain('Caught');
-    expect(pickGameOverTitle(100)).toContain('brew-tal');
-    expect(pickGameOverTitle(200)).toContain('Legendary');
+  it('tiers by score with house-chase copy', () => {
+    expect(pickGameOverTitle(0)).toMatch(/Caught|house/i);
+    expect(pickGameOverTitle(50)).toMatch(/almost had you|Caught/i);
+    expect(pickGameOverTitle(100)).toMatch(/free|Almost/i);
+    expect(pickGameOverTitle(200)).toMatch(/legend|House/i);
   });
 });
 
