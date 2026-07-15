@@ -2,27 +2,38 @@
  * Player action application (CE-local).
  * Uses pure gates from inputLogic / playerMotion / pacingLogic.
  */
-import { LANE_X } from '../engine/constants';
+import { LANE_X, MAX_JUMPS } from '../engine/constants';
 import type { GameState } from '../engine/types';
 import { canBoost, canChangeLane, canJump } from './inputLogic';
 import { applyJumpImpulse } from './playerMotion';
 import { startBoost as pureStartBoost } from './pacingLogic';
 
-export function tryJump(state: GameState): boolean {
+export type JumpResult = {
+  ok: boolean;
+  isDouble: boolean;
+};
+
+export function tryJump(state: GameState): JumpResult {
   if (
     !canJump({
       running: state.running,
       gameOver: state.gameOver,
       onGround: state.player.onGround,
+      jumpsLeft: state.player.jumpsLeft,
     })
   ) {
-    return false;
+    return { ok: false, isDouble: false };
   }
-  const imp = applyJumpImpulse(state.player.onGround);
-  if (!imp) return false;
+  const imp = applyJumpImpulse(state.player.jumpsLeft, state.player.onGround);
+  if (!imp) return { ok: false, isDouble: false };
   state.player.vy = imp.vy;
   state.player.onGround = imp.onGround;
-  return true;
+  state.player.jumpsLeft = imp.jumpsLeft;
+  // Fresh air timer on double so tilt feels snappy
+  if (imp.isDouble) {
+    state.player.airT = 0;
+  }
+  return { ok: true, isDouble: imp.isDouble };
 }
 
 export function tryLane(state: GameState, target: number): boolean {
@@ -60,4 +71,13 @@ export function tryBoost(state: GameState): boolean {
   state.boost.active = started.active;
   state.boost.timer = started.timer;
   return true;
+}
+
+/** Reset jump budget on landing (call from updateFrame). */
+export function refreshJumpsOnLand(state: GameState, justLanded: boolean): void {
+  if (justLanded || state.player.onGround) {
+    if (state.player.onGround) {
+      state.player.jumpsLeft = MAX_JUMPS;
+    }
+  }
 }

@@ -10,11 +10,25 @@ import {
 } from './inputLogic';
 
 describe('canJump', () => {
-  it('only while running on ground', () => {
-    expect(canJump({ running: true, gameOver: false, onGround: true })).toBe(true);
-    expect(canJump({ running: true, gameOver: false, onGround: false })).toBe(false);
-    expect(canJump({ running: false, gameOver: false, onGround: true })).toBe(false);
-    expect(canJump({ running: true, gameOver: true, onGround: true })).toBe(false);
+  it('allows ground jump while running', () => {
+    expect(
+      canJump({ running: true, gameOver: false, onGround: true, jumpsLeft: 2 }),
+    ).toBe(true);
+    expect(
+      canJump({ running: false, gameOver: false, onGround: true, jumpsLeft: 2 }),
+    ).toBe(false);
+    expect(
+      canJump({ running: true, gameOver: true, onGround: true, jumpsLeft: 2 }),
+    ).toBe(false);
+  });
+
+  it('allows double jump in air when jumpsLeft > 0', () => {
+    expect(
+      canJump({ running: true, gameOver: false, onGround: false, jumpsLeft: 1 }),
+    ).toBe(true);
+    expect(
+      canJump({ running: true, gameOver: false, onGround: false, jumpsLeft: 0 }),
+    ).toBe(false);
   });
 });
 

@@ -21,6 +21,7 @@ import {
   canCollectBean,
 } from './collisionLogic';
 import { nextBeanDelay, scoreFromTime, speedAtTime, tickBoost } from './pacingLogic';
+import { burstDustAt } from './spawnController';
 import {
   cupTiltX,
   laneBank,
@@ -93,6 +94,7 @@ export function updateFrame(ctx: UpdateFrameCtx): boolean {
   state.score = scoreFromTime(state.worldTime);
 
   const p = state.player;
+  const wasAirborne = !p.onGround;
   Object.assign(p, tickLaneMotion(p, dt, LANE_X));
   const jumped = tickJump(
     { y: p.y, vy: p.vy, onGround: p.onGround, airT: p.airT || 0 },
@@ -102,7 +104,27 @@ export function updateFrame(ctx: UpdateFrameCtx): boolean {
   p.vy = jumped.vy;
   p.onGround = jumped.onGround;
   p.airT = jumped.airT;
+  // Reset double-jump budget on landing
+  if (p.onGround) {
+    p.jumpsLeft = 2;
+  } else if (wasAirborne && p.jumpsLeft > 2) {
+    p.jumpsLeft = 2;
+  }
   p.runAnim = tickRunAnim(p.runAnim, dt, state.speed);
+
+  // Steam puff when double jump was requested this frame
+  const puffState = state as GameState & { _doubleJumpPuff?: boolean };
+  if (puffState._doubleJumpPuff) {
+    puffState._doubleJumpPuff = false;
+    // dustPool shape is compatible at runtime
+    burstDustAt(
+      ctx.dustPool as unknown as Parameters<typeof burstDustAt>[0],
+      p.laneX,
+      Math.max(0.2, p.y + 0.15),
+      0,
+      8,
+    );
+  }
 
   // Cup pose
   ctx.cup.position.x = p.laneX;

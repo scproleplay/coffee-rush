@@ -5,7 +5,7 @@ import type { PerspectiveCamera } from 'three';
 import {
   BASE_SPEED,
   LANE_X,
-  SPAWN_INTERVAL_START,
+  MAX_JUMPS,
   STORAGE_KEY,
 } from '../engine/constants';
 import type { GameState } from '../engine/types';
@@ -55,7 +55,8 @@ export function resetWorld(deps: ResetWorldDeps): void {
   state.score = 0;
   state.worldTime = 0;
   state.speed = BASE_SPEED;
-  state.nextSpawn = SPAWN_INTERVAL_START;
+  // Match Phase 2 early engagement (first obstacle soon after start)
+  state.nextSpawn = 0.55;
   state.lastObZ = -999;
   state.lastObLane = -1;
   state.shake = 0;
@@ -72,6 +73,7 @@ export function resetWorld(deps: ResetWorldDeps): void {
   state.player.onGround = true;
   state.player.runAnim = 0;
   state.player.airT = 0;
+  state.player.jumpsLeft = MAX_JUMPS;
   for (const o of state.obstacles) o.mesh.visible = false;
   state.boost.meter = 0;
   state.boost.active = false;
@@ -80,7 +82,7 @@ export function resetWorld(deps: ResetWorldDeps): void {
     b.active = false;
     b.mesh.visible = false;
   }
-  state.nextBean = 2.5;
+  state.nextBean = 1.6;
   for (const p of state.boostParticles) {
     p.life = 0;
     p.mesh.visible = false;

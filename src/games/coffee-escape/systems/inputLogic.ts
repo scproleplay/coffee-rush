@@ -10,6 +10,8 @@ export interface RunFlags {
 
 export interface JumpState extends RunFlags {
   onGround: boolean;
+  /** Remaining jumps (ground + double). Air jump allowed when > 0. */
+  jumpsLeft?: number;
 }
 
 export interface BoostStateFlags extends RunFlags {
@@ -26,8 +28,15 @@ export type InputAction =
   | { type: 'restart' }
   | { type: 'none' };
 
+/**
+ * Ground jump or double jump while run is active.
+ * Double jump: airborne with jumpsLeft > 0.
+ */
 export function canJump(s: JumpState): boolean {
-  return s.running && !s.gameOver && s.onGround;
+  if (!s.running || s.gameOver) return false;
+  // Back-compat: if jumpsLeft omitted, only ground jump
+  if (s.jumpsLeft === undefined) return s.onGround;
+  return s.jumpsLeft > 0;
 }
 
 export function canChangeLane(s: RunFlags): boolean {

@@ -7,6 +7,10 @@ export const LANE_X = [-1.6, 0, 1.6] as const;
 export const LANE_SWITCH_MS = 160;
 export const GROUND_Y = 0;
 export const JUMP_VY = 9.0;
+/** Second air jump — slightly softer so it feels like a steam kick, still reaches high beans */
+export const DOUBLE_JUMP_VY = 7.6;
+/** Max jumps before landing (ground + one air) */
+export const MAX_JUMPS = 2;
 export const GRAVITY = 22.0;
 
 export const OBSTACLE_POOL_SIZE = 30;

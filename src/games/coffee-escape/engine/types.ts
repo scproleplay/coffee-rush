@@ -13,7 +13,12 @@ export interface PlayerState {
   onGround: boolean;
   runAnim: number;
   airT?: number;
+  /** Remaining jumps before landing (2 on ground: ground + double). */
+  jumpsLeft: number;
 }
+
+/** Transient FX flags attached to GameState by input (not serialized). */
+export type DoubleJumpPuffFlag = { _doubleJumpPuff?: boolean };
 
 export interface ObstacleInstance {
   kind: ObstacleKind | string;

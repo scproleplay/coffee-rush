@@ -53,12 +53,27 @@ export function createSpawnController(state: GameState): SpawnController {
     return true;
   }
 
+  /**
+   * Bean heights:
+   * - Early: single-jump band (~0.85–1.25) — optional, fair
+   * - Later: some high beans (~1.55–1.95) reward double jump, never required for survival
+   */
+  function beanHeightForTime(t: number): number {
+    if (t < 12) {
+      return 0.85 + Math.random() * 0.4;
+    }
+    // ~30% high floaters after intro; still optional score candy
+    if (Math.random() < 0.3) {
+      return 1.55 + Math.random() * 0.4;
+    }
+    return 0.9 + Math.random() * 0.4;
+  }
+
   function spawnBeanAt(lane: number, z: number, y = 1.0): void {
     const b = state.beans.find((x) => !x.active);
     if (!b) return;
     b.lane = lane;
     b.z = z;
-    // Jump-only collectibles: mid-jump band (~0.85–1.20)
     b.y = y;
     b.rot = Math.random() * Math.PI * 2;
     b.active = true;
@@ -68,7 +83,7 @@ export function createSpawnController(state: GameState): SpawnController {
 
   function spawnBean(): void {
     const lane = Math.floor(Math.random() * 3);
-    const y = 0.85 + Math.random() * 0.35;
+    const y = beanHeightForTime(state.worldTime);
     const z =
       state.lastObZ <= -900
         ? OBSTACLE_START_Z - 6 - Math.random() * 4
@@ -99,8 +114,9 @@ export function createSpawnController(state: GameState): SpawnController {
       const lane = pickLane(state.lastObLane);
       const kind = pickKind(t, Math.random, { lowOnly: true });
       placeObstacle(kind, lane, z);
+      // Bean after hazard — single-jump height early; optional high later
       if (Math.random() < 0.7) {
-        spawnBeanAt(lane, z - 3.5, 1.0 + Math.random() * 0.2);
+        spawnBeanAt(lane, z - 3.5, beanHeightForTime(t));
       }
       return;
     }
@@ -110,9 +126,10 @@ export function createSpawnController(state: GameState): SpawnController {
       let kind = pickKind(t);
       if (isWideKind(kind)) kind = 'chair';
       placeObstacle(kind, lane, z);
+      // Bean on SAFE lane — never forces a jump over the obstacle to score
       const safeChoices = [0, 1, 2].filter((l) => l !== lane);
       const safe = safeChoices[Math.floor(Math.random() * safeChoices.length)]!;
-      spawnBeanAt(safe, z + 2.5, 0.95 + Math.random() * 0.2);
+      spawnBeanAt(safe, z + 2.5, beanHeightForTime(t));
       return;
     }
 
@@ -124,7 +141,7 @@ export function createSpawnController(state: GameState): SpawnController {
     if (Math.random() < 0.35) {
       const safeChoices = [0, 1, 2].filter((l) => l !== lane);
       const safe = safeChoices[Math.floor(Math.random() * safeChoices.length)]!;
-      spawnBeanAt(safe, z + 3, 1.0);
+      spawnBeanAt(safe, z + 3, beanHeightForTime(t));
     }
   }
 

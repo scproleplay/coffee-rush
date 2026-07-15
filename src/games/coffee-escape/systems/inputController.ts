@@ -35,10 +35,21 @@ export function attachInputController(deps: InputControllerDeps): InputControlle
     tryLane(state, state.player.targetLane + delta);
   }
 
+  function doJump(): void {
+    const r = tryJump(state);
+    if (r.ok && r.isDouble) {
+      // Brief flash + steam puff request for double jump feedback
+      state.flash = Math.max(state.flash, 0.08);
+      state.player.airT = state.player.airT || 0;
+      // Signal runtime/updateFrame via reusable dust burst at cup feet
+      (state as GameState & { _doubleJumpPuff?: boolean })._doubleJumpPuff = true;
+    }
+  }
+
   function applyGesture(
     g: ReturnType<typeof resolveStagePointerEnd>,
   ): void {
-    if (g.type === 'jump') tryJump(state);
+    if (g.type === 'jump') doJump();
     else if (g.type === 'lane') applyLaneDelta(g.delta);
   }
 
@@ -46,7 +57,7 @@ export function attachInputController(deps: InputControllerDeps): InputControlle
     const action = keyToAction(e.code, e.key);
     if (action.type === 'jump') {
       e.preventDefault();
-      tryJump(state);
+      doJump();
     } else if (action.type === 'lane') {
       e.preventDefault();
       applyLaneDelta(action.delta);
@@ -148,7 +159,9 @@ export function attachInputController(deps: InputControllerDeps): InputControlle
     }
   }
 
-  const wrap = createTapDedupe(500);
+  // Jump: short dedupe so click+pointerdown don't double-fire, but air double-jump still works
+  const wrapJump = createTapDedupe(140);
+  const wrapBoost = createTapDedupe(500);
   window.addEventListener('keydown', onKeyDown);
   // Non-passive so preventDefault can block page scroll while swiping the stage
   const ptrOpts: AddEventListenerOptions = { passive: false };
@@ -158,10 +171,10 @@ export function attachInputController(deps: InputControllerDeps): InputControlle
   stage.addEventListener('pointercancel', onStagePointerCancel);
   stage.addEventListener('pointerleave', onStagePointerCancel);
 
-  const onJump = wrap(() => tryJump(state));
-  const onBoost = wrap(() => tryBoost(state));
+  const onJump = wrapJump(() => doJump());
+  const onBoost = wrapBoost(() => tryBoost(state));
   if (jumpBtn) {
-    jumpBtn.addEventListener('click', onJump);
+    // Prefer pointerdown only — avoids click+pointerdown eating the double jump window
     jumpBtn.addEventListener('pointerdown', onJump);
   }
   if (boostBtn) {
@@ -187,7 +200,6 @@ export function attachInputController(deps: InputControllerDeps): InputControlle
       stage.removeEventListener('pointerleave', onStagePointerCancel);
       // note: passive flag is not part of listener identity in browsers
       if (jumpBtn) {
-        jumpBtn.removeEventListener('click', onJump);
         jumpBtn.removeEventListener('pointerdown', onJump);
       }
       if (boostBtn) {

@@ -64,9 +64,26 @@ describe('tickJump', () => {
 });
 
 describe('applyJumpImpulse', () => {
-  it('only on ground', () => {
-    expect(applyJumpImpulse(true)).toEqual({ vy: JUMP_VY, onGround: false });
-    expect(applyJumpImpulse(false)).toBeNull();
+  it('ground jump spends one charge', () => {
+    expect(applyJumpImpulse(2, true)).toEqual({
+      vy: JUMP_VY,
+      onGround: false,
+      jumpsLeft: 1,
+      isDouble: false,
+    });
+  });
+
+  it('air double jump when charges remain', () => {
+    const r = applyJumpImpulse(1, false);
+    expect(r).not.toBeNull();
+    expect(r!.isDouble).toBe(true);
+    expect(r!.jumpsLeft).toBe(0);
+    expect(r!.vy).toBeGreaterThan(0);
+  });
+
+  it('denies when no jumps left', () => {
+    expect(applyJumpImpulse(0, false)).toBeNull();
+    expect(applyJumpImpulse(0, true)).toBeNull();
   });
 });
 

@@ -1,7 +1,12 @@
 /**
- * Pure player motion (CE-local): lane lerp + jump physics.
+ * Pure player motion (CE-local): lane lerp + jump / double-jump physics.
  */
-import { GRAVITY, JUMP_VY, LANE_SWITCH_MS } from '../engine/constants';
+import {
+  DOUBLE_JUMP_VY,
+  GRAVITY,
+  JUMP_VY,
+  LANE_SWITCH_MS,
+} from '../engine/constants';
 
 export function easeOutCubic(t: number): number {
   const x = Math.min(1, Math.max(0, t));
@@ -62,9 +67,39 @@ export function tickJump(p: JumpMotion, dt: number): JumpMotion {
   return { y, vy, onGround, airT };
 }
 
-export function applyJumpImpulse(onGround: boolean): { vy: number; onGround: false } | null {
-  if (!onGround) return null;
-  return { vy: JUMP_VY, onGround: false };
+export interface JumpImpulseResult {
+  vy: number;
+  onGround: false;
+  jumpsLeft: number;
+  /** True when this was the extra air jump */
+  isDouble: boolean;
+}
+
+/**
+ * Apply ground or double jump from remaining jump budget.
+ * jumpsLeft is expected 1..MAX while airborne allowance remains.
+ */
+export function applyJumpImpulse(
+  jumpsLeft: number,
+  onGround: boolean,
+): JumpImpulseResult | null {
+  if (jumpsLeft <= 0) return null;
+  if (onGround) {
+    // First jump from ground — spend one, leave one for double
+    return {
+      vy: JUMP_VY,
+      onGround: false,
+      jumpsLeft: Math.max(0, jumpsLeft - 1),
+      isDouble: false,
+    };
+  }
+  // Air / double jump
+  return {
+    vy: DOUBLE_JUMP_VY,
+    onGround: false,
+    jumpsLeft: Math.max(0, jumpsLeft - 1),
+    isDouble: true,
+  };
 }
 
 /** Run-cycle phase advance from speed. */

@@ -2,7 +2,7 @@
  * Initial run state factory (CE-local).
  * Keeps runtime free of the large state object literal.
  */
-import { BASE_SPEED, LANE_X } from './constants';
+import { BASE_SPEED, LANE_X, MAX_JUMPS } from './constants';
 import type { GameState } from './types';
 
 export function createInitialState(): GameState {
@@ -29,6 +29,7 @@ export function createInitialState(): GameState {
       onGround: true,
       runAnim: 0,
       airT: 0,
+      jumpsLeft: MAX_JUMPS,
     },
     obstacles: [],
     man: { visible: true, z: 6, lane: 0 },
