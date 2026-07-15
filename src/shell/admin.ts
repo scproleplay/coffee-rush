@@ -87,13 +87,18 @@ function clearOverview(): void {
 }
 
 async function loadStats(): Promise<void> {
+  // Gate every entry (including Refresh). Non-admins never fetch or paint.
   if (!isAdmin()) return;
   const seq = ++loadSeq;
   setLoadStatus('Loading stats…');
   if (refreshBtn) refreshBtn.disabled = true;
 
   const { data, error } = await fetchAdminOverview();
-  if (seq !== loadSeq) return;
+  // Drop stale responses and re-check role after await (sign-out mid-flight).
+  if (seq !== loadSeq || !isAdmin()) {
+    if (refreshBtn) refreshBtn.disabled = false;
+    return;
+  }
 
   if (refreshBtn) refreshBtn.disabled = false;
 
@@ -138,6 +143,7 @@ function paintGate(): void {
     if (gate) gate.hidden = true;
     if (gateLinks) gateLinks.hidden = true;
     if (content) content.hidden = false;
+    if (refreshBtn) refreshBtn.hidden = false;
     if (roleLine) roleLine.textContent = `Role: ${role} · from admin_users`;
 
     if (!lastAllowed) {
@@ -149,6 +155,7 @@ function paintGate(): void {
 
   lastAllowed = false;
   if (content) content.hidden = true;
+  if (refreshBtn) refreshBtn.hidden = true;
   if (gate) gate.hidden = false;
   clearOverview();
 
@@ -191,6 +198,8 @@ function paintGate(): void {
 }
 
 refreshBtn?.addEventListener('click', () => {
+  // Defense in depth: never load if the gate closed (hidden button / DevTools).
+  if (!isAdmin()) return;
   void loadStats();
 });
 
