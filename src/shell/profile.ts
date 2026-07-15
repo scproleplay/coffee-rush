@@ -20,6 +20,9 @@ const guestLoginBlock = document.getElementById('guestLoginBlock');
 const signedInBlock = document.getElementById('signedInBlock');
 const signedInEmail = document.getElementById('signedInEmail');
 const signOutBtn = document.getElementById('signOutBtn');
+const loginPanel = document.getElementById('loginPanel');
+const loginPanelTitle = document.getElementById('loginPanelTitle');
+const loginPanelBlurb = document.getElementById('loginPanelBlurb');
 const adminRoleRow = document.getElementById('adminRoleRow');
 const adminBadge = document.getElementById('adminBadge');
 const adminRoleText = document.getElementById('adminRoleText');
@@ -60,6 +63,12 @@ function paint(): void {
 
   if (session.isAuthenticated && session.identity?.kind === 'user') {
     if (modeEl) modeEl.textContent = 'Signed in — nickname saved to your account';
+    if (loginPanelTitle) loginPanelTitle.textContent = 'Account';
+    if (loginPanel) loginPanel.setAttribute('aria-label', 'Account');
+    if (loginPanelBlurb) {
+      loginPanelBlurb.textContent =
+        'You’re signed in. Nickname saves to your account across devices.';
+    }
     if (guestLoginBlock) guestLoginBlock.hidden = true;
     if (signedInBlock) signedInBlock.hidden = false;
     if (signedInEmail) {
@@ -72,6 +81,12 @@ function paint(): void {
       modeEl.textContent = isSupabaseConfigured()
         ? 'Guest mode — play free anytime (login optional)'
         : 'Guest mode — login offline right now';
+    }
+    if (loginPanelTitle) loginPanelTitle.textContent = 'Optional login';
+    if (loginPanel) loginPanel.setAttribute('aria-label', 'Optional login');
+    if (loginPanelBlurb) {
+      loginPanelBlurb.textContent =
+        'Stay signed in across devices. You never need an account to play — login is optional.';
     }
     if (guestLoginBlock) guestLoginBlock.hidden = !isSupabaseConfigured();
     if (signedInBlock) signedInBlock.hidden = true;

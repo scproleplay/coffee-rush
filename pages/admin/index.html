@@ -11,8 +11,9 @@
         <div class="shell-badge" id="adminHeaderBadge">🔒 Admin</div>
         <h1 class="shell-title">Admin Panel</h1>
         <p class="shell-subtitle" id="adminSubtitle">Checking access…</p>
-        <nav class="shell-nav">
+        <nav class="shell-nav" id="adminHeaderNav">
           <a class="btn btn-secondary" href="/profile/">← Profile</a>
+          <a class="btn btn-ghost" href="/leaderboard/">🌍 Leaderboard</a>
           <a class="btn btn-ghost" href="/">Arcade</a>
         </nav>
       </header>
@@ -20,18 +21,68 @@
       <section class="hero-panel" id="adminGate" aria-live="polite">
         <h2 id="adminGateTitle">Please wait</h2>
         <p id="adminGateBody">Verifying your account…</p>
+        <div class="admin-links" id="adminGateLinks" hidden>
+          <a class="btn btn-primary" href="/profile/">Back to Profile</a>
+          <a class="btn btn-ghost" href="/">Arcade</a>
+        </div>
       </section>
 
       <section class="hero-panel" id="adminContent" hidden>
-        <h2>Tools</h2>
-        <p>
-          No live admin tools yet — this is a safe placeholder so the entry
-          point exists without exposing dangerous actions.
+        <h2>Overview</h2>
+        <p class="shell-footer-note" id="adminRoleLine" style="margin-top: 0"></p>
+        <p id="adminLoadStatus" class="admin-status" aria-live="polite">Loading stats…</p>
+
+        <div class="hero-stats" id="adminStatChips" aria-label="Dashboard cards">
+          <div class="stat-chip">
+            <strong id="adminTotalScores">—</strong>
+            <span>Total scores</span>
+          </div>
+          <div class="stat-chip">
+            <strong id="adminUniqueNicks">—</strong>
+            <span>Unique nicknames</span>
+          </div>
+          <div class="stat-chip">
+            <strong id="adminCeScores">—</strong>
+            <span>Coffee Escape scores</span>
+          </div>
+          <div class="stat-chip">
+            <strong id="adminCeHigh">—</strong>
+            <span>Highest CE score</span>
+          </div>
+        </div>
+
+        <h3 class="admin-section-title">Recent submissions (10)</h3>
+        <div class="admin-table-wrap">
+          <table class="admin-table" aria-label="Recent leaderboard submissions">
+            <thead>
+              <tr>
+                <th>created_at</th>
+                <th>game</th>
+                <th>nickname</th>
+                <th>result</th>
+                <th>user_id</th>
+              </tr>
+            </thead>
+            <tbody id="adminRecentBody">
+              <tr>
+                <td colspan="5">Loading…</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="admin-section-title">Quick links</h3>
+        <div class="admin-links">
+          <a class="btn btn-primary" href="/leaderboard/">View Leaderboard</a>
+          <a class="btn btn-secondary" href="/profile/">Back to Profile</a>
+          <a class="btn btn-ghost" href="/">Arcade</a>
+          <button class="btn btn-secondary" type="button" id="adminRefreshBtn">↻ Refresh</button>
+        </div>
+
+        <p class="admin-muted">
+          Read-only tools only. Access is from <code>admin_users</code> by auth user id
+          (never nickname or email). No delete/reset actions in this MVP.
         </p>
-        <p class="shell-footer-note" id="adminRoleLine" style="margin-top: 8px"></p>
-        <button class="btn btn-secondary" type="button" disabled title="Not available yet">
-          Coming soon
-        </button>
       </section>
 
       <footer class="shell-footer">

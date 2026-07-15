@@ -25,6 +25,7 @@
     { "source": "/memory-match", "destination": "/memory-match/index.html" },
     { "source": "/math-rush", "destination": "/math-rush/index.html" },
     { "source": "/leaderboard", "destination": "/leaderboard/index.html" },
-    { "source": "/profile", "destination": "/profile/index.html" }
+    { "source": "/profile", "destination": "/profile/index.html" },
+    { "source": "/admin", "destination": "/admin/index.html" }
   ]
 }

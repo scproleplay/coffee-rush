@@ -73,7 +73,9 @@ npm test
 | Vite pages/ + src/ layout | ✅ |
 | Coffee Escape modular runtime | ✅ |
 | Vitest | ✅ |
-| Supabase Auth UI | ⏳ next |
+| Supabase Auth UI (magic link) | ✅ |
+| Admin panel (read-only MVP) | ✅ gate + stats |
+| Reset leaderboard | ⏳ later (confirm flow) |
 
 ## Storage keys (do not rename)
 
