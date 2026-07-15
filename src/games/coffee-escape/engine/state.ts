@@ -2,11 +2,7 @@
  * Initial run state factory (CE-local).
  * Keeps runtime free of the large state object literal.
  */
-import {
-  BASE_SPEED,
-  LANE_X,
-  SPAWN_INTERVAL_START,
-} from './constants';
+import { BASE_SPEED, LANE_X } from './constants';
 import type { GameState } from './types';
 
 export function createInitialState(): GameState {
@@ -17,7 +13,8 @@ export function createInitialState(): GameState {
     best: 0,
     speed: BASE_SPEED,
     worldTime: 0,
-    nextSpawn: SPAWN_INTERVAL_START,
+    // First obstacle soon after start (engaging first 5–10s)
+    nextSpawn: 0.55,
     lastObZ: -999,
     lastObLane: -1,
     player: {
@@ -54,7 +51,7 @@ export function createInitialState(): GameState {
       cost: 30,
     },
     beans: [],
-    nextBean: 2.5,
+    nextBean: 1.6,
     motes: [],
     boostParticles: [],
     nextBoostParticle: 0,

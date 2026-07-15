@@ -12,6 +12,10 @@ import {
 } from '../engine/constants';
 import type { GameState } from '../engine/types';
 import {
+  OBSTACLE_KINDS,
+  isObstacleKind,
+} from '../entities/obstacleKinds';
+import {
   beanRecyclePastCamera,
   blocksPlayerLane,
   canCollectBean,
@@ -149,15 +153,33 @@ export function updateFrame(ctx: UpdateFrameCtx): boolean {
     if (o.z > OBSTACLE_END_Z) o.mesh.visible = false;
   }
 
-  // Collision
+  // Collision — logical hitboxes (fairer than raw mesh bounds for big house props)
   ctx.playerBox.setFromCenterAndSize(
     new THREE.Vector3(ctx.cup.position.x, ctx.cup.position.y + 0.55, ctx.cup.position.z),
-    new THREE.Vector3(0.7, 1.1, 0.7),
+    new THREE.Vector3(0.62, 1.0, 0.62),
   );
   for (const o of state.obstacles) {
     if (!o.mesh.visible) continue;
     if (!blocksPlayerLane(o.lane, p.lane, !!o.wide)) continue;
-    ctx.obBox.setFromObject(o.mesh);
+    const kindKey = typeof o.kind === 'string' ? o.kind : 'chair';
+    const meta = isObstacleKind(kindKey) ? OBSTACLE_KINDS[kindKey] : null;
+    const clearH = meta?.jumpHeight ?? 0.5;
+    // Jump clear before box test
+    if (p.y > clearH) continue;
+    const hitW = meta?.hitW ?? 1.0;
+    const hitD = meta?.hitD ?? 0.8;
+    const hitH = Math.max(0.25, clearH * 1.1);
+    const cx = o.wide
+      ? (() => {
+          const a = o.lane === 0 ? 0 : o.lane === 2 ? 1 : o.lane;
+          const b = o.lane === 0 ? 1 : o.lane === 2 ? 2 : Math.min(2, o.lane + 1);
+          return ((LANE_X[a] ?? 0) + (LANE_X[b] ?? 0)) / 2;
+        })()
+      : (LANE_X[o.lane] ?? 0);
+    ctx.obBox.setFromCenterAndSize(
+      new THREE.Vector3(cx, hitH * 0.5, o.z),
+      new THREE.Vector3(hitW, hitH, hitD),
+    );
     if (ctx.playerBox.intersectsBox(ctx.obBox)) {
       if (state.boost.active) {
         state.score += 1;

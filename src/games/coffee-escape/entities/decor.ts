@@ -246,3 +246,103 @@ export function makeArmchair() {
   }
   return group;
 }
+
+/** Window recess on the side wall (visual only). */
+export function makeWindow(side: 'left' | 'right') {
+  const group = new THREE.Group();
+  const frame = new THREE.Mesh(
+    new THREE.BoxGeometry(0.08, 1.2, 1.0),
+    new THREE.MeshLambertMaterial({ color: 0xf0e0c0 }),
+  );
+  frame.position.y = 2.2;
+  group.add(frame);
+  const glass = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.85, 1.0),
+    new THREE.MeshLambertMaterial({
+      color: 0xa8d0e8,
+      emissive: 0xffe0a0,
+      emissiveIntensity: 0.25,
+      transparent: true,
+      opacity: 0.85,
+    }),
+  );
+  glass.position.set(side === 'left' ? 0.05 : -0.05, 2.2, 0);
+  if (side === 'right') glass.rotation.y = Math.PI;
+  group.add(glass);
+  const mullion = new THREE.Mesh(
+    new THREE.BoxGeometry(0.04, 1.0, 0.04),
+    new THREE.MeshLambertMaterial({ color: 0xe8d8b8 }),
+  );
+  mullion.position.set(side === 'left' ? 0.06 : -0.06, 2.2, 0);
+  group.add(mullion);
+  const sill = new THREE.Mesh(
+    new THREE.BoxGeometry(0.2, 0.08, 1.1),
+    new THREE.MeshLambertMaterial({ color: 0xe8d8b0 }),
+  );
+  sill.position.set(side === 'left' ? 0.08 : -0.08, 1.55, 0);
+  group.add(sill);
+  return group;
+}
+
+/** Wall shelf with small props. */
+export function makeShelf() {
+  const group = new THREE.Group();
+  const board = new THREE.Mesh(
+    new THREE.BoxGeometry(0.2, 0.06, 1.1),
+    new THREE.MeshLambertMaterial({ color: 0x8a5a30 }),
+  );
+  board.position.y = 2.0;
+  group.add(board);
+  const bracketL = new THREE.Mesh(
+    new THREE.BoxGeometry(0.08, 0.2, 0.08),
+    new THREE.MeshLambertMaterial({ color: 0x5a3a14 }),
+  );
+  bracketL.position.set(0, 1.88, -0.4);
+  group.add(bracketL);
+  const bracketR = bracketL.clone();
+  bracketR.position.z = 0.4;
+  group.add(bracketR);
+  const jar = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.08, 0.08, 0.18, 8),
+    new THREE.MeshLambertMaterial({ color: 0xe8c070 }),
+  );
+  jar.position.set(0.02, 2.15, -0.2);
+  group.add(jar);
+  const book = new THREE.Mesh(
+    new THREE.BoxGeometry(0.12, 0.2, 0.16),
+    new THREE.MeshLambertMaterial({ color: 0x4060a0 }),
+  );
+  book.position.set(0.02, 2.16, 0.25);
+  group.add(book);
+  return group;
+}
+
+/** Kitchen counter strip against the wall. */
+export function makeKitchenCounter() {
+  const group = new THREE.Group();
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(0.7, 0.85, 1.4),
+    new THREE.MeshLambertMaterial({ color: 0xc4a06a }),
+  );
+  body.position.y = 0.42;
+  group.add(body);
+  const top = new THREE.Mesh(
+    new THREE.BoxGeometry(0.78, 0.06, 1.5),
+    new THREE.MeshLambertMaterial({ color: 0xe8e0d0 }),
+  );
+  top.position.y = 0.88;
+  group.add(top);
+  const sink = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.16, 0.14, 0.08, 12),
+    new THREE.MeshLambertMaterial({ color: 0xb0b8c0 }),
+  );
+  sink.position.set(0.05, 0.92, 0.2);
+  group.add(sink);
+  const faucet = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.03, 0.03, 0.25, 6),
+    new THREE.MeshLambertMaterial({ color: 0xa8a8a8 }),
+  );
+  faucet.position.set(0.05, 1.1, 0.05);
+  group.add(faucet);
+  return group;
+}

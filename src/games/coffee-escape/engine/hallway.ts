@@ -8,11 +8,14 @@ import {
   makeArmchair,
   makeCabinet,
   makeDoor,
+  makeKitchenCounter,
   makePictureFrame,
   makePlant,
   makeRug,
+  makeShelf,
   makeSideTable,
   makeWallLamp,
+  makeWindow,
 } from '../entities/decor';
 
 export interface HallwayBundle {
@@ -131,14 +134,14 @@ export function createHallway(scene: THREE.Scene): HallwayBundle {
     scene.add(cord);
   }
 
-  // Scrolling side decor — denser house props (doors, frames, furniture, rugs)
-  const DECOR_SPACING = 6.5;
+  // Scrolling side decor — denser house props (kept OFF playable lanes)
+  const DECOR_SPACING = 5.8;
   const decorItems: THREE.Object3D[] = [];
-  const COUNT = 32;
+  const COUNT = 36;
 
   for (let i = 0; i < COUNT; i++) {
     const side: 'left' | 'right' = i % 2 === 0 ? 'left' : 'right';
-    const pattern = i % 8;
+    const pattern = i % 11;
     let item: THREE.Object3D;
 
     if (pattern === 0) {
@@ -146,7 +149,6 @@ export function createHallway(scene: THREE.Scene): HallwayBundle {
       item.scale.setScalar(1);
       item.position.x = side === 'left' ? -2.9 : 2.9;
       item.position.y = 0;
-      // Face inward slightly
       item.rotation.y = side === 'left' ? Math.PI / 2 : -Math.PI / 2;
     } else if (pattern === 1) {
       item = makePictureFrame(i % 4, side);
@@ -161,23 +163,41 @@ export function createHallway(scene: THREE.Scene): HallwayBundle {
       item.position.x = side === 'left' ? -2.92 : 2.92;
       item.position.y = 2.9;
     } else if (pattern === 3) {
+      item = makeWindow(side);
+      item.scale.setScalar(1);
+      item.rotation.y = side === 'left' ? -Math.PI / 2 : Math.PI / 2;
+      item.position.x = side === 'left' ? -2.93 : 2.93;
+      item.position.y = 0;
+    } else if (pattern === 4) {
       item = makeArmchair();
       item.scale.setScalar(1.15);
       item.position.x = side === 'left' ? -2.15 : 2.15;
       item.position.y = 0;
       item.rotation.y = side === 'left' ? Math.PI / 2 : -Math.PI / 2;
-    } else if (pattern === 4) {
+    } else if (pattern === 5) {
       item = makeCabinet();
       item.scale.setScalar(1.2);
       item.position.x = side === 'left' ? -2.25 : 2.25;
       item.position.y = 0;
       item.rotation.y = side === 'left' ? Math.PI / 2 : -Math.PI / 2;
-    } else if (pattern === 5) {
+    } else if (pattern === 6) {
+      item = makeKitchenCounter();
+      item.scale.setScalar(1.05);
+      item.position.x = side === 'left' ? -2.2 : 2.2;
+      item.position.y = 0;
+      item.rotation.y = side === 'left' ? Math.PI / 2 : -Math.PI / 2;
+    } else if (pattern === 7) {
+      item = makeShelf();
+      item.scale.setScalar(1.2);
+      item.rotation.y = side === 'left' ? -Math.PI / 2 : Math.PI / 2;
+      item.position.x = side === 'left' ? -2.9 : 2.9;
+      item.position.y = 0;
+    } else if (pattern === 8) {
       item = makeSideTable();
       item.scale.setScalar(1.35);
       item.position.x = side === 'left' ? -2.2 : 2.2;
       item.position.y = 0;
-    } else if (pattern === 6) {
+    } else if (pattern === 9) {
       item = makePlant();
       item.scale.setScalar(1.5);
       item.position.x = side === 'left' ? -2.25 : 2.25;
@@ -185,7 +205,8 @@ export function createHallway(scene: THREE.Scene): HallwayBundle {
     } else {
       item = makeRug();
       item.scale.setScalar(1.1);
-      item.position.x = side === 'left' ? -1.9 : 1.9;
+      // Keep side rugs out of center lane
+      item.position.x = side === 'left' ? -2.0 : 2.0;
       item.position.y = 0;
       item.rotation.y = Math.PI / 2;
     }

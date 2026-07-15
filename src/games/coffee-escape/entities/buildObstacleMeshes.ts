@@ -1,333 +1,249 @@
 import * as THREE from 'three';
 import { OBSTACLE_KINDS, type ObstacleKind } from './obstacleKinds';
 
-/** Build Three.js meshes for an obstacle kind. Pure aside from THREE. */
+/** Build larger, readable house-obstacle meshes (visual only — collision is logical). */
 
 export function buildObstacleMeshes(kind: ObstacleKind) {
   const group = new THREE.Group();
   const c = OBSTACLE_KINDS[kind].color;
   const matPrimary = new THREE.MeshLambertMaterial({ color: c });
-  const matDark = new THREE.MeshLambertMaterial({ color: 0x222222 });
+  const matDark = new THREE.MeshLambertMaterial({ color: 0x2a2018 });
   const matBrown = new THREE.MeshLambertMaterial({ color: 0x5a3a14 });
-  const matMetal = new THREE.MeshLambertMaterial({ color: 0xa8a8a8 });
-  const matGlass = new THREE.MeshLambertMaterial({ color: 0x4ec0ff, transparent: true, opacity: 0.7 });
+  const matWood = new THREE.MeshLambertMaterial({ color: 0x9a5a28 });
+  const matCream = new THREE.MeshLambertMaterial({ color: 0xf0e0c8 });
+  const matCloth = new THREE.MeshLambertMaterial({ color: 0xd08090 });
 
   if (kind === 'spill') {
-    // Flat brown puddle on the floor. Cylinder with very low height
-    // and a wide radius.
     const spill = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.55, 0.55, 0.04, 16),
-      matPrimary
+      new THREE.CylinderGeometry(0.72, 0.78, 0.05, 18),
+      matPrimary,
     );
-    spill.position.y = 0.02;
+    spill.position.y = 0.03;
     group.add(spill);
-    // A small "splash" droplet to the side
     const drop = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.12, 0.12, 0.03, 8),
-      matPrimary
+      new THREE.CylinderGeometry(0.18, 0.2, 0.04, 10),
+      matPrimary,
     );
-    drop.position.set(0.45, 0.015, 0.25);
+    drop.position.set(0.55, 0.02, 0.3);
     group.add(drop);
+    const drop2 = drop.clone();
+    drop2.position.set(-0.4, 0.02, -0.25);
+    drop2.scale.setScalar(0.7);
+    group.add(drop2);
   } else if (kind === 'cable') {
-    // Power cable lying across the floor. A long thin box.
-    const cable = new THREE.Mesh(
-      new THREE.BoxGeometry(0.05, 0.04, 0.9),
-      matPrimary
-    );
-    cable.position.set(0, 0.04, 0);
+    // Thick house power strip + cable across the lane
+    const cable = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 1.15), matPrimary);
+    cable.position.set(0, 0.05, 0);
     group.add(cable);
-    // Plug at one end
-    const plug = new THREE.Mesh(
-      new THREE.BoxGeometry(0.10, 0.07, 0.08),
-      matPrimary
+    const strip = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.1, 0.2), matDark);
+    strip.position.set(0, 0.06, 0.55);
+    group.add(strip);
+    for (let i = 0; i < 3; i++) {
+      const socket = new THREE.Mesh(
+        new THREE.BoxGeometry(0.06, 0.02, 0.08),
+        new THREE.MeshLambertMaterial({ color: 0x111111 }),
+      );
+      socket.position.set(-0.1 + i * 0.1, 0.12, 0.55);
+      group.add(socket);
+    }
+  } else if (kind === 'rug') {
+    const rug = new THREE.Mesh(new THREE.BoxGeometry(1.25, 0.04, 1.0), matPrimary);
+    rug.position.y = 0.025;
+    group.add(rug);
+    const border = new THREE.Mesh(
+      new THREE.BoxGeometry(1.35, 0.03, 1.1),
+      new THREE.MeshLambertMaterial({ color: 0xe8d5a8 }),
     );
-    plug.position.set(0, 0.06, 0.45);
-    group.add(plug);
-    // Strain relief
-    const relief = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.04, 0.04, 0.08, 6),
-      matPrimary
-    );
-    relief.rotation.x = Math.PI / 2;
-    relief.position.set(0, 0.06, 0.39);
-    group.add(relief);
-  } else if (kind === 'mug') {
-    // Tipped-over coffee mug on the floor.
-    const body = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.13, 0.13, 0.22, 12),
-      matPrimary
-    );
-    body.position.y = 0.11;
-    // Tip it on its side
-    body.rotation.z = Math.PI / 2;
-    group.add(body);
-    // Handle
-    const handle = new THREE.Mesh(
-      new THREE.TorusGeometry(0.07, 0.02, 6, 10, Math.PI),
-      matPrimary
-    );
-    handle.rotation.y = Math.PI / 2;
-    handle.position.set(0.13, 0.11, 0);
-    group.add(handle);
-    // Coffee spill puddle next to it
-    const puddle = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.20, 0.20, 0.02, 12),
-      new THREE.MeshLambertMaterial({ color: 0x3a1f08 })
-    );
-    puddle.position.set(-0.18, 0.01, 0);
-    group.add(puddle);
+    border.position.y = 0.015;
+    group.add(border);
+    // Fringe
+    for (const z of [-0.55, 0.55]) {
+      const fringe = new THREE.Mesh(
+        new THREE.BoxGeometry(1.2, 0.02, 0.08),
+        new THREE.MeshLambertMaterial({ color: 0xf5e6c8 }),
+      );
+      fringe.position.set(0, 0.02, z);
+      group.add(fringe);
+    }
+  } else if (kind === 'books') {
+    const colors = [0xc04040, 0x3a6a9a, 0xd4a020, 0x4a7a40, 0x6a4080];
+    for (let i = 0; i < 5; i++) {
+      const book = new THREE.Mesh(
+        new THREE.BoxGeometry(0.22, 0.08 + (i % 3) * 0.04, 0.32),
+        new THREE.MeshLambertMaterial({ color: colors[i]! }),
+      );
+      book.position.set((i - 2) * 0.12, 0.08 + (i % 2) * 0.06, (i % 2) * 0.05);
+      book.rotation.y = (i - 2) * 0.08;
+      book.rotation.z = (i % 2) * 0.15;
+      group.add(book);
+    }
+  } else if (kind === 'toys') {
+    // Toy block pile
+    const blocks = [
+      { c: 0xe07040, p: [0, 0.18, 0] as const, s: [0.45, 0.35, 0.45] as const },
+      { c: 0x40a0e0, p: [-0.28, 0.14, 0.1] as const, s: [0.28, 0.28, 0.28] as const },
+      { c: 0xf0d040, p: [0.3, 0.12, -0.05] as const, s: [0.24, 0.24, 0.24] as const },
+      { c: 0x50c060, p: [0.05, 0.42, 0.05] as const, s: [0.22, 0.22, 0.22] as const },
+    ];
+    for (const b of blocks) {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(b.s[0], b.s[1], b.s[2]),
+        new THREE.MeshLambertMaterial({ color: b.c }),
+      );
+      mesh.position.set(b.p[0], b.p[1], b.p[2]);
+      group.add(mesh);
+    }
   } else if (kind === 'chair') {
-    // Chair on wheels. 5-star base + post + seat + back.
-    const post = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.04, 0.04, 0.35, 6),
-      matDark
+    // Kitchen / dining chair — chunky and readable
+    const seat = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.1, 0.7), matPrimary);
+    seat.position.y = 0.55;
+    group.add(seat);
+    const back = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.85, 0.1), matPrimary);
+    back.position.set(0, 1.0, -0.3);
+    group.add(back);
+    const legGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.55, 6);
+    for (const [x, z] of [
+      [-0.28, 0.25],
+      [0.28, 0.25],
+      [-0.28, -0.25],
+      [0.28, -0.25],
+    ] as const) {
+      const leg = new THREE.Mesh(legGeo, matBrown);
+      leg.position.set(x, 0.27, z);
+      group.add(leg);
+    }
+  } else if (kind === 'stool') {
+    const seat = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.32, 0.34, 0.08, 12),
+      matWood,
     );
-    post.position.y = 0.18;
+    seat.position.y = 0.7;
+    group.add(seat);
+    const post = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.06, 0.08, 0.66, 8),
+      matBrown,
+    );
+    post.position.y = 0.35;
     group.add(post);
     const base = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.20, 0.20, 0.05, 8),
-      matDark
+      new THREE.CylinderGeometry(0.28, 0.3, 0.06, 10),
+      matDark,
     );
-    base.position.y = 0.025;
+    base.position.y = 0.03;
     group.add(base);
-    // 5 wheel legs
-    for (let i = 0; i < 5; i++) {
-      const a = (i / 5) * Math.PI * 2;
-      const wheel = new THREE.Mesh(
-        new THREE.SphereGeometry(0.03, 6, 6),
-        matDark
-      );
-      wheel.position.set(Math.cos(a) * 0.18, 0.03, Math.sin(a) * 0.18);
-      group.add(wheel);
-    }
-    // Seat
-    const seat = new THREE.Mesh(
-      new THREE.BoxGeometry(0.5, 0.08, 0.5),
-      matPrimary
+  } else if (kind === 'pillow') {
+    const pillow = new THREE.Mesh(
+      new THREE.BoxGeometry(0.95, 0.45, 0.7),
+      matCloth,
     );
-    seat.position.y = 0.45;
-    group.add(seat);
-    // Back
-    const back = new THREE.Mesh(
-      new THREE.BoxGeometry(0.5, 0.7, 0.08),
-      matPrimary
+    pillow.position.y = 0.28;
+    pillow.rotation.z = 0.15;
+    pillow.rotation.y = 0.2;
+    group.add(pillow);
+    const pillow2 = new THREE.Mesh(
+      new THREE.BoxGeometry(0.7, 0.35, 0.55),
+      new THREE.MeshLambertMaterial({ color: 0xe8c0a0 }),
     );
-    back.position.set(0, 0.85, -0.21);
-    group.add(back);
+    pillow2.position.set(0.15, 0.35, 0.1);
+    pillow2.rotation.z = -0.25;
+    group.add(pillow2);
   } else if (kind === 'box') {
-    // Cardboard box or toy box with tape across the top.
-    const box = new THREE.Mesh(
-      new THREE.BoxGeometry(0.7, 0.7, 0.7),
-      matPrimary
-    );
-    box.position.y = 0.35;
+    const box = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.85, 0.9), matPrimary);
+    box.position.y = 0.43;
     group.add(box);
-    // Tape line across the top
     const tape = new THREE.Mesh(
-      new THREE.BoxGeometry(0.72, 0.02, 0.10),
-      matBrown
+      new THREE.BoxGeometry(0.98, 0.04, 0.14),
+      matBrown,
     );
-    tape.position.y = 0.7;
+    tape.position.y = 0.86;
     group.add(tape);
-  } else if (kind === 'plant') {
-    // Potted plant.
-    const pot = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.20, 0.16, 0.30, 10),
-      new THREE.MeshLambertMaterial({ color: 0xb87333 })
+    const tape2 = new THREE.Mesh(
+      new THREE.BoxGeometry(0.14, 0.04, 0.92),
+      matBrown,
     );
-    pot.position.y = 0.15;
-    group.add(pot);
-    // Soil
-    const soil = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.19, 0.19, 0.02, 10),
-      new THREE.MeshLambertMaterial({ color: 0x3a1f08 })
+    tape2.position.y = 0.86;
+    group.add(tape2);
+    // Label
+    const label = new THREE.Mesh(
+      new THREE.BoxGeometry(0.4, 0.25, 0.02),
+      matCream,
     );
-    soil.position.y = 0.30;
-    group.add(soil);
-    // Leaves
-    for (let i = 0; i < 5; i++) {
-      const a = (i / 5) * Math.PI * 2;
-      const leaf = new THREE.Mesh(
-        new THREE.ConeGeometry(0.08, 0.40, 6),
-        new THREE.MeshLambertMaterial({ color: 0x4a8a3a })
-      );
-      leaf.position.set(Math.cos(a) * 0.12, 0.55, Math.sin(a) * 0.12);
-      leaf.rotation.z = Math.cos(a) * 0.4;
-      leaf.rotation.x = Math.sin(a) * 0.4;
-      group.add(leaf);
-    }
-  } else if (kind === 'printer') {
-    // Laundry basket — woven basket with clothes peeking out.
+    label.position.set(0, 0.5, 0.46);
+    group.add(label);
+  } else if (kind === 'laundry') {
+    // Laundry basket with clothes
     const body = new THREE.Mesh(
-      new THREE.BoxGeometry(0.7, 0.45, 0.6),
-      matPrimary
+      new THREE.CylinderGeometry(0.48, 0.42, 0.7, 12),
+      matPrimary,
     );
-    body.position.y = 0.22;
+    body.position.y = 0.35;
     group.add(body);
-    // Paper output slot on top
-    const slot = new THREE.Mesh(
-      new THREE.BoxGeometry(0.4, 0.04, 0.2),
-      matPrimary
+    const rim = new THREE.Mesh(
+      new THREE.TorusGeometry(0.48, 0.04, 6, 16),
+      matWood,
     );
-    slot.position.y = 0.46;
-    group.add(slot);
-    // Paper sticking out
-    const paper = new THREE.Mesh(
-      new THREE.BoxGeometry(0.32, 0.02, 0.14),
-      new THREE.MeshLambertMaterial({ color: 0xffffff })
+    rim.rotation.x = Math.PI / 2;
+    rim.position.y = 0.7;
+    group.add(rim);
+    const shirt = new THREE.Mesh(
+      new THREE.BoxGeometry(0.45, 0.2, 0.35),
+      new THREE.MeshLambertMaterial({ color: 0x4a80c0 }),
     );
-    paper.position.y = 0.49;
-    group.add(paper);
-    // Buttons
-    for (let i = 0; i < 3; i++) {
-      const btn = new THREE.Mesh(
-        new THREE.SphereGeometry(0.025, 6, 6),
-        new THREE.MeshLambertMaterial({ color: i === 0 ? 0x2ec27e : 0xc0392b })
-      );
-      btn.position.set(-0.20 + i * 0.07, 0.46, 0.31);
-      group.add(btn);
-    }
-  } else if (kind === 'watercooler') {
-    // Tall floor lamp or bookshelf.
-    const base = new THREE.Mesh(
-      new THREE.BoxGeometry(0.4, 0.5, 0.4),
-      new THREE.MeshLambertMaterial({ color: 0xeeeeee })
+    shirt.position.set(0.05, 0.78, 0);
+    shirt.rotation.z = 0.2;
+    group.add(shirt);
+    const sock = new THREE.Mesh(
+      new THREE.BoxGeometry(0.2, 0.12, 0.15),
+      new THREE.MeshLambertMaterial({ color: 0xf0f0f0 }),
     );
-    base.position.y = 0.25;
-    group.add(base);
-    // Tap
-    const tap = new THREE.Mesh(
-      new THREE.BoxGeometry(0.08, 0.04, 0.05),
-      matMetal
-    );
-    tap.position.set(0, 0.30, 0.22);
-    group.add(tap);
-    // Big blue bottle on top
-    const bottle = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.18, 0.16, 0.55, 10),
-      matGlass
-    );
-    bottle.position.y = 0.78;
-    group.add(bottle);
-    // Cap
-    const cap = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.10, 0.10, 0.08, 8),
-      new THREE.MeshLambertMaterial({ color: 0xffffff })
-    );
-    cap.position.y = 1.10;
-    group.add(cap);
-  } else if (kind === 'filingcabinet') {
-    // Wooden dresser with 3 drawers.
-    const body = new THREE.Mesh(
-      new THREE.BoxGeometry(0.5, 0.95, 0.4),
-      matPrimary
-    );
-    body.position.y = 0.475;
-    group.add(body);
-    // 3 drawer handles
-    for (let i = 0; i < 3; i++) {
-      const handle = new THREE.Mesh(
-        new THREE.BoxGeometry(0.12, 0.025, 0.025),
-        matMetal
-      );
-      handle.position.set(0, 0.18 + i * 0.30, 0.21);
-      group.add(handle);
-    }
-  } else if (kind === 'desk') {
-    // Wide dining table: flat top with 4 legs. Spans 2 lanes.
-    const top = new THREE.Mesh(
-      new THREE.BoxGeometry(1.7, 0.06, 0.7),
-      matPrimary
-    );
-    top.position.y = 0.75;
+    sock.position.set(-0.2, 0.75, 0.1);
+    group.add(sock);
+  } else if (kind === 'table') {
+    // Wide coffee / dining table spanning two lanes
+    const top = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.1, 0.95), matPrimary);
+    top.position.y = 0.72;
     group.add(top);
-    // 4 legs
-    const legGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.75, 6);
-    for (const [x, z] of [[-0.78, 0.30], [0.78, 0.30], [-0.78, -0.30], [0.78, -0.30]]) {
+    const legGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.7, 6);
+    for (const [x, z] of [
+      [-1.05, 0.35],
+      [1.05, 0.35],
+      [-1.05, -0.35],
+      [1.05, -0.35],
+    ] as const) {
       const leg = new THREE.Mesh(legGeo, matBrown);
-      leg.position.set(x, 0.375, z);
+      leg.position.set(x, 0.35, z);
       group.add(leg);
     }
-    // A monitor on top
-    const monitorStand = new THREE.Mesh(
-      new THREE.BoxGeometry(0.05, 0.10, 0.05),
-      matDark
+    // Bowl on top
+    const bowl = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.18, 0.12, 0.12, 10),
+      matCream,
     );
-    monitorStand.position.set(-0.4, 0.83, 0);
-    group.add(monitorStand);
-    const monitor = new THREE.Mesh(
-      new THREE.BoxGeometry(0.4, 0.28, 0.03),
-      matDark
+    bowl.position.set(0.3, 0.84, 0);
+    group.add(bowl);
+  } else if (kind === 'doorframe') {
+    // Half-open door frame blocking two lanes visually
+    const postL = new THREE.Mesh(new THREE.BoxGeometry(0.18, 2.2, 0.18), matWood);
+    postL.position.set(-1.15, 1.1, 0);
+    group.add(postL);
+    const postR = postL.clone();
+    postR.position.x = 1.15;
+    group.add(postR);
+    const lintel = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.18, 0.2), matWood);
+    lintel.position.set(0, 2.15, 0);
+    group.add(lintel);
+    // Door leaf swung into lanes (solid block mid-height)
+    const door = new THREE.Mesh(new THREE.BoxGeometry(1.3, 1.9, 0.1), matPrimary);
+    door.position.set(-0.35, 0.95, 0.15);
+    door.rotation.y = 0.45;
+    group.add(door);
+    const knob = new THREE.Mesh(
+      new THREE.SphereGeometry(0.06, 8, 6),
+      new THREE.MeshLambertMaterial({ color: 0xd4af37 }),
     );
-    monitor.position.set(-0.4, 1.00, 0);
-    group.add(monitor);
-    // Keyboard
-    const keyboard = new THREE.Mesh(
-      new THREE.BoxGeometry(0.4, 0.02, 0.15),
-      new THREE.MeshLambertMaterial({ color: 0x222222 })
-    );
-    keyboard.position.set(0.3, 0.79, 0.15);
-    group.add(keyboard);
-  } else if (kind === 'worker') {
-    // Sleepy person slumped at a dining table. Wide (spans 2 lanes).
-    // Table is just a thin slab (the "desk" kind has the full table;
-    // here we just need the sleeper on a small table for context).
-    const deskTop = new THREE.Mesh(
-      new THREE.BoxGeometry(1.7, 0.06, 0.7),
-      new THREE.MeshLambertMaterial({ color: 0x8a4a1f })
-    );
-    deskTop.position.y = 0.75;
-    group.add(deskTop);
-    const legGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.75, 6);
-    for (const [x, z] of [[-0.78, 0.30], [0.78, 0.30], [-0.78, -0.30], [0.78, -0.30]]) {
-      const leg = new THREE.Mesh(legGeo, matBrown);
-      leg.position.set(x, 0.375, z);
-      group.add(leg);
-    }
-    // Worker body (cylinder) slumped forward
-    const body = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.18, 0.18, 0.55, 10),
-      matPrimary
-    );
-    body.position.set(-0.3, 1.05, 0.20);
-    body.rotation.x = -0.6; // slumped forward
-    group.add(body);
-    // Head
-    const head = new THREE.Mesh(
-      new THREE.SphereGeometry(0.13, 10, 8),
-      new THREE.MeshLambertMaterial({ color: 0xe7b78f })
-    );
-    head.position.set(-0.3, 1.30, 0.40);
-    group.add(head);
-    // Hair patch
-    const hair = new THREE.Mesh(
-      new THREE.SphereGeometry(0.10, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2),
-      new THREE.MeshLambertMaterial({ color: 0x3a2a1a })
-    );
-    hair.position.set(-0.3, 1.40, 0.40);
-    group.add(hair);
-    // Closed eyes (two thin cylinders)
-    for (const dx of [-0.05, 0.05]) {
-      const eye = new THREE.Mesh(
-        new THREE.BoxGeometry(0.03, 0.005, 0.005),
-        new THREE.MeshLambertMaterial({ color: 0x1a0a02 })
-      );
-      eye.position.set(-0.3 + dx, 1.30, 0.52);
-      group.add(eye);
-    }
-    // Keyboard they're slumped on
-    const keyboard = new THREE.Mesh(
-      new THREE.BoxGeometry(0.4, 0.02, 0.15),
-      new THREE.MeshLambertMaterial({ color: 0x222222 })
-    );
-    keyboard.position.set(-0.3, 0.79, 0.30);
-    group.add(keyboard);
+    knob.position.set(0.15, 0.95, 0.35);
+    group.add(knob);
   }
 
-  // Scale all obstacles up so they read clearly as house furniture
-  // rather than tiny props. 1.5× makes chairs, boxes, etc. visually
-  // prominent without breaking jumpability (player jump apex ≈ 1.8u,
-  // tallest scaled obstacle ≈ 1.4u).
-  group.scale.setScalar(1.5);
   return group;
 }

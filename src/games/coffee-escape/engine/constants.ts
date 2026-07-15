@@ -1,4 +1,4 @@
-/** Coffee Escape world / pacing constants. */
+/** Coffee Escape world / pacing constants. Phase 2: denser house chase. */
 
 export const STORAGE_KEY = 'codecup-coffee-escape-best';
 
@@ -9,29 +9,32 @@ export const GROUND_Y = 0;
 export const JUMP_VY = 9.0;
 export const GRAVITY = 22.0;
 
-export const OBSTACLE_POOL_SIZE = 26;
-export const OBSTACLE_START_Z = -70;
+export const OBSTACLE_POOL_SIZE = 30;
+/** Closer first wave so something appears within ~4–6s at base speed */
+export const OBSTACLE_START_Z = -52;
 export const OBSTACLE_END_Z = 6;
 export const RECYCLE_Z = -85;
 
-/** World scroll speed (units/sec). Gentle for 5s, then ramps to cap ~55s. */
+/** World scroll speed (units/sec). Gentle for a short grace, then ramps. */
 export const BASE_SPEED = 12;
 export const MAX_SPEED = 36;
 export const SPEED_RAMP = 0.6;
-export const SPEED_GRACE_SECONDS = 5;
+export const SPEED_GRACE_SECONDS = 3.5;
 
-export const SPAWN_INTERVAL_START = 0.95;
-export const SPAWN_INTERVAL_MIN = 0.45;
-export const SPAWN_RAMP_SECONDS = 25;
-export const SPAWN_JITTER = 0.3;
+/** Spawn cadence — denser early, still fair for mobile */
+export const SPAWN_INTERVAL_START = 0.68;
+export const SPAWN_INTERVAL_MIN = 0.38;
+export const SPAWN_RAMP_SECONDS = 20;
+export const SPAWN_JITTER = 0.22;
 
-export const PAIR_SPAWN_BASE = 0.15;
-export const PAIR_SPAWN_RAMP = 0.025;
-export const SAME_LANE_MIN_GAP = 12;
+export const PAIR_SPAWN_BASE = 0.18;
+export const PAIR_SPAWN_RAMP = 0.028;
+/** Min Z gap between consecutive obstacle waves */
+export const SAME_LANE_MIN_GAP = 10;
 
-export const BEAN_SPAWN_CHANCE = 0.5;
-export const BEAN_INTERVAL_MIN = 2.2;
-export const BEAN_INTERVAL_MAX = 3.8;
+export const BEAN_SPAWN_CHANCE = 0.58;
+export const BEAN_INTERVAL_MIN = 1.5;
+export const BEAN_INTERVAL_MAX = 2.7;
 export const BEAN_POOL_SIZE = 14;
 
 export const SCORE_PER_SECOND = 10;

@@ -1,94 +1,143 @@
 /**
  * Obstacle / bean spawn orchestration (CE-local).
+ * Phase 2: controlled fair patterns + denser early action.
  * Pure pick rules live in spawnLogic; this places meshes into the world.
  */
-import {
-  BEAN_SPAWN_CHANCE,
-  LANE_X,
-  OBSTACLE_START_Z,
-} from '../engine/constants';
+import { LANE_X, OBSTACLE_START_Z } from '../engine/constants';
 import type { BeanInstance, GameState, ObstacleInstance } from '../engine/types';
+import {
+  OBSTACLE_KINDS,
+  isObstacleKind,
+  type ObstacleKind,
+} from '../entities/obstacleKinds';
 import {
   firstHiddenObstacle,
   rebuildObstacle,
 } from '../entities/obstaclePool';
 import {
+  pairLanes,
   pickKind,
   pickLane,
+  pickSpawnPattern,
   pickZ,
   shouldSpawnPair,
+  type SpawnPattern,
 } from './spawnLogic';
 
 export interface SpawnController {
   spawnNext: () => void;
   spawnBean: () => void;
-  spawnSingleObstacle: () => void;
-  spawnObstaclePair: () => void;
+}
+
+function isWideKind(kind: string): boolean {
+  return isObstacleKind(kind) && !!OBSTACLE_KINDS[kind].wide;
 }
 
 export function createSpawnController(state: GameState): SpawnController {
-  function spawnBean(): void {
+  function placeObstacle(kind: ObstacleKind, lane: number, z: number): boolean {
+    const ob = firstHiddenObstacle(state.obstacles);
+    if (!ob) return false;
+    rebuildObstacle(ob, kind);
+    ob.lane = lane;
+    ob.z = z;
+    ob.mesh.visible = true;
+    ob.mesh.position.set(LANE_X[lane] ?? 0, 0, z);
+    if (ob.wide) {
+      const a = lane === 0 ? 0 : lane === 2 ? 1 : lane;
+      const b = lane === 0 ? 1 : lane === 2 ? 2 : Math.min(2, lane + 1);
+      const mid = ((LANE_X[a] ?? 0) + (LANE_X[b] ?? 0)) / 2;
+      ob.mesh.position.x = mid;
+    }
+    state.lastObZ = Math.min(state.lastObZ, z);
+    state.lastObLane = lane;
+    return true;
+  }
+
+  function spawnBeanAt(lane: number, z: number, y = 1.0): void {
     const b = state.beans.find((x) => !x.active);
     if (!b) return;
-    b.lane = Math.floor(Math.random() * 3);
-    b.z = -55 - Math.random() * 10;
-    // Jump-only collectibles: height must clear minHeight (0.2) but stay
-    // inside a normal jump arc (JUMP_VY=9 / GRAVITY=22 → peak ≈ 1.84).
-    // Keep beans mid-jump so they read clearly and are reachable first try.
-    b.y = 0.85 + Math.random() * 0.35; // ~0.85–1.20
+    b.lane = lane;
+    b.z = z;
+    // Jump-only collectibles: mid-jump band (~0.85–1.20)
+    b.y = y;
     b.rot = Math.random() * Math.PI * 2;
     b.active = true;
     b.mesh.visible = true;
-    b.mesh.position.set(
-      // LANE_X is applied in updateFrame; keep group origin clean
-      b.mesh.position.x,
-      b.y,
-      b.z,
-    );
+    b.mesh.position.set(b.mesh.position.x, b.y, b.z);
   }
 
-  function spawnSingleObstacle(): void {
-    const ob = firstHiddenObstacle(state.obstacles);
-    if (!ob) return;
-    const kind = pickKind(state.worldTime);
-    rebuildObstacle(ob, kind);
-    const lane = pickLane(state.lastObLane);
+  function spawnBean(): void {
+    const lane = Math.floor(Math.random() * 3);
+    const y = 0.85 + Math.random() * 0.35;
+    const z =
+      state.lastObZ <= -900
+        ? OBSTACLE_START_Z - 6 - Math.random() * 4
+        : state.lastObZ - 5 - Math.random() * 6;
+    spawnBeanAt(lane, z, y);
+  }
+
+  function spawnPattern(pattern: SpawnPattern): void {
     const z = pickZ(state.lastObZ, state.speed);
-    ob.lane = lane;
-    ob.z = z;
-    ob.mesh.position.set(LANE_X[lane], 0, z);
-    ob.mesh.visible = true;
-    state.lastObZ = z;
-    state.lastObLane = lane;
-  }
+    const t = state.worldTime;
 
-  function spawnObstaclePair(): void {
-    const safeLane = Math.floor(Math.random() * 3);
-    const lanesForObs = [0, 1, 2].filter((l) => l !== safeLane);
-    const baseZ = OBSTACLE_START_Z - Math.random() * 3;
-    for (let i = 0; i < 2; i++) {
-      const ob = firstHiddenObstacle(state.obstacles);
-      if (!ob) continue;
-      const kind = pickKind(state.worldTime);
-      rebuildObstacle(ob, kind);
-      const lane = lanesForObs[i]!;
-      const z = baseZ - i * 3.5;
-      ob.lane = lane;
-      ob.z = z;
-      ob.mesh.position.set(LANE_X[lane], 0, z);
-      ob.mesh.visible = true;
+    if (pattern === 'pair') {
+      const safe = Math.floor(Math.random() * 3);
+      const [l0, l1] = pairLanes(safe);
+      let k0 = pickKind(t, Math.random, { midOnly: Math.random() < 0.5 });
+      let k1 = pickKind(t, Math.random, { midOnly: Math.random() < 0.5 });
+      if (isWideKind(k0)) k0 = 'chair';
+      if (isWideKind(k1)) k1 = 'pillow';
+      placeObstacle(k0, l0, z);
+      placeObstacle(k1, l1, z - 0.4);
+      if (Math.random() < 0.55) {
+        spawnBeanAt(safe, z + 4, 0.95 + Math.random() * 0.25);
+      }
+      return;
     }
-    state.lastObLane = lanesForObs[1] ?? safeLane;
-    state.lastObZ = baseZ;
+
+    if (pattern === 'jump_low') {
+      const lane = pickLane(state.lastObLane);
+      const kind = pickKind(t, Math.random, { lowOnly: true });
+      placeObstacle(kind, lane, z);
+      if (Math.random() < 0.7) {
+        spawnBeanAt(lane, z - 3.5, 1.0 + Math.random() * 0.2);
+      }
+      return;
+    }
+
+    if (pattern === 'single_with_bean') {
+      const lane = pickLane(state.lastObLane);
+      let kind = pickKind(t);
+      if (isWideKind(kind)) kind = 'chair';
+      placeObstacle(kind, lane, z);
+      const safeChoices = [0, 1, 2].filter((l) => l !== lane);
+      const safe = safeChoices[Math.floor(Math.random() * safeChoices.length)]!;
+      spawnBeanAt(safe, z + 2.5, 0.95 + Math.random() * 0.2);
+      return;
+    }
+
+    // single
+    const lane = pickLane(state.lastObLane);
+    let kind = pickKind(t);
+    if (t < 12 && isWideKind(kind)) kind = 'chair';
+    placeObstacle(kind, lane, z);
+    if (Math.random() < 0.35) {
+      const safeChoices = [0, 1, 2].filter((l) => l !== lane);
+      const safe = safeChoices[Math.floor(Math.random() * safeChoices.length)]!;
+      spawnBeanAt(safe, z + 3, 1.0);
+    }
   }
 
   function spawnNext(): void {
-    if (shouldSpawnPair(state.worldTime)) spawnObstaclePair();
-    else spawnSingleObstacle();
-    if (Math.random() < BEAN_SPAWN_CHANCE) spawnBean();
+    const pattern = pickSpawnPattern(state.worldTime);
+    if (pattern === 'pair' && !shouldSpawnPair(state.worldTime)) {
+      spawnPattern('single');
+      return;
+    }
+    spawnPattern(pattern);
   }
 
-  return { spawnNext, spawnBean, spawnSingleObstacle, spawnObstaclePair };
+  return { spawnNext, spawnBean };
 }
 
 /** Activate a dust burst around a world position (bean collect FX). */
@@ -143,7 +192,6 @@ export function emitBoostParticleAt(
     0.3 + Math.random() * 0.2,
   );
   p.vy = 1.2 + Math.random() * 0.8;
-  // material opacity if present
   // @ts-expect-error material shape
   if (p.mesh.material?.opacity != null) p.mesh.material.opacity = 0.8;
   p.mesh.scale.setScalar(0.8);
