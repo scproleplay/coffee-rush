@@ -56,6 +56,13 @@
       overflow: visible;
     }
 
+    .ce-mute-btn {
+      min-width: 5.5rem;
+    }
+    .ce-mute-btn.is-muted {
+      opacity: 0.75;
+    }
+
     /* While a run is active, stop the document from scrolling under swipes. */
     html.ce-playing,
     body.ce-playing {

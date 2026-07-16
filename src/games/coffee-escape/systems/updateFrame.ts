@@ -90,6 +90,11 @@ export interface UpdateFrameCtx {
   emitBoostParticle: () => void;
   onCrash: () => void;
   onSectionChange?: (id: SectionId, label: string) => void;
+  /** Optional SFX (wired from runtime audio). */
+  onHit?: () => void;
+  onBean?: () => void;
+  /** Jump that fired from the input buffer this frame (ground or double). */
+  onBufferedJump?: (isDouble: boolean) => void;
   // DOM
   scoreEl: HTMLElement | null;
   boostFill: HTMLElement | null;
@@ -129,9 +134,12 @@ export function updateFrame(ctx: UpdateFrameCtx): boolean {
 
   // Buffered jump (early double-jump swipe / pre-land press) — apply before physics
   const buffered = consumeJumpBuffer(state, dt);
-  if (buffered.ok && buffered.isDouble) {
-    state.flash = Math.max(state.flash, 0.06);
-    (state as GameState & { _doubleJumpPuff?: boolean })._doubleJumpPuff = true;
+  if (buffered.ok) {
+    ctx.onBufferedJump?.(buffered.isDouble);
+    if (buffered.isDouble) {
+      state.flash = Math.max(state.flash, 0.06);
+      (state as GameState & { _doubleJumpPuff?: boolean })._doubleJumpPuff = true;
+    }
   }
 
   Object.assign(p, tickLaneMotion(p, dt, LANE_X));
@@ -275,6 +283,7 @@ export function updateFrame(ctx: UpdateFrameCtx): boolean {
         state.chase = hit;
         state.shake = Math.max(state.shake, 0.28);
         state.flash = Math.max(state.flash, 0.18);
+        ctx.onHit?.();
       }
       o.lane = -1;
       o.mesh.visible = false;
@@ -387,6 +396,7 @@ export function updateFrame(ctx: UpdateFrameCtx): boolean {
     ) {
       // Caffeine buys distance from the man
       state.chase = applyChaseBeanRelief(state.chase);
+      ctx.onBean?.();
       ctx.collectBean(b);
     }
   }

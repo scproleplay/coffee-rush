@@ -20,6 +20,10 @@ export interface InputControllerDeps {
   isStartVisible: () => boolean;
   onBeginRun: () => void;
   onRestart: () => void;
+  /** Optional SFX hooks (unlocked after first user gesture). */
+  onJump?: (isDouble: boolean) => void;
+  onBoost?: () => void;
+  onUserGesture?: () => void;
 }
 
 export interface InputController {
@@ -31,19 +35,32 @@ export interface InputController {
 export function attachInputController(deps: InputControllerDeps): InputController {
   const { state, canvas, stage, jumpBtn, boostBtn } = deps;
 
+  function noteGesture(): void {
+    deps.onUserGesture?.();
+  }
+
   function applyLaneDelta(delta: -1 | 1): void {
     tryLane(state, state.player.targetLane + delta);
   }
 
   function doJump(): void {
+    noteGesture();
     // tryJump always buffers; if it can fire now it returns ok immediately
     const r = tryJump(state);
-    if (r.ok && r.isDouble) {
-      // Brief flash + steam puff request for double jump feedback
-      state.flash = Math.max(state.flash, 0.06);
-      // Signal runtime/updateFrame via reusable dust burst at cup feet
-      (state as GameState & { _doubleJumpPuff?: boolean })._doubleJumpPuff = true;
+    if (r.ok) {
+      deps.onJump?.(r.isDouble);
+      if (r.isDouble) {
+        // Brief flash + steam puff request for double jump feedback
+        state.flash = Math.max(state.flash, 0.06);
+        // Signal runtime/updateFrame via reusable dust burst at cup feet
+        (state as GameState & { _doubleJumpPuff?: boolean })._doubleJumpPuff = true;
+      }
     }
+  }
+
+  function doBoost(): void {
+    noteGesture();
+    if (tryBoost(state)) deps.onBoost?.();
   }
 
   function applyGesture(
@@ -63,13 +80,15 @@ export function attachInputController(deps: InputControllerDeps): InputControlle
       applyLaneDelta(action.delta);
     } else if (action.type === 'boost') {
       e.preventDefault();
-      tryBoost(state);
+      doBoost();
     } else if (e.code === 'Enter') {
       if (!state.running && !state.gameOver && deps.isStartVisible()) {
         e.preventDefault();
+        noteGesture();
         deps.onBeginRun();
       } else if (state.gameOver) {
         e.preventDefault();
+        noteGesture();
         deps.onRestart();
       }
     }
@@ -80,6 +99,7 @@ export function attachInputController(deps: InputControllerDeps): InputControlle
     endY: number,
     forceTap: boolean,
   ): void {
+    noteGesture();
     state.pointerActive = false;
     state.pointerConsumed = true;
     if (state.pointerFallbackTimer) {
@@ -173,7 +193,7 @@ export function attachInputController(deps: InputControllerDeps): InputControlle
   stage.addEventListener('pointerleave', onStagePointerCancel);
 
   const onJump = wrapJump(() => doJump());
-  const onBoost = wrapBoost(() => tryBoost(state));
+  const onBoost = wrapBoost(() => doBoost());
   if (jumpBtn) {
     // Prefer pointerdown only — avoids click+pointerdown eating the double jump window
     jumpBtn.addEventListener('pointerdown', onJump);

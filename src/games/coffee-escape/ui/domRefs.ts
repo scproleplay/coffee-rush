@@ -33,6 +33,7 @@ export interface CeDom {
   CHASE_FILL: HTMLElement | null;
   CHASE_HUD: HTMLElement | null;
   CHASE_LABEL: HTMLElement | null;
+  MUTE_BTN: HTMLElement | null;
   HINT: HTMLElement | null;
 }
 
@@ -75,6 +76,7 @@ export function getCeDom(): CeDom {
     CHASE_FILL: document.getElementById('ceChaseFill'),
     CHASE_HUD: document.getElementById('ceChaseHud'),
     CHASE_LABEL: document.getElementById('ceChaseLabel'),
+    MUTE_BTN: document.getElementById('ceMuteBtn'),
     HINT: document.getElementById('ceHint'),
   };
 }

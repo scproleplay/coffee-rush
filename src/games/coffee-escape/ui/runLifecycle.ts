@@ -109,6 +109,7 @@ export interface GameOverUiDeps {
   state: GameState;
   dom: CeDom;
   lb: LeaderboardFormApi;
+  onGameOver?: (newBest: boolean) => void;
 }
 
 export function presentGameOver(deps: GameOverUiDeps): void {
@@ -125,6 +126,7 @@ export function presentGameOver(deps: GameOverUiDeps): void {
     state.best = finalScore;
     saveBestValue(state.best);
   }
+  deps.onGameOver?.(newBest);
   const finalBest = state.best;
   updateBestDisplays(dom, finalBest);
 

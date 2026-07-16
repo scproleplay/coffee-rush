@@ -22,6 +22,7 @@ import {
   emitBoostParticleAt,
 } from './systems/spawnController';
 import { updateFrame } from './systems/updateFrame';
+import { createCeAudio } from './ui/audio';
 import { getCeDom } from './ui/domRefs';
 import { createLeaderboardForm } from './ui/leaderboardForm';
 import { spawnPopup, worldToScreen } from './ui/popups';
@@ -54,6 +55,7 @@ function startCoffeeEscape() {
     CHASE_FILL,
     CHASE_HUD,
     CHASE_LABEL,
+    MUTE_BTN,
     HINT,
     RUN_STAMP,
     LB_FORM,
@@ -61,6 +63,17 @@ function startCoffeeEscape() {
     LB_SUBMIT_BTN,
     LB_STATUS_EL,
   } = dom;
+
+  const audio = createCeAudio();
+
+  function syncMuteBtn(): void {
+    if (!MUTE_BTN) return;
+    const muted = audio.isMuted();
+    MUTE_BTN.setAttribute('aria-pressed', muted ? 'true' : 'false');
+    MUTE_BTN.classList.toggle('is-muted', muted);
+    MUTE_BTN.textContent = muted ? '🔇 Muted' : '🔊 Sound';
+  }
+  syncMuteBtn();
 
   const state = createInitialState();
 
@@ -125,6 +138,9 @@ function startCoffeeEscape() {
     isStartVisible: () => !!(START_OVERLAY && !START_OVERLAY.hidden),
     onBeginRun: () => beginRunRef(),
     onRestart: () => restartRef(),
+    onUserGesture: () => audio.unlock(),
+    onJump: (isDouble) => audio.play(isDouble ? 'doubleJump' : 'jump'),
+    onBoost: () => audio.play('boost'),
   });
 
   const lbForm = createLeaderboardForm(
@@ -150,6 +166,7 @@ function startCoffeeEscape() {
   }
 
   function beginRun() {
+    audio.unlock();
     resetWorld();
     lbForm.resetSubmitted();
     lbForm.hide();
@@ -166,7 +183,14 @@ function startCoffeeEscape() {
 
   function gameOver() {
     setPlayingChrome(false);
-    presentGameOver({ state, dom, lb: lbForm });
+    presentGameOver({
+      state,
+      dom,
+      lb: lbForm,
+      onGameOver: (newBest) => {
+        audio.play(newBest ? 'newBest' : 'gameOver');
+      },
+    });
   }
 
   function restart() {
@@ -222,6 +246,10 @@ function startCoffeeEscape() {
       onSectionChange: (_id, label) => {
         flashRunStamp(RUN_STAMP, label);
       },
+      onHit: () => audio.play('hit'),
+      onBean: () => audio.play('bean'),
+      onBufferedJump: (isDouble) =>
+        audio.play(isDouble ? 'doubleJump' : 'jump'),
       scoreEl: SCORE_EL,
       boostFill: BOOST_FILL,
       boostHudFill: BOOST_HUD_FILL,
@@ -263,6 +291,14 @@ function startCoffeeEscape() {
 
     bindTap(START_BTN, beginRun);
     bindTap(TRY_AGAIN_BTN, restart);
+    if (MUTE_BTN) {
+      MUTE_BTN.addEventListener('click', (e) => {
+        e.preventDefault();
+        audio.unlock();
+        audio.toggleMuted();
+        syncMuteBtn();
+      });
+    }
     if (RESET_BEST_BTN) {
       RESET_BEST_BTN.addEventListener('click', () => {
         state.best = 0;
