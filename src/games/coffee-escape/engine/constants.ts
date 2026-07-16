@@ -12,7 +12,7 @@ export const JUMP_VY = 8.6;
  * Second air jump — small steam puff / correction boost.
  * A bit higher than the ultra-low hop, still under the ceiling.
  */
-export const DOUBLE_JUMP_VY = 4.3;
+export const DOUBLE_JUMP_VY = 4.7;
 /**
  * When already rising faster than the double-jump target, keep this fraction of excess
  * so we never yank velocity downward.
