@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import {
   BEAN_INTERVAL_MAX,
   BEAN_INTERVAL_MIN,
+  DOUBLE_JUMP_REACT_SEC,
   JUMP_VY,
   LANE_X,
   OBSTACLE_END_Z,
@@ -22,8 +23,10 @@ import {
 } from './collisionLogic';
 import { nextBeanDelay, scoreFromTime, speedAtTime, tickBoost } from './pacingLogic';
 import { burstDustAt } from './spawnController';
+import { consumeJumpBuffer } from './playerActions';
 import {
   cupTiltX,
+  doubleJumpScale,
   laneBank,
   tickJump,
   tickLaneMotion,
@@ -95,6 +98,14 @@ export function updateFrame(ctx: UpdateFrameCtx): boolean {
 
   const p = state.player;
   const wasAirborne = !p.onGround;
+
+  // Buffered jump (early double-jump swipe / pre-land press) — apply before physics
+  const buffered = consumeJumpBuffer(state, dt);
+  if (buffered.ok && buffered.isDouble) {
+    state.flash = Math.max(state.flash, 0.1);
+    (state as GameState & { _doubleJumpPuff?: boolean })._doubleJumpPuff = true;
+  }
+
   Object.assign(p, tickLaneMotion(p, dt, LANE_X));
   const jumped = tickJump(
     { y: p.y, vy: p.vy, onGround: p.onGround, airT: p.airT || 0 },
@@ -104,11 +115,16 @@ export function updateFrame(ctx: UpdateFrameCtx): boolean {
   p.vy = jumped.vy;
   p.onGround = jumped.onGround;
   p.airT = jumped.airT;
-  // Reset double-jump budget on landing
+  // Reset double-jump budget on landing; clear react + buffer
   if (p.onGround) {
     p.jumpsLeft = 2;
+    p.doubleJumpReactT = 0;
   } else if (wasAirborne && p.jumpsLeft > 2) {
     p.jumpsLeft = 2;
+  }
+  // Tick double-jump visual react (1 → 0)
+  if (p.doubleJumpReactT > 0) {
+    p.doubleJumpReactT = Math.max(0, p.doubleJumpReactT - dt / DOUBLE_JUMP_REACT_SEC);
   }
   p.runAnim = tickRunAnim(p.runAnim, dt, state.speed);
 
@@ -116,13 +132,21 @@ export function updateFrame(ctx: UpdateFrameCtx): boolean {
   const puffState = state as GameState & { _doubleJumpPuff?: boolean };
   if (puffState._doubleJumpPuff) {
     puffState._doubleJumpPuff = false;
-    // dustPool shape is compatible at runtime
+    // dustPool shape is compatible at runtime — denser kick under the cup
     burstDustAt(
       ctx.dustPool as unknown as Parameters<typeof burstDustAt>[0],
       p.laneX,
-      Math.max(0.2, p.y + 0.15),
+      Math.max(0.15, p.y + 0.08),
       0,
-      8,
+      12,
+    );
+    // Extra upward steam ring for readable double-jump feedback
+    burstDustAt(
+      ctx.dustPool as unknown as Parameters<typeof burstDustAt>[0],
+      p.laneX,
+      Math.max(0.4, p.y + 0.55),
+      0,
+      6,
     );
   }
 
@@ -131,28 +155,37 @@ export function updateFrame(ctx: UpdateFrameCtx): boolean {
   ctx.cup.position.y = p.y;
   const swing = Math.sin(p.runAnim) * 1.0;
   const bob = p.onGround ? Math.abs(Math.sin(p.runAnim * 2)) * 0.06 : 0;
+  const react = p.doubleJumpReactT || 0;
   ctx.armLGroup.rotation.x = swing;
   ctx.armRGroup.rotation.x = -swing;
   ctx.legLGroup.rotation.x = -swing * 0.7;
   ctx.legRGroup.rotation.x = swing * 0.7;
   if (!p.onGround) {
     const tuck = Math.min(1, p.vy / JUMP_VY + 0.4);
-    ctx.legLGroup.rotation.x = -1.0 * tuck - 0.3;
-    ctx.legRGroup.rotation.x = -1.0 * tuck - 0.3;
-    ctx.armLGroup.rotation.x = -1.5 * tuck - 0.2;
-    ctx.armRGroup.rotation.x = 1.5 * tuck + 0.2;
+    // Double-jump kick: tuck legs harder then ease out
+    const kick = 0.55 * react;
+    ctx.legLGroup.rotation.x = -1.0 * tuck - 0.3 - kick;
+    ctx.legRGroup.rotation.x = -1.0 * tuck - 0.3 - kick;
+    ctx.armLGroup.rotation.x = -1.5 * tuck - 0.2 - kick * 0.6;
+    ctx.armRGroup.rotation.x = 1.5 * tuck + 0.2 + kick * 0.6;
   }
-  ctx.cup.rotation.x = cupTiltX(p.onGround, p.airT || 0);
+  ctx.cup.rotation.x = cupTiltX(p.onGround, p.airT || 0, react);
   ctx.cup.rotation.z = laneBank(p.laneSwitchT, p.laneFromX, p.laneToX);
-  ctx.cup.position.y = p.y + bob;
+  // Squash/stretch on double jump
+  const sc = doubleJumpScale(react);
+  ctx.cup.scale.set(sc, 2 - sc, sc);
+  // Slight lift of visual during kick so squash reads as bounce
+  ctx.cup.position.y = p.y + bob + react * 0.04;
 
   for (const child of ctx.steamGroup.children) {
     const ph = child.userData.phase || 0;
     const t = state.worldTime * 2 + ph;
-    child.position.y = ((t * 0.4) % 0.6) + 0.05;
+    // Burst steam upward harder during double-jump react
+    const steamBoost = 1 + react * 1.8;
+    child.position.y = ((t * 0.4 * steamBoost) % 0.6) + 0.05 + react * 0.12;
     child.position.x = (ph - 1) * 0.08 + Math.sin(t * 1.5) * 0.02;
     const k = 1 - (((t * 0.4) % 0.6) / 0.6);
-    child.scale.setScalar(0.4 + k * 0.9);
+    child.scale.setScalar((0.4 + k * 0.9) * (1 + react * 0.45));
   }
 
   const manSwing = Math.sin(p.runAnim * 0.9) * 0.7;

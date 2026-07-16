@@ -14,12 +14,26 @@ export const JUMP_VY = 9.0;
  * Peak combo height stays around ~2.0 so high caffeine pickups remain optional candy.
  */
 export const DOUBLE_JUMP_VY = 5.4;
+/**
+ * When already rising faster than the double-jump boost, keep this fraction of the
+ * excess upward speed so the second jump never yanks velocity downward (snappy feel).
+ */
+export const DOUBLE_JUMP_RISE_KEEP = 0.32;
+/**
+ * When falling, keep this fraction of downward speed as a soft cancel
+ * (slightly less reverse snap without raising peak height).
+ */
+export const DOUBLE_JUMP_FALL_SOFT = 0.1;
 /** Max jumps before landing (ground + one air) */
 export const MAX_JUMPS = 2;
 /** Base gravity while rising — slightly firmer than the old floaty feel */
 export const GRAVITY = 26.0;
 /** Extra pull on the way down for snappier landings */
 export const FALL_GRAVITY_MULT = 1.45;
+/** How long a jump press is remembered if it arrives a hair early/late (seconds) */
+export const JUMP_BUFFER_SEC = 0.12;
+/** Visual react window for double-jump squash / steam kick (seconds) */
+export const DOUBLE_JUMP_REACT_SEC = 0.22;
 
 export const OBSTACLE_POOL_SIZE = 30;
 /** Closer first wave so something appears within ~4–6s at base speed */

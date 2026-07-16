@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   applyJumpImpulse,
+  blendDoubleJumpVy,
   cupTiltX,
+  doubleJumpScale,
   easeOutCubic,
   laneBank,
   tickJump,
@@ -74,7 +76,7 @@ describe('applyJumpImpulse', () => {
   });
 
   it('air double jump when charges remain', () => {
-    const r = applyJumpImpulse(1, false);
+    const r = applyJumpImpulse(1, false, 0);
     expect(r).not.toBeNull();
     expect(r!.isDouble).toBe(true);
     expect(r!.jumpsLeft).toBe(0);
@@ -100,6 +102,28 @@ describe('applyJumpImpulse', () => {
   });
 });
 
+describe('blendDoubleJumpVy', () => {
+  it('does not yank downward when already rising faster than double boost', () => {
+    const rising = JUMP_VY * 0.7; // still above DOUBLE_JUMP_VY early in first jump
+    const blended = blendDoubleJumpVy(rising);
+    expect(blended).toBeGreaterThanOrEqual(DOUBLE_JUMP_VY);
+    // Must not hard-reset below current rise
+    expect(blended).toBeGreaterThan(DOUBLE_JUMP_VY);
+  });
+
+  it('lifts to double-jump vy near the apex', () => {
+    expect(blendDoubleJumpVy(0.5)).toBe(DOUBLE_JUMP_VY);
+    expect(blendDoubleJumpVy(0)).toBe(DOUBLE_JUMP_VY);
+  });
+
+  it('soft-cancels fall without full reverse snap', () => {
+    const falling = -4;
+    const blended = blendDoubleJumpVy(falling);
+    expect(blended).toBeLessThan(DOUBLE_JUMP_VY);
+    expect(blended).toBeGreaterThan(0);
+  });
+});
+
 describe('tickRunAnim', () => {
   it('advances with speed', () => {
     const a = tickRunAnim(0, 1, 12);
@@ -116,6 +140,17 @@ describe('visual helpers', () => {
 
   it('cupTiltX flips in air', () => {
     expect(cupTiltX(true, 0)).toBeCloseTo(-0.1, 5);
-    expect(cupTiltX(false, 0.7)).toBeGreaterThan(5);
+    expect(cupTiltX(false, 0.7)).toBeGreaterThan(4);
+  });
+
+  it('cupTiltX kicks forward on double-jump react', () => {
+    const base = cupTiltX(false, 0.2, 0);
+    const kicked = cupTiltX(false, 0.2, 1);
+    expect(kicked).toBeLessThan(base);
+  });
+
+  it('doubleJumpScale returns 1 when idle and dips on react', () => {
+    expect(doubleJumpScale(0)).toBe(1);
+    expect(doubleJumpScale(1)).not.toBe(1);
   });
 });

@@ -30,6 +30,7 @@ export function createInitialState(): GameState {
       runAnim: 0,
       airT: 0,
       jumpsLeft: MAX_JUMPS,
+      doubleJumpReactT: 0,
     },
     obstacles: [],
     man: { visible: true, z: 6, lane: 0 },
@@ -56,5 +57,6 @@ export function createInitialState(): GameState {
     motes: [],
     boostParticles: [],
     nextBoostParticle: 0,
+    jumpBufferT: 0,
   };
 }

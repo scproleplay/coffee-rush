@@ -2,7 +2,7 @@
  * Player action application (CE-local).
  * Uses pure gates from inputLogic / playerMotion / pacingLogic.
  */
-import { LANE_X, MAX_JUMPS } from '../engine/constants';
+import { JUMP_BUFFER_SEC, LANE_X, MAX_JUMPS } from '../engine/constants';
 import type { GameState } from '../engine/types';
 import { canBoost, canChangeLane, canJump } from './inputLogic';
 import { applyJumpImpulse } from './playerMotion';
@@ -13,7 +13,16 @@ export type JumpResult = {
   isDouble: boolean;
 };
 
+/**
+ * Try a jump immediately. If not currently allowed, buffer the press so it
+ * fires as soon as a double-jump (or ground jump) becomes available.
+ */
 export function tryJump(state: GameState): JumpResult {
+  if (state.running && !state.gameOver) {
+    // Always refresh buffer so rapid swipes feel responsive
+    state.jumpBufferT = JUMP_BUFFER_SEC;
+  }
+
   if (
     !canJump({
       running: state.running,
@@ -24,14 +33,45 @@ export function tryJump(state: GameState): JumpResult {
   ) {
     return { ok: false, isDouble: false };
   }
-  const imp = applyJumpImpulse(state.player.jumpsLeft, state.player.onGround);
+
+  return applyJumpNow(state);
+}
+
+/** Consume a pending buffered jump if the player can jump this frame. */
+export function consumeJumpBuffer(state: GameState, dt: number): JumpResult {
+  if (state.jumpBufferT > 0) {
+    state.jumpBufferT = Math.max(0, state.jumpBufferT - dt);
+  }
+  if (state.jumpBufferT <= 0) return { ok: false, isDouble: false };
+  if (
+    !canJump({
+      running: state.running,
+      gameOver: state.gameOver,
+      onGround: state.player.onGround,
+      jumpsLeft: state.player.jumpsLeft,
+    })
+  ) {
+    return { ok: false, isDouble: false };
+  }
+  return applyJumpNow(state);
+}
+
+function applyJumpNow(state: GameState): JumpResult {
+  const imp = applyJumpImpulse(
+    state.player.jumpsLeft,
+    state.player.onGround,
+    state.player.vy,
+  );
   if (!imp) return { ok: false, isDouble: false };
   state.player.vy = imp.vy;
   state.player.onGround = imp.onGround;
   state.player.jumpsLeft = imp.jumpsLeft;
-  // Fresh air timer on double so tilt feels snappy
+  // Clear buffer so one press doesn't fire twice
+  state.jumpBufferT = 0;
   if (imp.isDouble) {
-    state.player.airT = 0;
+    // Soft restart of air timer for cleaner spin (not a hard zero snap every frame)
+    state.player.airT = Math.min(state.player.airT || 0, 0.08);
+    state.player.doubleJumpReactT = 1;
   }
   return { ok: true, isDouble: imp.isDouble };
 }

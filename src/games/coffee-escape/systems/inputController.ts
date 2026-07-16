@@ -36,11 +36,11 @@ export function attachInputController(deps: InputControllerDeps): InputControlle
   }
 
   function doJump(): void {
+    // tryJump always buffers; if it can fire now it returns ok immediately
     const r = tryJump(state);
     if (r.ok && r.isDouble) {
       // Brief flash + steam puff request for double jump feedback
-      state.flash = Math.max(state.flash, 0.08);
-      state.player.airT = state.player.airT || 0;
+      state.flash = Math.max(state.flash, 0.1);
       // Signal runtime/updateFrame via reusable dust burst at cup feet
       (state as GameState & { _doubleJumpPuff?: boolean })._doubleJumpPuff = true;
     }
@@ -159,8 +159,9 @@ export function attachInputController(deps: InputControllerDeps): InputControlle
     }
   }
 
-  // Jump: short dedupe so click+pointerdown don't double-fire, but air double-jump still works
-  const wrapJump = createTapDedupe(140);
+  // Jump: short dedupe so click+pointerdown don't double-fire.
+  // Keep window tight so intentional double-jump swipes still register.
+  const wrapJump = createTapDedupe(90);
   const wrapBoost = createTapDedupe(500);
   window.addEventListener('keydown', onKeyDown);
   // Non-passive so preventDefault can block page scroll while swiping the stage

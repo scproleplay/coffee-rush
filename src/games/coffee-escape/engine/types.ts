@@ -15,6 +15,8 @@ export interface PlayerState {
   airT?: number;
   /** Remaining jumps before landing (2 on ground: ground + double). */
   jumpsLeft: number;
+  /** 1 → 0 visual kick window after a double jump (squash / steam react). */
+  doubleJumpReactT: number;
 }
 
 /** Transient FX flags attached to GameState by input (not serialized). */
@@ -92,4 +94,9 @@ export interface GameState {
   motes: Mesh[];
   boostParticles: ParticleRec[];
   nextBoostParticle: number;
+  /**
+   * Seconds remaining that a jump press is remembered (early double-jump /
+   * pre-land buffer). 0 when idle.
+   */
+  jumpBufferT: number;
 }
