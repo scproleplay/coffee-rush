@@ -11,8 +11,12 @@ describe('pickGameOverTitle', () => {
 });
 
 describe('isNewBest', () => {
-  it('strictly greater', () => {
+  it('strictly greater than previous best only', () => {
     expect(isNewBest(10, 10)).toBe(false);
     expect(isNewBest(11, 10)).toBe(true);
+    expect(isNewBest(133, 390)).toBe(false);
+    expect(isNewBest(391, 390)).toBe(true);
+    expect(isNewBest(0, 0)).toBe(false);
+    expect(isNewBest(1, 0)).toBe(true);
   });
 });

@@ -559,6 +559,11 @@
       animation: ce-new-best-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1),
                  ce-pulse 1.2s 0.6s infinite;
     }
+    /* Must beat `.ce-new-best { display: inline-block }` — otherwise the
+       badge stays visible even when JS sets the hidden attribute. */
+    .ce-new-best[hidden] {
+      display: none !important;
+    }
     @keyframes ce-new-best-pop {
       0%   { transform: scale(0) rotate(-15deg); opacity: 0; }
       100% { transform: scale(1) rotate(0deg);   opacity: 1; }

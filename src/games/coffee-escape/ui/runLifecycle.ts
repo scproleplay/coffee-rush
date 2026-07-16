@@ -113,26 +113,48 @@ export function presentGameOver(deps: GameOverUiDeps): void {
   state.running = false;
   state.gameOver = true;
   if (dom.HUD) dom.HUD.hidden = true;
-  const newBest = isNewBest(state.score, state.best);
+
+  // Capture previous best BEFORE any update so ties/losses never flash "NEW BEST!"
+  const previousBest = state.best;
+  const finalScore = state.score;
+  const newBest = isNewBest(finalScore, previousBest);
   if (newBest) {
-    state.best = state.score;
+    state.best = finalScore;
     saveBestValue(state.best);
   }
-  updateBestDisplays(dom, state.best);
+  const finalBest = state.best;
+  updateBestDisplays(dom, finalBest);
+
   if (dom.FINAL_SCORE_ITEM) dom.FINAL_SCORE_ITEM.classList.remove('is-best');
   if (dom.FINAL_BEST_ITEM) dom.FINAL_BEST_ITEM.classList.remove('is-best');
-  if (dom.FINAL_SCORE_EL) dom.FINAL_SCORE_EL.textContent = '0';
+  if (dom.FINAL_SCORE_EL) {
+    dom.FINAL_SCORE_EL.classList.remove('is-best');
+    dom.FINAL_SCORE_EL.classList.add('final');
+    dom.FINAL_SCORE_EL.textContent = '0';
+  }
   if (dom.FINAL_BEST_EL) dom.FINAL_BEST_EL.textContent = '0';
-  if (dom.NEW_BEST_EL) dom.NEW_BEST_EL.hidden = !newBest;
+
+  if (dom.NEW_BEST_EL) {
+    if (newBest) {
+      dom.NEW_BEST_EL.hidden = false;
+      dom.NEW_BEST_EL.textContent = 'NEW BEST!';
+      dom.NEW_BEST_EL.removeAttribute('hidden');
+    } else {
+      dom.NEW_BEST_EL.hidden = true;
+      dom.NEW_BEST_EL.setAttribute('hidden', '');
+      dom.NEW_BEST_EL.textContent = 'NEW BEST!';
+    }
+  }
+
   if (dom.OVER_TITLE_EL) {
-    dom.OVER_TITLE_EL.textContent = pickGameOverTitle(state.score);
+    dom.OVER_TITLE_EL.textContent = newBest
+      ? 'New house record! ☕🏆'
+      : pickGameOverTitle(finalScore);
   }
   if (dom.GAME_OVER_OVERLAY) dom.GAME_OVER_OVERLAY.hidden = false;
   if (!lb.wasSubmitted()) lb.show();
   else lb.hide();
 
-  const finalScore = state.score;
-  const finalBest = state.best;
   const startT = performance.now();
   const dur = 700;
   function tick(): void {
