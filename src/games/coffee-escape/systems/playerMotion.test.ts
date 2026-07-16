@@ -8,7 +8,7 @@ import {
   tickLaneMotion,
   tickRunAnim,
 } from './playerMotion';
-import { JUMP_VY, LANE_X } from '../engine/constants';
+import { DOUBLE_JUMP_VY, JUMP_VY, LANE_X } from '../engine/constants';
 
 describe('easeOutCubic', () => {
   it('maps 0..1', () => {
@@ -79,6 +79,19 @@ describe('applyJumpImpulse', () => {
     expect(r!.isDouble).toBe(true);
     expect(r!.jumpsLeft).toBe(0);
     expect(r!.vy).toBeGreaterThan(0);
+    expect(r!.vy).toBe(DOUBLE_JUMP_VY);
+  });
+
+  it('double jump is not stronger than first jump (steam puff, not rocket)', () => {
+    expect(DOUBLE_JUMP_VY).toBeLessThanOrEqual(JUMP_VY);
+    expect(DOUBLE_JUMP_VY).toBeLessThan(JUMP_VY * 0.75);
+  });
+
+  it('falls faster than it rises for snappy landings', () => {
+    const rise = tickJump({ y: 1, vy: 2, onGround: false, airT: 0.1 }, 0.05);
+    const fall = tickJump({ y: 1, vy: -2, onGround: false, airT: 0.1 }, 0.05);
+    // Falling should lose more |vy| (stronger gravity mult)
+    expect(Math.abs(fall.vy) - 2).toBeGreaterThan(2 - rise.vy);
   });
 
   it('denies when no jumps left', () => {

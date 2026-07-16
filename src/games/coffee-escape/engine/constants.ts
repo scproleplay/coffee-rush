@@ -6,12 +6,20 @@ export const STORAGE_KEY = 'codecup-coffee-escape-best';
 export const LANE_X = [-1.6, 0, 1.6] as const;
 export const LANE_SWITCH_MS = 160;
 export const GROUND_Y = 0;
+/** First jump: clears mid furniture (~0.55–0.58) with a normal arc */
 export const JUMP_VY = 9.0;
-/** Second air jump — slightly softer so it feels like a steam kick, still reaches high beans */
-export const DOUBLE_JUMP_VY = 7.6;
+/**
+ * Second air jump — small steam puff / correction boost.
+ * Must be ≤ first jump and not launch near the ceiling.
+ * Peak combo height stays around ~2.0 so high caffeine pickups remain optional candy.
+ */
+export const DOUBLE_JUMP_VY = 5.4;
 /** Max jumps before landing (ground + one air) */
 export const MAX_JUMPS = 2;
-export const GRAVITY = 22.0;
+/** Base gravity while rising — slightly firmer than the old floaty feel */
+export const GRAVITY = 26.0;
+/** Extra pull on the way down for snappier landings */
+export const FALL_GRAVITY_MULT = 1.45;
 
 export const OBSTACLE_POOL_SIZE = 30;
 /** Closer first wave so something appears within ~4–6s at base speed */

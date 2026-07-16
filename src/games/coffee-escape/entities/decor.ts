@@ -346,3 +346,414 @@ export function makeKitchenCounter() {
   group.add(faucet);
   return group;
 }
+
+/** Tall fridge — unmistakable kitchen silhouette. */
+export function makeFridge() {
+  const group = new THREE.Group();
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(0.85, 1.9, 0.7),
+    new THREE.MeshLambertMaterial({ color: 0xe8eef2 }),
+  );
+  body.position.y = 0.95;
+  group.add(body);
+  // Freezer seam
+  const seam = new THREE.Mesh(
+    new THREE.BoxGeometry(0.86, 0.03, 0.02),
+    new THREE.MeshLambertMaterial({ color: 0xb0b8c0 }),
+  );
+  seam.position.set(0, 1.45, 0.36);
+  group.add(seam);
+  // Handles
+  const handleMat = new THREE.MeshLambertMaterial({ color: 0x8a9098 });
+  const h1 = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.35, 0.04), handleMat);
+  h1.position.set(0.3, 1.65, 0.38);
+  group.add(h1);
+  const h2 = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.55, 0.04), handleMat);
+  h2.position.set(0.3, 0.85, 0.38);
+  group.add(h2);
+  // Toe kick
+  const kick = new THREE.Mesh(
+    new THREE.BoxGeometry(0.88, 0.08, 0.72),
+    new THREE.MeshLambertMaterial({ color: 0x2a2a2a }),
+  );
+  kick.position.y = 0.04;
+  group.add(kick);
+  return group;
+}
+
+/** Stove / range with cooktop — kitchen identity. */
+export function makeStove() {
+  const group = new THREE.Group();
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(0.85, 0.85, 0.7),
+    new THREE.MeshLambertMaterial({ color: 0x3a3a40 }),
+  );
+  body.position.y = 0.42;
+  group.add(body);
+  const cooktop = new THREE.Mesh(
+    new THREE.BoxGeometry(0.9, 0.05, 0.74),
+    new THREE.MeshLambertMaterial({ color: 0x1a1a1e }),
+  );
+  cooktop.position.y = 0.88;
+  group.add(cooktop);
+  // Burners
+  const burnerMat = new THREE.MeshLambertMaterial({ color: 0x2a2a30 });
+  for (const [x, z] of [
+    [-0.22, 0.15],
+    [0.22, 0.15],
+    [-0.22, -0.15],
+    [0.22, -0.15],
+  ] as const) {
+    const b = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.03, 10), burnerMat);
+    b.position.set(x, 0.92, z);
+    group.add(b);
+  }
+  // Oven window
+  const window = new THREE.Mesh(
+    new THREE.BoxGeometry(0.5, 0.35, 0.02),
+    new THREE.MeshLambertMaterial({
+      color: 0x1a2030,
+      emissive: 0xff6020,
+      emissiveIntensity: 0.15,
+    }),
+  );
+  window.position.set(0, 0.4, 0.36);
+  group.add(window);
+  // Backsplash riser
+  const back = new THREE.Mesh(
+    new THREE.BoxGeometry(0.9, 0.55, 0.08),
+    new THREE.MeshLambertMaterial({ color: 0x2a2a30 }),
+  );
+  back.position.set(0, 1.15, -0.28);
+  group.add(back);
+  return group;
+}
+
+/** Dining table + chairs silhouette for kitchen/dining feel. */
+export function makeDiningSet() {
+  const group = new THREE.Group();
+  const top = new THREE.Mesh(
+    new THREE.BoxGeometry(0.9, 0.06, 0.7),
+    new THREE.MeshLambertMaterial({ color: 0xa07040 }),
+  );
+  top.position.y = 0.78;
+  group.add(top);
+  const legMat = new THREE.MeshLambertMaterial({ color: 0x5a3a14 });
+  for (const [x, z] of [
+    [-0.35, 0.25],
+    [0.35, 0.25],
+    [-0.35, -0.25],
+    [0.35, -0.25],
+  ] as const) {
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.75, 6), legMat);
+    leg.position.set(x, 0.38, z);
+    group.add(leg);
+  }
+  // One chair tucked in (readable)
+  const seat = new THREE.Mesh(
+    new THREE.BoxGeometry(0.35, 0.06, 0.35),
+    new THREE.MeshLambertMaterial({ color: 0x8a5a28 }),
+  );
+  seat.position.set(0, 0.45, 0.55);
+  group.add(seat);
+  const back = new THREE.Mesh(
+    new THREE.BoxGeometry(0.35, 0.45, 0.06),
+    new THREE.MeshLambertMaterial({ color: 0x7a4a20 }),
+  );
+  back.position.set(0, 0.7, 0.7);
+  group.add(back);
+  // Bowl on table
+  const bowl = new THREE.Mesh(
+    new THREE.SphereGeometry(0.1, 8, 6),
+    new THREE.MeshLambertMaterial({ color: 0xd06040 }),
+  );
+  bowl.scale.set(1, 0.5, 1);
+  bowl.position.set(0, 0.88, 0);
+  group.add(bowl);
+  return group;
+}
+
+/** Living-room couch edge — large and readable. */
+export function makeCouch() {
+  const group = new THREE.Group();
+  const base = new THREE.Mesh(
+    new THREE.BoxGeometry(0.85, 0.4, 1.5),
+    new THREE.MeshLambertMaterial({ color: 0x6a5a8a }),
+  );
+  base.position.y = 0.32;
+  group.add(base);
+  const back = new THREE.Mesh(
+    new THREE.BoxGeometry(0.2, 0.55, 1.5),
+    new THREE.MeshLambertMaterial({ color: 0x5a4a7a }),
+  );
+  back.position.set(-0.3, 0.65, 0);
+  group.add(back);
+  const arm1 = new THREE.Mesh(
+    new THREE.BoxGeometry(0.85, 0.3, 0.18),
+    new THREE.MeshLambertMaterial({ color: 0x5a4a7a }),
+  );
+  arm1.position.set(0, 0.55, 0.7);
+  group.add(arm1);
+  const arm2 = arm1.clone();
+  arm2.position.z = -0.7;
+  group.add(arm2);
+  // Pillows
+  const p1 = new THREE.Mesh(
+    new THREE.BoxGeometry(0.25, 0.22, 0.28),
+    new THREE.MeshLambertMaterial({ color: 0xd08070 }),
+  );
+  p1.position.set(0.1, 0.62, 0.25);
+  group.add(p1);
+  const p2 = new THREE.Mesh(
+    new THREE.BoxGeometry(0.22, 0.2, 0.26),
+    new THREE.MeshLambertMaterial({ color: 0xe8d0a0 }),
+  );
+  p2.position.set(0.05, 0.6, -0.3);
+  group.add(p2);
+  return group;
+}
+
+/** TV stand with screen — living room identity. */
+export function makeTvStand() {
+  const group = new THREE.Group();
+  const stand = new THREE.Mesh(
+    new THREE.BoxGeometry(0.55, 0.55, 1.2),
+    new THREE.MeshLambertMaterial({ color: 0x4a3020 }),
+  );
+  stand.position.y = 0.28;
+  group.add(stand);
+  // Screen
+  const screen = new THREE.Mesh(
+    new THREE.BoxGeometry(0.08, 0.7, 1.05),
+    new THREE.MeshLambertMaterial({
+      color: 0x1a2030,
+      emissive: 0x204060,
+      emissiveIntensity: 0.35,
+    }),
+  );
+  screen.position.set(0.05, 1.05, 0);
+  group.add(screen);
+  // Bezel
+  const bezel = new THREE.Mesh(
+    new THREE.BoxGeometry(0.06, 0.78, 1.15),
+    new THREE.MeshLambertMaterial({ color: 0x1a1a1a }),
+  );
+  bezel.position.set(0.02, 1.05, 0);
+  group.add(bezel);
+  // Speaker / console box
+  const box = new THREE.Mesh(
+    new THREE.BoxGeometry(0.25, 0.12, 0.35),
+    new THREE.MeshLambertMaterial({ color: 0x2a2a2a }),
+  );
+  box.position.set(0.1, 0.62, 0.25);
+  group.add(box);
+  return group;
+}
+
+/** Floor lamp for living room warmth. */
+export function makeFloorLamp() {
+  const group = new THREE.Group();
+  const base = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.18, 0.22, 0.06, 10),
+    new THREE.MeshLambertMaterial({ color: 0x4a3020 }),
+  );
+  base.position.y = 0.03;
+  group.add(base);
+  const pole = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.03, 0.03, 1.6, 6),
+    new THREE.MeshLambertMaterial({ color: 0x5a4030 }),
+  );
+  pole.position.y = 0.85;
+  group.add(pole);
+  const shade = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.22, 0.28, 0.35, 10),
+    new THREE.MeshLambertMaterial({
+      color: 0xffe8c0,
+      emissive: 0xffaa60,
+      emissiveIntensity: 0.5,
+    }),
+  );
+  shade.position.y = 1.75;
+  group.add(shade);
+  return group;
+}
+
+/** Laundry basket — hallway clutter. */
+export function makeLaundryBasket() {
+  const group = new THREE.Group();
+  const basket = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.32, 0.28, 0.55, 10, 1, true),
+    new THREE.MeshLambertMaterial({
+      color: 0xd4a574,
+      side: THREE.DoubleSide,
+    }),
+  );
+  basket.position.y = 0.28;
+  group.add(basket);
+  const bottom = new THREE.Mesh(
+    new THREE.CircleGeometry(0.28, 10),
+    new THREE.MeshLambertMaterial({ color: 0xc09060 }),
+  );
+  bottom.rotation.x = -Math.PI / 2;
+  bottom.position.y = 0.02;
+  group.add(bottom);
+  // Clothes pile
+  const clothColors = [0x6080c0, 0xc06060, 0xe8e0d0];
+  for (let i = 0; i < 3; i++) {
+    const c = new THREE.Mesh(
+      new THREE.SphereGeometry(0.14, 8, 6),
+      new THREE.MeshLambertMaterial({ color: clothColors[i]! }),
+    );
+    c.scale.set(1.2, 0.5, 1);
+    c.position.set((i - 1) * 0.08, 0.52 + i * 0.04, (i % 2) * 0.05);
+    group.add(c);
+  }
+  return group;
+}
+
+/** Bed edge + nightstand — bedroom section identity. */
+export function makeBedEdge() {
+  const group = new THREE.Group();
+  // Mattress / bed body along wall
+  const mattress = new THREE.Mesh(
+    new THREE.BoxGeometry(0.95, 0.35, 1.6),
+    new THREE.MeshLambertMaterial({ color: 0xe8e0f0 }),
+  );
+  mattress.position.y = 0.4;
+  group.add(mattress);
+  // Frame
+  const frame = new THREE.Mesh(
+    new THREE.BoxGeometry(1.0, 0.2, 1.65),
+    new THREE.MeshLambertMaterial({ color: 0x6b4220 }),
+  );
+  frame.position.y = 0.15;
+  group.add(frame);
+  // Headboard
+  const head = new THREE.Mesh(
+    new THREE.BoxGeometry(0.12, 0.7, 1.65),
+    new THREE.MeshLambertMaterial({ color: 0x5a3520 }),
+  );
+  head.position.set(-0.4, 0.7, 0);
+  group.add(head);
+  // Pillow
+  const pillow = new THREE.Mesh(
+    new THREE.BoxGeometry(0.35, 0.12, 0.55),
+    new THREE.MeshLambertMaterial({ color: 0xfff8f0 }),
+  );
+  pillow.position.set(-0.15, 0.65, 0.35);
+  group.add(pillow);
+  // Blanket fold
+  const blanket = new THREE.Mesh(
+    new THREE.BoxGeometry(0.7, 0.08, 1.0),
+    new THREE.MeshLambertMaterial({ color: 0x5a7a9a }),
+  );
+  blanket.position.set(0.1, 0.6, -0.15);
+  group.add(blanket);
+  return group;
+}
+
+/** Nightstand with lamp — pairs with bed. */
+export function makeNightstand() {
+  const group = new THREE.Group();
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(0.45, 0.55, 0.4),
+    new THREE.MeshLambertMaterial({ color: 0x8a5a30 }),
+  );
+  body.position.y = 0.28;
+  group.add(body);
+  const top = new THREE.Mesh(
+    new THREE.BoxGeometry(0.5, 0.05, 0.44),
+    new THREE.MeshLambertMaterial({ color: 0xa07040 }),
+  );
+  top.position.y = 0.58;
+  group.add(top);
+  // Drawer line
+  const drawer = new THREE.Mesh(
+    new THREE.BoxGeometry(0.4, 0.12, 0.02),
+    new THREE.MeshLambertMaterial({ color: 0x6a4020 }),
+  );
+  drawer.position.set(0, 0.35, 0.21);
+  group.add(drawer);
+  // Lamp
+  const lampBase = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.06, 0.08, 0.08, 8),
+    new THREE.MeshLambertMaterial({ color: 0xd4b48a }),
+  );
+  lampBase.position.set(0, 0.66, 0);
+  group.add(lampBase);
+  const stem = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.02, 0.02, 0.2, 6),
+    new THREE.MeshLambertMaterial({ color: 0x8a8a8a }),
+  );
+  stem.position.set(0, 0.8, 0);
+  group.add(stem);
+  const shade = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.1, 0.14, 0.16, 8),
+    new THREE.MeshLambertMaterial({
+      color: 0xfff0d0,
+      emissive: 0xffcc88,
+      emissiveIntensity: 0.4,
+    }),
+  );
+  shade.position.set(0, 0.95, 0);
+  group.add(shade);
+  // Clock
+  const clock = new THREE.Mesh(
+    new THREE.BoxGeometry(0.12, 0.08, 0.06),
+    new THREE.MeshLambertMaterial({ color: 0x2a2a2a }),
+  );
+  clock.position.set(0.12, 0.66, 0.1);
+  group.add(clock);
+  return group;
+}
+
+/** Tall bookshelf for living/hallway density. */
+export function makeBookshelf() {
+  const group = new THREE.Group();
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(0.45, 1.7, 0.9),
+    new THREE.MeshLambertMaterial({ color: 0x7a4a22 }),
+  );
+  body.position.y = 0.85;
+  group.add(body);
+  // Shelves
+  const shelfMat = new THREE.MeshLambertMaterial({ color: 0x5a3010 });
+  for (let i = 0; i < 4; i++) {
+    const shelf = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.04, 0.88), shelfMat);
+    shelf.position.set(0, 0.25 + i * 0.4, 0);
+    group.add(shelf);
+  }
+  // Books
+  const colors = [0xc04040, 0x3a6a9a, 0xd4a020, 0x4a8a3a, 0x8a4a8a, 0xe07040];
+  for (let row = 0; row < 4; row++) {
+    for (let b = 0; b < 4; b++) {
+      const book = new THREE.Mesh(
+        new THREE.BoxGeometry(0.12, 0.28, 0.16),
+        new THREE.MeshLambertMaterial({ color: colors[(row * 4 + b) % colors.length]! }),
+      );
+      book.position.set(0.08, 0.42 + row * 0.4, -0.3 + b * 0.2);
+      group.add(book);
+    }
+  }
+  return group;
+}
+
+/** Room divider arch / doorway portal — signals room transitions. */
+export function makeRoomArch(side: 'left' | 'right') {
+  const group = new THREE.Group();
+  const postMat = new THREE.MeshLambertMaterial({ color: 0x8a5a30 });
+  const post = new THREE.Mesh(new THREE.BoxGeometry(0.2, 2.8, 0.25), postMat);
+  post.position.set(side === 'left' ? 0.05 : -0.05, 1.4, 0);
+  group.add(post);
+  const lintel = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 1.2), postMat);
+  lintel.position.set(side === 'left' ? 0.05 : -0.05, 2.7, 0.4);
+  group.add(lintel);
+  // Soft wall accent panel behind arch (room color hint)
+  const accent = new THREE.Mesh(
+    new THREE.BoxGeometry(0.04, 2.6, 0.9),
+    new THREE.MeshLambertMaterial({ color: 0xd4a070 }),
+  );
+  accent.position.set(side === 'left' ? -0.02 : 0.02, 1.3, 0.35);
+  group.add(accent);
+  return group;
+}

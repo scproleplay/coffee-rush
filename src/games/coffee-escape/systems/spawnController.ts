@@ -54,19 +54,20 @@ export function createSpawnController(state: GameState): SpawnController {
   }
 
   /**
-   * Bean heights:
-   * - Early: single-jump band (~0.85–1.25) — optional, fair
-   * - Later: some high beans (~1.55–1.95) reward double jump, never required for survival
+   * Bean heights (tuned to steam-puff double jump):
+   * - Early: single-jump band (~0.8–1.15) — optional, fair
+   * - Later: some high floaters (~1.3–1.55) reward a small double jump, never required
+   *   (combo peak is ~2.0; keep pickups well below "ceiling rocket" range)
    */
   function beanHeightForTime(t: number): number {
     if (t < 12) {
-      return 0.85 + Math.random() * 0.4;
+      return 0.8 + Math.random() * 0.35;
     }
     // ~30% high floaters after intro; still optional score candy
     if (Math.random() < 0.3) {
-      return 1.55 + Math.random() * 0.4;
+      return 1.3 + Math.random() * 0.25;
     }
-    return 0.9 + Math.random() * 0.4;
+    return 0.85 + Math.random() * 0.35;
   }
 
   function spawnBeanAt(lane: number, z: number, y = 1.0): void {

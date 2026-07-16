@@ -33,29 +33,34 @@ export function createScene(canvas: HTMLCanvasElement): SceneBundle {
   renderer.setClearColor(0xffefd6, 1);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-  // Soft ambient house light
-  const hemi = new THREE.HemisphereLight(0xfff4e0, 0x8a5a30, 0.78);
+  // Soft ambient house light — warmer floor bounce
+  const hemi = new THREE.HemisphereLight(0xfff0d8, 0x9a6038, 0.85);
   scene.add(hemi);
 
   // Warm key light (afternoon window feel)
-  const sun = new THREE.DirectionalLight(0xffe2b0, 1.0);
+  const sun = new THREE.DirectionalLight(0xffe4b8, 1.05);
   sun.position.set(3.5, 9, -2);
   scene.add(sun);
 
-  // Gentle cool fill from opposite side (shadow depth without going office-blue)
-  const fill = new THREE.DirectionalLight(0xffd8c0, 0.28);
+  // Warm fill from opposite side (keep house, not office)
+  const fill = new THREE.DirectionalLight(0xffd0a8, 0.32);
   fill.position.set(-5, 5, 2);
   scene.add(fill);
 
   // Warm rim near camera / cup
-  const rim = new THREE.PointLight(0xffb070, 0.5, 10, 2);
+  const rim = new THREE.PointLight(0xffb070, 0.55, 10, 2);
   rim.position.set(0, 0.6, 2);
   scene.add(rim);
 
   // Ceiling wash — soft overhead house lamps
-  const ceilingWash = new THREE.PointLight(0xffe8c8, 0.35, 40, 2);
+  const ceilingWash = new THREE.PointLight(0xffe8c8, 0.42, 40, 2);
   ceilingWash.position.set(0, 5.2, -20);
   scene.add(ceilingWash);
+
+  // Secondary warm pool farther down the hall (room depth)
+  const farWarm = new THREE.PointLight(0xffc080, 0.28, 50, 2);
+  farWarm.position.set(0, 3.5, -35);
+  scene.add(farWarm);
 
   return { scene, camera, renderer, cameraBaseY, cameraBaseZ };
 }

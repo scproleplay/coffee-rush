@@ -3,6 +3,7 @@
  */
 import {
   DOUBLE_JUMP_VY,
+  FALL_GRAVITY_MULT,
   GRAVITY,
   JUMP_VY,
   LANE_SWITCH_MS,
@@ -53,7 +54,9 @@ export interface JumpMotion {
 
 export function tickJump(p: JumpMotion, dt: number): JumpMotion {
   let { y, vy, onGround, airT } = p;
-  vy -= GRAVITY * dt;
+  // Stronger pull while falling → less floaty, snappier landings
+  const g = vy < 0 ? GRAVITY * FALL_GRAVITY_MULT : GRAVITY;
+  vy -= g * dt;
   y += vy * dt;
   if (y <= 0) {
     y = 0;
