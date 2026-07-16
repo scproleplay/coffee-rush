@@ -291,6 +291,80 @@
       .ce-boost-hud-label { font-size: 0.6rem; bottom: calc(10px + 16px); }
     }
 
+    /* Chase / danger meter — top-center under HUD, tired man closing in */
+    .ce-chase-hud {
+      position: absolute;
+      left: 50%;
+      top: max(52px, calc(env(safe-area-inset-top, 0px) + 48px));
+      transform: translateX(-50%);
+      width: min(200px, 52vw);
+      height: 12px;
+      background: linear-gradient(180deg, #fff8f0 0%, #f0e0d0 100%);
+      border: 1.5px solid #c07040;
+      border-radius: 999px;
+      overflow: hidden;
+      z-index: 3;
+      pointer-events: none;
+      box-shadow:
+        0 1px 2px rgba(0, 0, 0, 0.12),
+        0 3px 8px rgba(180, 80, 40, 0.18);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .ce-chase-hud-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #e8a060 0%, #d06030 55%, #b03020 100%);
+      transition: width 0.12s linear;
+    }
+    .ce-chase-hud.is-mid {
+      border-color: #d07030;
+      box-shadow: 0 2px 10px rgba(200, 90, 30, 0.28);
+    }
+    .ce-chase-hud.is-hot {
+      border-color: #c02020;
+      box-shadow: 0 2px 12px rgba(200, 30, 20, 0.4);
+      animation: ce-chase-pulse 0.7s ease-in-out infinite;
+    }
+    .ce-chase-hud.is-hot .ce-chase-hud-fill {
+      background: linear-gradient(90deg, #e07040 0%, #d03020 50%, #901010 100%);
+    }
+    @keyframes ce-chase-pulse {
+      0%, 100% { transform: translateX(-50%) scale(1); }
+      50% { transform: translateX(-50%) scale(1.03); }
+    }
+    .ce-chase-hud-label {
+      position: absolute;
+      left: 50%;
+      top: max(36px, calc(env(safe-area-inset-top, 0px) + 32px));
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.68rem;
+      font-weight: 800;
+      color: #a05028;
+      text-transform: uppercase;
+      letter-spacing: 0.10em;
+      z-index: 3;
+      pointer-events: none;
+      text-shadow: 0 1px 0 rgba(255, 255, 255, 0.75);
+    }
+    .ce-chase-face {
+      font-size: 0.85rem;
+      letter-spacing: 0;
+    }
+    @media (max-width: 380px) {
+      .ce-chase-hud {
+        width: min(160px, 56vw);
+        height: 10px;
+        top: max(48px, calc(env(safe-area-inset-top, 0px) + 44px));
+      }
+      .ce-chase-hud-label {
+        font-size: 0.58rem;
+        top: max(32px, calc(env(safe-area-inset-top, 0px) + 28px));
+      }
+    }
+
     /* Generic overlay used by intro, start, and game-over */
     .ce-overlay {
       position: absolute;

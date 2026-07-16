@@ -52,6 +52,8 @@ function startCoffeeEscape() {
     BOOST_BTN,
     BOOST_FILL,
     BOOST_HUD_FILL,
+    CHASE_FILL,
+    CHASE_HUD,
     HINT,
     RUN_STAMP,
     LB_FORM,
@@ -106,6 +108,8 @@ function startCoffeeEscape() {
     burstDustAt(dustPool, b.mesh.position.x, b.mesh.position.y, b.mesh.position.z);
     const screen = worldToScreen(b.mesh.position, camera, STAGE);
     spawnPopup(STAGE, '+5', screen.x, screen.y - 20, '#ffb000');
+    // Small escape feedback when caffeine pulls him back
+    spawnPopup(STAGE, '💨', screen.x + 18, screen.y + 8, '#c07040');
   }
 
   function emitBoostParticle() {
@@ -229,6 +233,8 @@ function startCoffeeEscape() {
       boostFill: BOOST_FILL,
       boostHudFill: BOOST_HUD_FILL,
       boostBtn: BOOST_BTN,
+      chaseFill: CHASE_FILL,
+      chaseHud: CHASE_HUD,
       playerBox: _playerBox,
       obBox: _obBox,
       tmpVec: _tmpVec,

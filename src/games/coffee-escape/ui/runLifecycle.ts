@@ -62,6 +62,9 @@ export function resetWorld(deps: ResetWorldDeps): void {
   state.distance = 0;
   state.sectionId = 'living';
   state.sectionCycle = 0;
+  state.chase.danger = 0;
+  state.chase.hitIFrame = 0;
+  state.failReason = 'none';
   state.shake = 0;
   state.flash = 0;
   deps.clearPointer();
@@ -149,7 +152,7 @@ export function presentGameOver(deps: GameOverUiDeps): void {
   if (dom.OVER_TITLE_EL) {
     dom.OVER_TITLE_EL.textContent = newBest
       ? 'New house record! ☕🏆'
-      : pickGameOverTitle(finalScore);
+      : pickGameOverTitle(finalScore, state.failReason);
   }
   if (dom.GAME_OVER_OVERLAY) dom.GAME_OVER_OVERLAY.hidden = false;
   if (!lb.wasSubmitted()) lb.show();

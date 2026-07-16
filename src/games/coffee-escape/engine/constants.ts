@@ -84,3 +84,23 @@ export const SCORE_PER_SECOND = 10;
 export const MOTE_COUNT = 26;
 export const DUST_POOL_SIZE = 32;
 export const BOOST_PARTICLE_POOL = 24;
+
+// --- Tired man chase (meter-based, no AI pathing yet) ---
+/** Danger meter 0..max. At max the man "catches" the cup. */
+export const CHASE_MAX = 100;
+/** Danger added when hitting an obstacle without boost. */
+export const CHASE_HIT_DANGER = 28;
+/** Danger removed when collecting a caffeine bean. */
+export const CHASE_BEAN_RELIEF = 12;
+/** Danger drained per second while boost is active. */
+export const CHASE_BOOST_DRAIN_PER_SEC = 16;
+/**
+ * Very light passive creep (units/sec) so the chase is always present.
+ * Kept low — hits and boost remain the main levers.
+ */
+export const CHASE_PASSIVE_PER_SEC = 1.1;
+/** Seconds of hit invulnerability so one obstacle can't multi-tick. */
+export const CHASE_HIT_IFRAME_SEC = 0.5;
+/** Man world-Z when danger is 0 (far behind) vs max (almost on the cup). */
+export const CHASE_MAN_Z_FAR = 5.4;
+export const CHASE_MAN_Z_NEAR = 1.35;

@@ -30,6 +30,8 @@ export interface CeDom {
   BOOST_BTN: HTMLElement | null;
   BOOST_FILL: HTMLElement | null;
   BOOST_HUD_FILL: HTMLElement | null;
+  CHASE_FILL: HTMLElement | null;
+  CHASE_HUD: HTMLElement | null;
   HINT: HTMLElement | null;
 }
 
@@ -69,6 +71,8 @@ export function getCeDom(): CeDom {
     BOOST_BTN: document.getElementById('ceBoostBtn'),
     BOOST_FILL: document.getElementById('ceBoostFill'),
     BOOST_HUD_FILL: document.getElementById('ceBoostHudFill'),
+    CHASE_FILL: document.getElementById('ceChaseFill'),
+    CHASE_HUD: document.getElementById('ceChaseHud'),
     HINT: document.getElementById('ceHint'),
   };
 }

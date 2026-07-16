@@ -10,8 +10,8 @@ export interface ManHandles {
 
 /**
  * Tired man chaser silhouette (CE-local only).
- * Phase 1: visual presence only — no catch/distance mechanics yet.
- * Changing this cannot affect other arcade games.
+ * Position Z is driven by the chase danger meter (see chaseLogic / updateFrame).
+ * No pathfinding AI — he just eases closer as danger rises.
  */
 export function createMan(scene: THREE.Scene, leftLaneX: number): ManHandles {
   const man = new THREE.Group();

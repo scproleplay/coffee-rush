@@ -108,4 +108,19 @@ export interface GameState {
   sectionId: SectionId;
   /** How many full section-cycle loops completed. */
   sectionCycle: number;
+  /**
+   * Tired-man chase meter (0..max). Hits raise danger; beans/boost lower it.
+   * At max → caught (game over). No pathfinding AI yet.
+   */
+  chase: {
+    danger: number;
+    max: number;
+    hitIFrame: number;
+  };
+  /**
+   * Why the run ended — used for game-over copy.
+   * `crash` = legacy instant wipe (unused for normal hits now);
+   * `caught` = chase meter maxed.
+   */
+  failReason: 'none' | 'crash' | 'caught';
 }

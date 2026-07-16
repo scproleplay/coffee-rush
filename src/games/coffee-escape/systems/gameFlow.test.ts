@@ -8,6 +8,12 @@ describe('pickGameOverTitle', () => {
     expect(pickGameOverTitle(100)).toMatch(/free|Almost/i);
     expect(pickGameOverTitle(200)).toMatch(/legend|House/i);
   });
+
+  it('uses catch copy when the chase meter maxes', () => {
+    expect(pickGameOverTitle(50, 'caught')).toMatch(/caught his coffee/i);
+    // Catch reason wins over high score tier
+    expect(pickGameOverTitle(250, 'caught')).toMatch(/caught his coffee/i);
+  });
 });
 
 describe('isNewBest', () => {

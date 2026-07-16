@@ -72,6 +72,22 @@
             <div class="ce-boost-hud-fill" id="ceBoostHudFill"></div>
           </div>
 
+          <div class="ce-chase-hud-label" aria-hidden="true">
+            <span class="ce-chase-face" aria-hidden="true">😮‍💨</span>
+            CHASE
+          </div>
+          <div
+            id="ceChaseHud"
+            class="ce-chase-hud"
+            role="meter"
+            aria-label="Chase danger"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-valuenow="0"
+          >
+            <div class="ce-chase-hud-fill" id="ceChaseFill"></div>
+          </div>
+
           <div id="ceStartOverlay" class="ce-overlay" hidden>
             <div class="ce-card">
               <div class="ce-start-hero" aria-hidden="true">
@@ -117,7 +133,8 @@
             <div class="ce-card">
               <h2 id="ceOverTitle">Caught in the house! ☕😱</h2>
               <p class="ce-over-blurb">
-                The tired man almost got his coffee. Escape farther next time.
+                Keep the chase meter down — jump clutter, grab caffeine, and
+                boost to pull ahead. Escape farther next time.
               </p>
               <div id="ceNewBest" class="ce-new-best" hidden>NEW BEST!</div>
               <div class="ce-result-grid">

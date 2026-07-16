@@ -1,9 +1,15 @@
 /**
  * Pure game-flow copy / thresholds (CE-local).
- * Phase 1 house-chase flavor — still score-only titles (no chase mechanics).
+ * House-chase flavor + tired-man catch titles.
  */
 
-export function pickGameOverTitle(score: number): string {
+export type FailReason = 'none' | 'crash' | 'caught';
+
+export function pickGameOverTitle(
+  score: number,
+  failReason: FailReason = 'none',
+): string {
+  if (failReason === 'caught') return 'He caught his coffee! ☕😱';
   if (score >= 200) return 'House legend! ☕🏠';
   if (score >= 100) return 'Almost free! ☕💨';
   if (score >= 50) return 'He almost had you! ☕😱';

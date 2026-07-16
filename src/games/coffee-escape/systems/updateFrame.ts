@@ -23,6 +23,14 @@ import {
   blocksPlayerLane,
   canCollectBean,
 } from './collisionLogic';
+import {
+  applyChaseBeanRelief,
+  applyChaseHit,
+  chaseProximity,
+  isCaught,
+  manZFromDanger,
+  tickChase,
+} from './chaseLogic';
 import { nextBeanDelay, scoreFromTime, speedAtTime, tickBoost } from './pacingLogic';
 import { burstDustAt } from './spawnController';
 import { consumeJumpBuffer } from './playerActions';
@@ -91,6 +99,8 @@ export interface UpdateFrameCtx {
   boostFill: HTMLElement | null;
   boostHudFill: HTMLElement | null;
   boostBtn: HTMLElement | null;
+  chaseFill: HTMLElement | null;
+  chaseHud: HTMLElement | null;
   // scratch
   playerBox: THREE.Box3;
   obBox: THREE.Box3;
@@ -209,12 +219,27 @@ export function updateFrame(ctx: UpdateFrameCtx): boolean {
     child.scale.setScalar((0.4 + k * 0.9) * (1 + flipWave * 0.18));
   }
 
+  // Chase meter: passive creep / boost drain / i-frames
+  state.chase = tickChase(state.chase, dt, {
+    boostActive: state.boost.active,
+  });
+
+  // Tired man silhouette — eases closer as danger rises (no path AI)
+  const prox = chaseProximity(state.chase);
   const manSwing = Math.sin(p.runAnim * 0.9) * 0.7;
   ctx.manArmL.rotation.x = -manSwing;
   ctx.manArmR.rotation.x = manSwing;
   ctx.manLegL.rotation.x = manSwing;
   ctx.manLegR.rotation.x = -manSwing;
   ctx.man.position.y = Math.abs(Math.sin(p.runAnim * 1.8)) * 0.05;
+  const manTargetZ = manZFromDanger(state.chase.danger, state.chase.max);
+  ctx.man.position.z += (manTargetZ - ctx.man.position.z) * Math.min(1, dt * 4);
+  // Drift slightly toward the player's lane so he feels like he's closing in
+  const manTargetX = LANE_X[0]! - 0.55 + p.laneX * 0.15;
+  ctx.man.position.x += (manTargetX - ctx.man.position.x) * Math.min(1, dt * 3);
+  // Urgency tint when he's close
+  ctx.man.visible = true;
+  ctx.man.scale.setScalar(1 + prox * 0.08);
 
   // Obstacles
   state.nextSpawn -= dt;
@@ -229,7 +254,7 @@ export function updateFrame(ctx: UpdateFrameCtx): boolean {
     if (o.z > OBSTACLE_END_Z) o.mesh.visible = false;
   }
 
-  // Collision — logical hitboxes (fairer than raw mesh bounds for big house props)
+  // Collision — hits raise chase danger (boost still clears through)
   ctx.playerBox.setFromCenterAndSize(
     new THREE.Vector3(ctx.cup.position.x, ctx.cup.position.y + 0.55, ctx.cup.position.z),
     new THREE.Vector3(0.62, 1.0, 0.62),
@@ -261,14 +286,37 @@ export function updateFrame(ctx: UpdateFrameCtx): boolean {
         state.score += 1;
         state.flash = 0.15;
         o.lane = -1;
+        o.mesh.visible = false;
         continue;
       }
-      state.shake = 0.45;
-      state.flash = 0.25;
-      state.gameOver = true;
-      ctx.onCrash();
-      return false;
+      // Soft hit: bump chase danger, knock obstacle away, keep running
+      const hit = applyChaseHit(state.chase);
+      if (hit) {
+        state.chase = hit;
+        state.shake = Math.max(state.shake, 0.28);
+        state.flash = Math.max(state.flash, 0.18);
+      }
+      o.lane = -1;
+      o.mesh.visible = false;
+      if (isCaught(state.chase)) {
+        state.failReason = 'caught';
+        state.shake = 0.45;
+        state.flash = 0.25;
+        state.gameOver = true;
+        ctx.onCrash();
+        return false;
+      }
     }
+  }
+
+  // Caught by passive creep / meter max (no obstacle this frame)
+  if (isCaught(state.chase)) {
+    state.failReason = 'caught';
+    state.shake = 0.4;
+    state.flash = 0.22;
+    state.gameOver = true;
+    ctx.onCrash();
+    return false;
   }
 
   // World scroll — use active section textures from env handle
@@ -357,6 +405,8 @@ export function updateFrame(ctx: UpdateFrameCtx): boolean {
         playerY: p.y,
       })
     ) {
+      // Caffeine buys distance from the man
+      state.chase = applyChaseBeanRelief(state.chase);
       ctx.collectBean(b);
     }
   }
@@ -418,6 +468,17 @@ export function updateFrame(ctx: UpdateFrameCtx): boolean {
     state.boost.timer = b.timer;
     state.boost.meter = b.meter;
   }
+
+  // Chase / danger meter HUD
+  const dangerPct = chaseProximity(state.chase) * 100;
+  if (ctx.chaseFill) {
+    ctx.chaseFill.style.width = `${dangerPct.toFixed(1)}%`;
+  }
+  if (ctx.chaseHud) {
+    ctx.chaseHud.classList.toggle('is-hot', dangerPct >= 70);
+    ctx.chaseHud.classList.toggle('is-mid', dangerPct >= 40 && dangerPct < 70);
+  }
+
   if (ctx.boostFill) {
     ctx.boostFill.style.height = `${(state.boost.meter / state.boost.max) * 100}%`;
   }
