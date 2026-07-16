@@ -77,8 +77,10 @@ describe('manZFromDanger / proximity', () => {
     expect(manZFromDanger(CHASE_MAX)).toBeCloseTo(CHASE_MAN_Z_NEAR, 5);
     expect(manZFromDanger(CHASE_MAX / 2)).toBeLessThan(CHASE_MAN_Z_FAR);
     expect(manZFromDanger(CHASE_MAX / 2)).toBeGreaterThan(CHASE_MAN_Z_NEAR);
-    // Never closer than ~2.9 so he doesn't fill the UI / camera
-    expect(CHASE_MAN_Z_NEAR).toBeGreaterThanOrEqual(2.8);
+    // Must stay in front of the camera (camera ~z=4.5 looking toward -Z)
+    expect(CHASE_MAN_Z_FAR).toBeLessThan(4.2);
+    expect(CHASE_MAN_Z_NEAR).toBeLessThan(CHASE_MAN_Z_FAR);
+    expect(CHASE_MAN_Z_NEAR).toBeGreaterThan(1.2);
   });
 
   it('proximity is 0..1', () => {

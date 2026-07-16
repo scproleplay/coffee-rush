@@ -22,8 +22,8 @@ export interface ManHandles {
  */
 export function createMan(scene: THREE.Scene, _leftLaneX: number): ManHandles {
   const man = new THREE.Group();
-  // Slightly smaller overall so he never dominates the frame
-  man.scale.setScalar(0.82);
+  // Readable size without filling the lens
+  man.scale.setScalar(0.9);
 
   // Clear palette that pops against warm house floors
   const robeMat = new THREE.MeshLambertMaterial({ color: 0xc07040 });
@@ -249,11 +249,10 @@ export function createMan(scene: THREE.Scene, _leftLaneX: number): ManHandles {
   man.add(manLegL);
   man.add(manLegR);
 
-  // RIGHT side of track, well behind the cup — never over caffeine meter (bottom-left)
-  const rightX = 1.6 + 0.7; // outside right lane
-  man.position.set(rightX, 0, 5.2);
-  // Face slightly toward center / cup
-  man.rotation.y = -0.25;
+  // Between camera (z≈4.5) and cup (z≈0), on the RIGHT — never behind camera
+  // and never over the bottom-left caffeine meter.
+  man.position.set(1.85, 0, 3.45);
+  man.rotation.y = -0.3; // face toward cup / center
   scene.add(man);
 
   return {

@@ -247,9 +247,9 @@ export function updateFrame(ctx: UpdateFrameCtx): boolean {
   ctx.man.position.z += (manTargetZ - ctx.man.position.z) * Math.min(1, dt * 3.5);
   ctx.man.position.x += (manTargetX - ctx.man.position.x) * Math.min(1, dt * 3);
   ctx.man.visible = true;
-  // Base scale is set on the model (0.82); only tiny urgency bump
-  const base = 0.82;
-  ctx.man.scale.setScalar(base * (1 + prox * 0.04));
+  // Base scale on the model (~0.9); slight urgency bump when close
+  const base = 0.9;
+  ctx.man.scale.setScalar(base * (1 + prox * 0.05));
 
   // Obstacles
   state.nextSpawn -= dt;
