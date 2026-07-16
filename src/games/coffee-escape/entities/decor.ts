@@ -964,3 +964,473 @@ export function makeGardenGate(side: 'left' | 'right') {
   group.add(lamp);
   return group;
 }
+
+// ---------------------------------------------------------------------------
+// Room-specific signature props (readable silhouettes, off-lane only)
+// ---------------------------------------------------------------------------
+
+/** Countertop microwave — kitchen signature. */
+export function makeMicrowave() {
+  const group = new THREE.Group();
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(0.7, 0.42, 0.5),
+    new THREE.MeshLambertMaterial({ color: 0xd8dce0 }),
+  );
+  body.position.y = 1.05;
+  group.add(body);
+  // Window
+  const win = new THREE.Mesh(
+    new THREE.BoxGeometry(0.38, 0.26, 0.02),
+    new THREE.MeshLambertMaterial({
+      color: 0x1a2030,
+      emissive: 0xffaa60,
+      emissiveIntensity: 0.12,
+    }),
+  );
+  win.position.set(-0.08, 1.05, 0.26);
+  group.add(win);
+  // Control panel
+  const panel = new THREE.Mesh(
+    new THREE.BoxGeometry(0.16, 0.3, 0.02),
+    new THREE.MeshLambertMaterial({ color: 0x2a2a30 }),
+  );
+  panel.position.set(0.22, 1.05, 0.26);
+  group.add(panel);
+  // Buttons
+  for (let i = 0; i < 3; i++) {
+    const btn = new THREE.Mesh(
+      new THREE.BoxGeometry(0.06, 0.04, 0.02),
+      new THREE.MeshLambertMaterial({ color: 0x6a7080 }),
+    );
+    btn.position.set(0.22, 1.14 - i * 0.08, 0.28);
+    group.add(btn);
+  }
+  // Stand / counter under it
+  const stand = new THREE.Mesh(
+    new THREE.BoxGeometry(0.75, 0.08, 0.55),
+    new THREE.MeshLambertMaterial({ color: 0xc4a06a }),
+  );
+  stand.position.y = 0.82;
+  group.add(stand);
+  const legs = new THREE.Mesh(
+    new THREE.BoxGeometry(0.72, 0.78, 0.5),
+    new THREE.MeshLambertMaterial({ color: 0xb09060 }),
+  );
+  legs.position.y = 0.39;
+  group.add(legs);
+  return group;
+}
+
+/** Wall oven stack (separate from freestanding stove). */
+export function makeOven() {
+  const group = new THREE.Group();
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(0.75, 1.35, 0.65),
+    new THREE.MeshLambertMaterial({ color: 0xe8eef2 }),
+  );
+  body.position.y = 0.7;
+  group.add(body);
+  // Oven door glass
+  const glass = new THREE.Mesh(
+    new THREE.BoxGeometry(0.5, 0.45, 0.03),
+    new THREE.MeshLambertMaterial({
+      color: 0x1a1820,
+      emissive: 0xff7020,
+      emissiveIntensity: 0.2,
+    }),
+  );
+  glass.position.set(0, 0.55, 0.34);
+  group.add(glass);
+  // Handle bar
+  const handle = new THREE.Mesh(
+    new THREE.BoxGeometry(0.4, 0.04, 0.04),
+    new THREE.MeshLambertMaterial({ color: 0x8a9098 }),
+  );
+  handle.position.set(0, 0.82, 0.38);
+  group.add(handle);
+  // Knobs
+  for (const x of [-0.18, 0, 0.18]) {
+    const knob = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.04, 0.04, 0.03, 8),
+      new THREE.MeshLambertMaterial({ color: 0x3a3a40 }),
+    );
+    knob.rotation.x = Math.PI / 2;
+    knob.position.set(x, 1.2, 0.35);
+    group.add(knob);
+  }
+  return group;
+}
+
+/** Hanging pot rack + pans — unmistakable kitchen clutter. */
+export function makePotRack() {
+  const group = new THREE.Group();
+  const bar = new THREE.Mesh(
+    new THREE.BoxGeometry(0.08, 0.08, 1.1),
+    new THREE.MeshLambertMaterial({ color: 0x5a5a5a }),
+  );
+  bar.position.y = 1.85;
+  group.add(bar);
+  // Ceiling hooks
+  for (const z of [-0.4, 0, 0.4]) {
+    const hook = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.015, 0.015, 0.25, 4),
+      new THREE.MeshLambertMaterial({ color: 0x4a4a4a }),
+    );
+    hook.position.set(0, 2.0, z);
+    group.add(hook);
+  }
+  const metals = [0x8a9098, 0xb0a090, 0x6a7080];
+  for (let i = 0; i < 3; i++) {
+    const pot = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.14, 0.12, 0.16, 10),
+      new THREE.MeshLambertMaterial({ color: metals[i]! }),
+    );
+    pot.position.set(0.05, 1.55, -0.35 + i * 0.35);
+    group.add(pot);
+    const handle = new THREE.Mesh(
+      new THREE.BoxGeometry(0.18, 0.03, 0.03),
+      new THREE.MeshLambertMaterial({ color: 0x2a2a2a }),
+    );
+    handle.position.set(0.2, 1.55, -0.35 + i * 0.35);
+    group.add(handle);
+  }
+  // Frying pan hanging flat
+  const pan = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.18, 0.18, 0.04, 12),
+    new THREE.MeshLambertMaterial({ color: 0x2a2a30 }),
+  );
+  pan.position.set(-0.05, 1.5, 0.15);
+  group.add(pan);
+  const panHandle = new THREE.Mesh(
+    new THREE.BoxGeometry(0.28, 0.03, 0.04),
+    new THREE.MeshLambertMaterial({ color: 0x1a1a1a }),
+  );
+  panHandle.position.set(0.2, 1.5, 0.15);
+  group.add(panHandle);
+  return group;
+}
+
+/** Stack of pots / pans on the floor-ish counter side. */
+export function makePotsAndPans() {
+  const group = new THREE.Group();
+  const big = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.22, 0.2, 0.22, 12),
+    new THREE.MeshLambertMaterial({ color: 0x8a9098 }),
+  );
+  big.position.y = 0.14;
+  group.add(big);
+  const mid = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.18, 0.16, 0.14, 10),
+    new THREE.MeshLambertMaterial({ color: 0xb0a090 }),
+  );
+  mid.position.set(0.05, 0.32, 0.02);
+  group.add(mid);
+  const pan = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.2, 0.2, 0.05, 12),
+    new THREE.MeshLambertMaterial({ color: 0x2a2a30 }),
+  );
+  pan.position.set(-0.08, 0.42, 0.05);
+  pan.rotation.z = 0.15;
+  group.add(pan);
+  const lid = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.14, 0.14, 0.04, 10),
+    new THREE.MeshLambertMaterial({ color: 0xc0c4c8 }),
+  );
+  lid.position.set(0.12, 0.48, -0.05);
+  group.add(lid);
+  // Wooden spoon sticking out
+  const spoon = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.02, 0.02, 0.35, 5),
+    new THREE.MeshLambertMaterial({ color: 0xa07040 }),
+  );
+  spoon.position.set(0.18, 0.55, 0);
+  spoon.rotation.z = -0.4;
+  group.add(spoon);
+  return group;
+}
+
+/** Dish rack with plates — kitchen sink side. */
+export function makeDishRack() {
+  const group = new THREE.Group();
+  const tray = new THREE.Mesh(
+    new THREE.BoxGeometry(0.55, 0.06, 0.4),
+    new THREE.MeshLambertMaterial({ color: 0xb0b4b8 }),
+  );
+  tray.position.y = 0.08;
+  group.add(tray);
+  for (let i = 0; i < 4; i++) {
+    const plate = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.12, 0.12, 0.02, 12),
+      new THREE.MeshLambertMaterial({ color: i % 2 ? 0xf0f0f0 : 0xe8e0d0 }),
+    );
+    plate.rotation.x = Math.PI / 2;
+    plate.position.set(-0.15 + i * 0.1, 0.22, 0);
+    group.add(plate);
+  }
+  const glass = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.05, 0.04, 0.18, 8),
+    new THREE.MeshLambertMaterial({ color: 0xc8e0f0 }),
+  );
+  glass.position.set(0.18, 0.2, 0.08);
+  group.add(glass);
+  return group;
+}
+
+/** Hallway wall mirror. */
+export function makeMirror(side: 'left' | 'right') {
+  const group = new THREE.Group();
+  const frame = new THREE.Mesh(
+    new THREE.BoxGeometry(0.06, 1.1, 0.7),
+    new THREE.MeshLambertMaterial({ color: 0x8a6a3a }),
+  );
+  group.add(frame);
+  const glass = new THREE.Mesh(
+    new THREE.BoxGeometry(0.03, 0.95, 0.55),
+    new THREE.MeshLambertMaterial({
+      color: 0xc8d8e8,
+      emissive: 0xa0c0e0,
+      emissiveIntensity: 0.25,
+    }),
+  );
+  glass.position.x = side === 'left' ? 0.02 : -0.02;
+  group.add(glass);
+  // Bevel edge
+  const inner = new THREE.Mesh(
+    new THREE.BoxGeometry(0.02, 0.88, 0.48),
+    new THREE.MeshLambertMaterial({ color: 0xe8f0f8 }),
+  );
+  inner.position.x = side === 'left' ? 0.035 : -0.035;
+  group.add(inner);
+  return group;
+}
+
+/** Classic home radiator under the wall. */
+export function makeRadiator() {
+  const group = new THREE.Group();
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(0.28, 0.7, 1.1),
+    new THREE.MeshLambertMaterial({ color: 0xe8e4dc }),
+  );
+  body.position.y = 0.4;
+  group.add(body);
+  // Fins
+  for (let i = 0; i < 7; i++) {
+    const fin = new THREE.Mesh(
+      new THREE.BoxGeometry(0.3, 0.62, 0.06),
+      new THREE.MeshLambertMaterial({ color: 0xd8d4cc }),
+    );
+    fin.position.set(0, 0.4, -0.42 + i * 0.14);
+    group.add(fin);
+  }
+  // Valve
+  const valve = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.05, 0.05, 0.08, 8),
+    new THREE.MeshLambertMaterial({ color: 0x8a3030 }),
+  );
+  valve.position.set(0.05, 0.15, 0.55);
+  group.add(valve);
+  return group;
+}
+
+/** Coat hooks / rack with hanging coats. */
+export function makeCoatRack() {
+  const group = new THREE.Group();
+  const board = new THREE.Mesh(
+    new THREE.BoxGeometry(0.1, 0.18, 0.9),
+    new THREE.MeshLambertMaterial({ color: 0x6b4220 }),
+  );
+  board.position.y = 1.55;
+  group.add(board);
+  for (let i = 0; i < 4; i++) {
+    const peg = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.03, 0.025, 0.12, 6),
+      new THREE.MeshLambertMaterial({ color: 0x4a2a10 }),
+    );
+    peg.rotation.z = Math.PI / 2;
+    peg.position.set(0.08, 1.55, -0.3 + i * 0.2);
+    group.add(peg);
+  }
+  // Coat shapes
+  const coat1 = new THREE.Mesh(
+    new THREE.BoxGeometry(0.12, 0.7, 0.28),
+    new THREE.MeshLambertMaterial({ color: 0x3a4a6a }),
+  );
+  coat1.position.set(0.12, 1.15, -0.15);
+  group.add(coat1);
+  const coat2 = new THREE.Mesh(
+    new THREE.BoxGeometry(0.12, 0.65, 0.26),
+    new THREE.MeshLambertMaterial({ color: 0x6a3a2a }),
+  );
+  coat2.position.set(0.12, 1.12, 0.2);
+  group.add(coat2);
+  return group;
+}
+
+/** Shoe rack / boots by the door. */
+export function makeShoeRack() {
+  const group = new THREE.Group();
+  const shelf = new THREE.Mesh(
+    new THREE.BoxGeometry(0.45, 0.06, 0.7),
+    new THREE.MeshLambertMaterial({ color: 0x8a5a30 }),
+  );
+  shelf.position.y = 0.2;
+  group.add(shelf);
+  const shelf2 = shelf.clone();
+  shelf2.position.y = 0.42;
+  group.add(shelf2);
+  const colors = [0x2a2a2a, 0x6a3a20, 0x3a3a50, 0x8a4a30];
+  for (let i = 0; i < 4; i++) {
+    const shoe = new THREE.Mesh(
+      new THREE.BoxGeometry(0.18, 0.1, 0.28),
+      new THREE.MeshLambertMaterial({ color: colors[i]! }),
+    );
+    shoe.position.set(
+      (i % 2) * 0.12 - 0.05,
+      i < 2 ? 0.28 : 0.5,
+      -0.2 + (i % 2) * 0.35,
+    );
+    group.add(shoe);
+  }
+  return group;
+}
+
+/** Narrow console table for hallway. */
+export function makeConsoleTable() {
+  const group = new THREE.Group();
+  const top = new THREE.Mesh(
+    new THREE.BoxGeometry(0.4, 0.06, 0.9),
+    new THREE.MeshLambertMaterial({ color: 0x8a5a30 }),
+  );
+  top.position.y = 0.85;
+  group.add(top);
+  for (const z of [-0.35, 0.35]) {
+    const leg = new THREE.Mesh(
+      new THREE.BoxGeometry(0.06, 0.82, 0.06),
+      new THREE.MeshLambertMaterial({ color: 0x5a3a18 }),
+    );
+    leg.position.set(0.12, 0.41, z);
+    group.add(leg);
+    const leg2 = leg.clone();
+    leg2.position.x = -0.12;
+    group.add(leg2);
+  }
+  // Vase / keys bowl
+  const vase = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.08, 0.06, 0.22, 8),
+    new THREE.MeshLambertMaterial({ color: 0xc05060 }),
+  );
+  vase.position.set(0, 1.0, 0.15);
+  group.add(vase);
+  const bowl = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.1, 0.08, 0.05, 10),
+    new THREE.MeshLambertMaterial({ color: 0xd4a574 }),
+  );
+  bowl.position.set(0, 0.9, -0.2);
+  group.add(bowl);
+  return group;
+}
+
+/** Living-room fireplace silhouette. */
+export function makeFireplace() {
+  const group = new THREE.Group();
+  const surround = new THREE.Mesh(
+    new THREE.BoxGeometry(0.45, 1.4, 1.2),
+    new THREE.MeshLambertMaterial({ color: 0xb0a090 }),
+  );
+  surround.position.y = 0.7;
+  group.add(surround);
+  const opening = new THREE.Mesh(
+    new THREE.BoxGeometry(0.2, 0.55, 0.7),
+    new THREE.MeshLambertMaterial({
+      color: 0x1a1010,
+      emissive: 0xff6020,
+      emissiveIntensity: 0.35,
+    }),
+  );
+  opening.position.set(0.15, 0.45, 0);
+  group.add(opening);
+  const mantel = new THREE.Mesh(
+    new THREE.BoxGeometry(0.55, 0.1, 1.35),
+    new THREE.MeshLambertMaterial({ color: 0x8a5a30 }),
+  );
+  mantel.position.y = 1.35;
+  group.add(mantel);
+  // Chimney breast up
+  const breast = new THREE.Mesh(
+    new THREE.BoxGeometry(0.4, 0.9, 0.9),
+    new THREE.MeshLambertMaterial({ color: 0xc8b8a0 }),
+  );
+  breast.position.y = 1.9;
+  group.add(breast);
+  return group;
+}
+
+/** Garden BBQ / grill. */
+export function makeBbq() {
+  const group = new THREE.Group();
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(0.7, 0.45, 0.55),
+    new THREE.MeshLambertMaterial({ color: 0x2a2a30 }),
+  );
+  body.position.y = 0.7;
+  group.add(body);
+  const lid = new THREE.Mesh(
+    new THREE.SphereGeometry(0.35, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2),
+    new THREE.MeshLambertMaterial({ color: 0x1a1a20 }),
+  );
+  lid.position.y = 0.95;
+  lid.scale.set(1, 0.7, 0.85);
+  group.add(lid);
+  // Legs
+  for (const [x, z] of [
+    [-0.25, -0.2],
+    [0.25, -0.2],
+    [-0.25, 0.2],
+    [0.25, 0.2],
+  ] as const) {
+    const leg = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.03, 0.03, 0.5, 5),
+      new THREE.MeshLambertMaterial({ color: 0x3a3a40 }),
+    );
+    leg.position.set(x, 0.25, z);
+    group.add(leg);
+  }
+  // Ember glow
+  const glow = new THREE.Mesh(
+    new THREE.BoxGeometry(0.5, 0.08, 0.35),
+    new THREE.MeshLambertMaterial({
+      color: 0xff4010,
+      emissive: 0xff3000,
+      emissiveIntensity: 0.5,
+    }),
+  );
+  glow.position.y = 0.72;
+  group.add(glow);
+  return group;
+}
+
+/** Watering can for garden. */
+export function makeWateringCan() {
+  const group = new THREE.Group();
+  const body = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.16, 0.18, 0.32, 10),
+    new THREE.MeshLambertMaterial({ color: 0x3a7a9a }),
+  );
+  body.position.y = 0.2;
+  group.add(body);
+  const spout = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.03, 0.04, 0.28, 6),
+    new THREE.MeshLambertMaterial({ color: 0x2a5a7a }),
+  );
+  spout.rotation.z = Math.PI / 3;
+  spout.position.set(0.2, 0.28, 0);
+  group.add(spout);
+  const handle = new THREE.Mesh(
+    new THREE.TorusGeometry(0.12, 0.025, 6, 10, Math.PI),
+    new THREE.MeshLambertMaterial({ color: 0x2a5a7a }),
+  );
+  handle.rotation.y = Math.PI / 2;
+  handle.position.set(-0.12, 0.35, 0);
+  group.add(handle);
+  return group;
+}

@@ -13,14 +13,19 @@ import {
 } from './textures';
 import {
   makeArmchair,
+  makeBbq,
   makeBookshelf,
   makeBush,
   makeCabinet,
+  makeCoatRack,
   makeCoffeeTable,
+  makeConsoleTable,
   makeCouch,
   makeDiningSet,
+  makeDishRack,
   makeDoor,
   makeFencePanel,
+  makeFireplace,
   makeFloorLamp,
   makeFlowerPot,
   makeFridge,
@@ -28,18 +33,25 @@ import {
   makeHoseReel,
   makeKitchenCounter,
   makeLaundryBasket,
+  makeMicrowave,
+  makeMirror,
+  makeOven,
   makePatioChair,
   makePictureFrame,
   makePillowStack,
   makePlant,
+  makePotRack,
+  makePotsAndPans,
+  makeRadiator,
   makeRoomArch,
   makeRug,
   makeShelf,
+  makeShoeRack,
   makeSideTable,
   makeStove,
   makeTvStand,
   makeWallLamp,
-  makeWindow,
+  makeWateringCan,
 } from '../entities/decor';
 
 export interface HallwayBundle {
@@ -71,7 +83,7 @@ function placeSide(
 }
 
 function makeLivingProp(i: number, side: Side): THREE.Object3D {
-  const slot = i % 6;
+  const slot = i % 8;
   let item: THREE.Object3D;
   if (slot === 0) {
     item = makeCouch();
@@ -93,16 +105,25 @@ function makeLivingProp(i: number, side: Side): THREE.Object3D {
     item = makeBookshelf();
     item.scale.setScalar(1.15);
     placeSide(item, side, 2.35, 0);
+  } else if (slot === 5) {
+    item = makeFireplace();
+    item.scale.setScalar(1.05);
+    placeSide(item, side, 2.55, 0);
+  } else if (slot === 6) {
+    item = makePillowStack();
+    item.scale.setScalar(1.25);
+    placeSide(item, side, 2.2, 0, false);
   } else {
-    item = i % 2 === 0 ? makePillowStack() : makeArmchair();
-    item.scale.setScalar(i % 2 === 0 ? 1.2 : 1.3);
-    placeSide(item, side, 2.2, 0, i % 2 !== 0);
+    item = makeArmchair();
+    item.scale.setScalar(1.3);
+    placeSide(item, side, 2.2, 0);
   }
   return item;
 }
 
 function makeKitchenProp(i: number, side: Side): THREE.Object3D {
-  const slot = i % 5;
+  // Signature kitchen: fridge, stove, oven, microwave, pots, counters, dining
+  const slot = i % 9;
   let item: THREE.Object3D;
   if (slot === 0) {
     item = makeFridge();
@@ -113,60 +134,89 @@ function makeKitchenProp(i: number, side: Side): THREE.Object3D {
     item.scale.setScalar(1.2);
     placeSide(item, side, 2.3, 0);
   } else if (slot === 2) {
+    item = makeOven();
+    item.scale.setScalar(1.15);
+    placeSide(item, side, 2.35, 0);
+  } else if (slot === 3) {
+    item = makeMicrowave();
+    item.scale.setScalar(1.15);
+    placeSide(item, side, 2.3, 0);
+  } else if (slot === 4) {
     item = makeKitchenCounter();
     item.scale.setScalar(1.25);
     placeSide(item, side, 2.25, 0);
-  } else if (slot === 3) {
+  } else if (slot === 5) {
+    item = makePotRack();
+    item.scale.setScalar(1.15);
+    placeSide(item, side, 2.4, 0, false);
+  } else if (slot === 6) {
+    item = makePotsAndPans();
+    item.scale.setScalar(1.35);
+    placeSide(item, side, 2.2, 0, false);
+  } else if (slot === 7) {
     item = makeDiningSet();
     item.scale.setScalar(1.15);
     placeSide(item, side, 2.2, 0);
   } else {
-    item = makeCabinet();
-    item.scale.setScalar(1.3);
-    placeSide(item, side, 2.25, 0);
+    item = i % 2 === 0 ? makeDishRack() : makeCabinet();
+    item.scale.setScalar(i % 2 === 0 ? 1.4 : 1.3);
+    placeSide(item, side, 2.2, 0, i % 2 !== 0);
   }
   return item;
 }
 
 function makeHallwayProp(i: number, side: Side): THREE.Object3D {
-  const slot = i % 6;
+  // Signature hallway: doors, mirrors, radiators, coats, shoes, frames
+  const slot = i % 9;
   let item: THREE.Object3D;
   if (slot === 0) {
     item = makeDoor(side);
     item.scale.setScalar(1.15);
     placeSide(item, side, 2.9, 0);
   } else if (slot === 1) {
+    item = makeMirror(side);
+    item.scale.setScalar(1.15);
+    item.rotation.y = side === 'left' ? -Math.PI / 2 : Math.PI / 2;
+    item.position.x = side === 'left' ? -2.92 : 2.92;
+    item.position.y = 1.7;
+  } else if (slot === 2) {
+    item = makeRadiator();
+    item.scale.setScalar(1.15);
+    placeSide(item, side, 2.75, 0, false);
+  } else if (slot === 3) {
+    item = makeCoatRack();
+    item.scale.setScalar(1.15);
+    placeSide(item, side, 2.7, 0, false);
+  } else if (slot === 4) {
+    item = makeShoeRack();
+    item.scale.setScalar(1.25);
+    placeSide(item, side, 2.25, 0, false);
+  } else if (slot === 5) {
+    item = makeConsoleTable();
+    item.scale.setScalar(1.15);
+    placeSide(item, side, 2.3, 0, false);
+  } else if (slot === 6) {
     item = makePictureFrame(i % 4, side);
     item.scale.setScalar(1.9);
     item.rotation.y = side === 'left' ? -Math.PI / 2 : Math.PI / 2;
     item.position.x = side === 'left' ? -2.95 : 2.95;
     item.position.y = 2.9;
-  } else if (slot === 2) {
+  } else if (slot === 7) {
     item = makeWallLamp();
     item.scale.setScalar(1.6);
     item.rotation.y = side === 'left' ? -Math.PI / 2 : Math.PI / 2;
     item.position.x = side === 'left' ? -2.92 : 2.92;
     item.position.y = 3.0;
-  } else if (slot === 3) {
-    item = makeWindow(side);
-    item.scale.setScalar(1.15);
-    item.rotation.y = side === 'left' ? -Math.PI / 2 : Math.PI / 2;
-    item.position.x = side === 'left' ? -2.93 : 2.93;
-    item.position.y = 0;
-  } else if (slot === 4) {
-    item = makeLaundryBasket();
-    item.scale.setScalar(1.35);
-    placeSide(item, side, 2.25, 0, false);
   } else {
-    item = makePlant();
-    item.scale.setScalar(1.7);
-    placeSide(item, side, 2.3, 0, false);
+    item = i % 2 === 0 ? makeLaundryBasket() : makePlant();
+    item.scale.setScalar(i % 2 === 0 ? 1.35 : 1.7);
+    placeSide(item, side, 2.25, 0, false);
   }
   return item;
 }
 
 function makeGardenProp(i: number, side: Side): THREE.Object3D {
-  const slot = i % 6;
+  const slot = i % 8;
   let item: THREE.Object3D;
   if (slot === 0) {
     item = makeFencePanel();
@@ -188,6 +238,14 @@ function makeGardenProp(i: number, side: Side): THREE.Object3D {
     item = makeHoseReel();
     item.scale.setScalar(1.2);
     placeSide(item, side, 2.3, 0, false);
+  } else if (slot === 5) {
+    item = makeBbq();
+    item.scale.setScalar(1.15);
+    placeSide(item, side, 2.35, 0, false);
+  } else if (slot === 6) {
+    item = makeWateringCan();
+    item.scale.setScalar(1.4);
+    placeSide(item, side, 2.2, 0, false);
   } else {
     item = makePlant();
     item.scale.setScalar(1.8);
@@ -222,12 +280,12 @@ function makeTransitionMarker(theme: SectionId, side: Side): THREE.Object3D {
   return arch;
 }
 
-/** Props per section (both sides interleaved). */
+/** Props per section (both sides interleaved) — denser for signature props. */
 const PROPS_PER_SECTION: Record<SectionId, number> = {
-  living: 14,
-  kitchen: 14,
-  hallway: 12,
-  garden: 14,
+  living: 16,
+  kitchen: 18,
+  hallway: 18,
+  garden: 16,
 };
 
 /**
