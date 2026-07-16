@@ -18,12 +18,12 @@ export interface ManHandles {
 /**
  * Tired man chaser — clean stylized 3D (CE-local).
  * Simple readable shapes, funny morning-robe dad, not creepy.
- * Stays on the RIGHT of the track so he never covers the caffeine meter.
+ * Placed behind the cup (between camera and player); scale/Z driven by chase meter.
  */
 export function createMan(scene: THREE.Scene, _leftLaneX: number): ManHandles {
   const man = new THREE.Group();
-  // Readable size without filling the lens
-  man.scale.setScalar(0.9);
+  // Start small (far chase); updateFrame grows him as danger rises
+  man.scale.setScalar(0.48);
 
   // Clear palette that pops against warm house floors
   const robeMat = new THREE.MeshLambertMaterial({ color: 0xc07040 });
@@ -93,25 +93,14 @@ export function createMan(scene: THREE.Scene, _leftLaneX: number): ManHandles {
   head.scale.set(0.95, 1.02, 0.92);
   headG.add(head);
 
-  // Clean hair cap — sits ON TOP of head, not a face-covering blob
+  // Clean hair cap — top of head only, leaves forehead/face clear
   const hair = new THREE.Mesh(
-    new THREE.SphereGeometry(0.175, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.48),
+    new THREE.SphereGeometry(0.165, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.42),
     hairMat,
   );
-  hair.position.set(0, 0.02, -0.01);
-  hair.scale.set(1.05, 0.95, 1.0);
+  hair.position.set(0, 0.04, -0.02);
+  hair.scale.set(1.02, 0.9, 0.98);
   headG.add(hair);
-
-  // Small sideburns only (not temples blobs)
-  const sideL = new THREE.Mesh(
-    new THREE.BoxGeometry(0.04, 0.08, 0.06),
-    hairMat,
-  );
-  sideL.position.set(-0.16, -0.02, 0.02);
-  headG.add(sideL);
-  const sideR = sideL.clone();
-  sideR.position.x = 0.16;
-  headG.add(sideR);
 
   // Ears — small, out of the way
   const earL = new THREE.Mesh(new THREE.SphereGeometry(0.035, 6, 6), skinMat);
@@ -122,55 +111,51 @@ export function createMan(scene: THREE.Scene, _leftLaneX: number): ManHandles {
   earR.position.x = 0.175;
   headG.add(earR);
 
-  // ===== FACE — flat, readable, tired/funny (no stacked melt spheres) =====
-  // Eye whites
+  // ===== FACE — simple, readable at chase distance =====
   const eyeL = new THREE.Mesh(
-    new THREE.SphereGeometry(0.032, 8, 6),
+    new THREE.SphereGeometry(0.028, 8, 6),
     eyeWhiteMat,
   );
-  eyeL.position.set(-0.06, 0.02, 0.155);
-  eyeL.scale.set(1.15, 0.85, 0.5);
+  eyeL.position.set(-0.055, 0.025, 0.15);
+  eyeL.scale.set(1.2, 0.9, 0.45);
   headG.add(eyeL);
   const eyeR = eyeL.clone();
-  eyeR.position.x = 0.06;
+  eyeR.position.x = 0.055;
   headG.add(eyeR);
 
-  // Pupils (centered, slightly large = "need coffee")
-  const pupilL = new THREE.Mesh(new THREE.SphereGeometry(0.014, 6, 6), pupilMat);
-  pupilL.position.set(-0.055, 0.022, 0.175);
+  const pupilL = new THREE.Mesh(new THREE.SphereGeometry(0.012, 6, 6), pupilMat);
+  pupilL.position.set(-0.05, 0.027, 0.168);
   headG.add(pupilL);
   const pupilR = pupilL.clone();
-  pupilR.position.x = 0.065;
+  pupilR.position.x = 0.06;
   headG.add(pupilR);
 
-  // Simple upper lids (thin dark line, not bags of flesh)
-  const lidL = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.012, 0.02), browMat);
-  lidL.position.set(-0.06, 0.045, 0.17);
+  // Thin lids
+  const lidL = new THREE.Mesh(new THREE.BoxGeometry(0.065, 0.01, 0.016), browMat);
+  lidL.position.set(-0.055, 0.048, 0.162);
   headG.add(lidL);
   const lidR = lidL.clone();
-  lidR.position.x = 0.06;
+  lidR.position.x = 0.055;
   headG.add(lidR);
 
-  // Eyebrows — gentle worried arch
-  const browL = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.014, 0.016), browMat);
-  browL.position.set(-0.065, 0.075, 0.16);
-  browL.rotation.z = 0.2;
+  // Soft worried brows
+  const browL = new THREE.Mesh(new THREE.BoxGeometry(0.065, 0.012, 0.014), browMat);
+  browL.position.set(-0.06, 0.078, 0.155);
+  browL.rotation.z = 0.18;
   headG.add(browL);
   const browR = browL.clone();
-  browR.position.x = 0.065;
-  browR.rotation.z = -0.2;
+  browR.position.x = 0.06;
+  browR.rotation.z = -0.18;
   headG.add(browR);
 
-  // Tiny nose
-  const nose = new THREE.Mesh(new THREE.SphereGeometry(0.022, 6, 6), skinMat);
-  nose.position.set(0, -0.015, 0.175);
-  nose.scale.set(0.7, 0.85, 0.75);
+  const nose = new THREE.Mesh(new THREE.SphereGeometry(0.018, 6, 6), skinMat);
+  nose.position.set(0, -0.01, 0.168);
+  nose.scale.set(0.65, 0.8, 0.7);
   headG.add(nose);
 
-  // Small smile-line mouth (tired "please coffee")
-  const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.018, 0.015), mouthMat);
-  mouth.position.set(0, -0.075, 0.16);
-  mouth.scale.set(1, 0.7, 1);
+  // Small tired mouth
+  const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.014, 0.012), mouthMat);
+  mouth.position.set(0, -0.07, 0.155);
   headG.add(mouth);
 
   man.add(headG);
@@ -249,10 +234,9 @@ export function createMan(scene: THREE.Scene, _leftLaneX: number): ManHandles {
   man.add(manLegL);
   man.add(manLegR);
 
-  // Between camera (z≈4.5) and cup (z≈0), on the RIGHT — never behind camera
-  // and never over the bottom-left caffeine meter.
-  man.position.set(1.85, 0, 3.45);
-  man.rotation.y = -0.3; // face toward cup / center
+  // Behind the cup (z between camera ~4.5 and player ~0), slight right bias
+  man.position.set(0.42, 0, 2.55);
+  man.rotation.y = 0; // face up the hall toward the cup
   scene.add(man);
 
   return {

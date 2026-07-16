@@ -5,12 +5,16 @@ import {
   chaseProximity,
   createChaseState,
   isCaught,
+  manScaleFromDanger,
+  manXFromDanger,
   manZFromDanger,
   tickChase,
 } from './chaseLogic';
 import {
   CHASE_BEAN_RELIEF,
   CHASE_HIT_DANGER,
+  CHASE_MAN_SCALE_FAR,
+  CHASE_MAN_SCALE_NEAR,
   CHASE_MAN_Z_FAR,
   CHASE_MAN_Z_NEAR,
   CHASE_MAX,
@@ -71,16 +75,31 @@ describe('applyChaseBeanRelief / boost drain', () => {
   });
 });
 
-describe('manZFromDanger / proximity', () => {
-  it('maps far→near as danger rises but stays behind camera plane', () => {
+describe('manZFromDanger / proximity / scale', () => {
+  it('maps far→near as danger rises, always between camera and cup', () => {
     expect(manZFromDanger(0)).toBeCloseTo(CHASE_MAN_Z_FAR, 5);
     expect(manZFromDanger(CHASE_MAX)).toBeCloseTo(CHASE_MAN_Z_NEAR, 5);
     expect(manZFromDanger(CHASE_MAX / 2)).toBeLessThan(CHASE_MAN_Z_FAR);
     expect(manZFromDanger(CHASE_MAX / 2)).toBeGreaterThan(CHASE_MAN_Z_NEAR);
-    // Must stay in front of the camera (camera ~z=4.5 looking toward -Z)
-    expect(CHASE_MAN_Z_FAR).toBeLessThan(4.2);
+    // In front of camera (~4.5), behind cup (~0)
+    expect(CHASE_MAN_Z_FAR).toBeLessThan(4.0);
     expect(CHASE_MAN_Z_NEAR).toBeLessThan(CHASE_MAN_Z_FAR);
-    expect(CHASE_MAN_Z_NEAR).toBeGreaterThan(1.2);
+    expect(CHASE_MAN_Z_NEAR).toBeGreaterThan(0.6);
+  });
+
+  it('tracks player lane with a small right bias that shrinks when close', () => {
+    const far = manXFromDanger(0, 0);
+    const near = manXFromDanger(CHASE_MAX, 0);
+    expect(far).toBeGreaterThan(0); // bias to the right when safe
+    expect(near).toBeLessThan(far); // closer to center when hot
+    expect(manXFromDanger(0, 1.6)).toBeCloseTo(1.6 + (far - 0), 5);
+  });
+
+  it('scales up with danger but stays sub-hero size', () => {
+    expect(manScaleFromDanger(0)).toBeCloseTo(CHASE_MAN_SCALE_FAR, 5);
+    expect(manScaleFromDanger(CHASE_MAX)).toBeCloseTo(CHASE_MAN_SCALE_NEAR, 5);
+    expect(CHASE_MAN_SCALE_NEAR).toBeLessThan(0.85);
+    expect(CHASE_MAN_SCALE_FAR).toBeLessThan(CHASE_MAN_SCALE_NEAR);
   });
 
   it('proximity is 0..1', () => {

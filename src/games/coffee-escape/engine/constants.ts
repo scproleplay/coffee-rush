@@ -102,12 +102,18 @@ export const CHASE_PASSIVE_PER_SEC = 1.1;
 /** Seconds of hit invulnerability so one obstacle can't multi-tick. */
 export const CHASE_HIT_IFRAME_SEC = 0.5;
 /**
- * Man world-Z when danger is 0 (farther from cup) vs max (closer to cup).
- * Camera is at z≈4.5 looking toward -Z (player at z≈0). Visible range is
- * z < cameraZ — values > 4.5 are BEHIND the camera and invisible.
- * Keep man between camera and cup: ~3.4 (far) → ~1.7 (closing in).
+ * Man world-Z relative to the cup at z≈0 (camera at z≈4.5 looking toward −Z).
+ * He stays BETWEEN camera and cup so he reads as chasing from behind —
+ * never at the camera plane (huge / clipped) and never past the cup.
+ * Far = deeper in frame (smaller), near = closer to cup (more pressure).
  */
-export const CHASE_MAN_Z_FAR = 3.45;
-export const CHASE_MAN_Z_NEAR = 1.75;
-/** Horizontal home — right of center so he doesn't cover caffeine (bottom-left). */
-export const CHASE_MAN_X = 1.85;
+export const CHASE_MAN_Z_FAR = 2.55;
+export const CHASE_MAN_Z_NEAR = 1.05;
+/**
+ * Horizontal: follow the cup with a small right bias so he sits behind
+ * the lanes, not stuck on the screen edge or over the caffeine HUD.
+ */
+export const CHASE_MAN_X_BIAS = 0.42;
+/** Scale when far (low danger) vs near (high danger). */
+export const CHASE_MAN_SCALE_FAR = 0.48;
+export const CHASE_MAN_SCALE_NEAR = 0.72;

@@ -28,6 +28,7 @@ import {
   applyChaseHit,
   chaseProximity,
   isCaught,
+  manScaleFromDanger,
   manXFromDanger,
   manZFromDanger,
   tickChase,
@@ -225,31 +226,54 @@ export function updateFrame(ctx: UpdateFrameCtx): boolean {
     boostActive: state.boost.active,
   });
 
-  // Tired man — clean run cycle; stays RIGHT + back so caffeine HUD stays free
+  // Tired man — chases FROM BEHIND the cup (between camera and player)
   const prox = chaseProximity(state.chase);
-  const manCadence = 0.8 + prox * 0.4;
-  const manSwing = Math.sin(p.runAnim * manCadence) * (0.45 + prox * 0.25);
-  const reach = 0.3 + prox * 0.4;
-  ctx.manArmL.rotation.x = -manSwing * 0.75 - 0.12;
-  ctx.manArmR.rotation.x = manSwing * 0.4 - reach;
-  ctx.manArmL.rotation.z = -0.1;
-  ctx.manArmR.rotation.z = 0.1;
-  ctx.manLegL.rotation.x = manSwing * 0.8;
-  ctx.manLegR.rotation.x = -manSwing * 0.8;
-  // Gentle bob only — no huge lean into the camera
+  const manCadence = 0.95 + prox * 0.55;
+  const phase = p.runAnim * manCadence;
+  const manSwing = Math.sin(phase) * (0.55 + prox * 0.3);
+  const manSwingOpp = Math.sin(phase + Math.PI) * (0.55 + prox * 0.3);
+  // Opposite-arm / opposite-leg run; right arm reaches forward for the cup
+  const reach = 0.45 + prox * 0.5;
+  ctx.manArmL.rotation.x = manSwingOpp * 0.7 - 0.1;
+  ctx.manArmR.rotation.x = manSwing * 0.35 - reach;
+  ctx.manArmL.rotation.z = -0.08;
+  ctx.manArmR.rotation.z = 0.12 + prox * 0.06;
+  // Soft elbow bend on arm children (if present)
+  const armLChild = ctx.manArmL.children[1];
+  const armRChild = ctx.manArmR.children[1];
+  if (armLChild) armLChild.rotation.x = 0.35 + Math.abs(manSwingOpp) * 0.25;
+  if (armRChild) armRChild.rotation.x = 0.25 + Math.abs(manSwing) * 0.2;
+  ctx.manLegL.rotation.x = manSwing * 0.95;
+  ctx.manLegR.rotation.x = manSwingOpp * 0.95;
+  const legLChild = ctx.manLegL.children[1];
+  const legRChild = ctx.manLegR.children[1];
+  if (legLChild) legLChild.rotation.x = 0.15 + Math.max(0, -manSwing) * 0.35;
+  if (legRChild) legRChild.rotation.x = 0.15 + Math.max(0, -manSwingOpp) * 0.35;
+
+  // Bob + mild lean; face the run direction (toward −Z / cup)
   ctx.man.position.y =
-    Math.abs(Math.sin(p.runAnim * manCadence * 2)) * 0.035;
-  ctx.man.rotation.x = 0.03 + prox * 0.04;
-  ctx.man.rotation.y = -0.25 + p.laneX * 0.04;
+    Math.abs(Math.sin(phase * 2)) * (0.03 + prox * 0.02);
+  ctx.man.rotation.x = 0.06 + prox * 0.05;
+  ctx.man.rotation.y = 0; // face straight up the hall toward the cup
 
   const manTargetZ = manZFromDanger(state.chase.danger, state.chase.max);
-  const manTargetX = manXFromDanger(state.chase.danger, state.chase.max);
-  ctx.man.position.z += (manTargetZ - ctx.man.position.z) * Math.min(1, dt * 3.5);
-  ctx.man.position.x += (manTargetX - ctx.man.position.x) * Math.min(1, dt * 3);
+  const manTargetX = manXFromDanger(
+    state.chase.danger,
+    p.laneX,
+    state.chase.max,
+  );
+  const manTargetScale = manScaleFromDanger(
+    state.chase.danger,
+    state.chase.max,
+  );
+  // Smooth follow — lag makes him feel like he's chasing, not locked on
+  const follow = Math.min(1, dt * 3.2);
+  ctx.man.position.z += (manTargetZ - ctx.man.position.z) * follow;
+  ctx.man.position.x += (manTargetX - ctx.man.position.x) * follow * 0.85;
+  const curScale = ctx.man.scale.x || manTargetScale;
+  const nextScale = curScale + (manTargetScale - curScale) * follow;
+  ctx.man.scale.setScalar(nextScale);
   ctx.man.visible = true;
-  // Base scale on the model (~0.9); slight urgency bump when close
-  const base = 0.9;
-  ctx.man.scale.setScalar(base * (1 + prox * 0.05));
 
   // Obstacles
   state.nextSpawn -= dt;

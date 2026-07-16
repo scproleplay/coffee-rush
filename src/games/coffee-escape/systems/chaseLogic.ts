@@ -7,7 +7,9 @@ import {
   CHASE_BOOST_DRAIN_PER_SEC,
   CHASE_HIT_DANGER,
   CHASE_HIT_IFRAME_SEC,
-  CHASE_MAN_X,
+  CHASE_MAN_SCALE_FAR,
+  CHASE_MAN_SCALE_NEAR,
+  CHASE_MAN_X_BIAS,
   CHASE_MAN_Z_FAR,
   CHASE_MAN_Z_NEAR,
   CHASE_MAX,
@@ -96,15 +98,32 @@ export function chaseProximity(chase: Pick<ChaseState, 'danger' | 'max'>): numbe
   return Math.max(0, Math.min(1, chase.danger / chase.max));
 }
 
-/** Map danger → man world Z (higher Z = farther from cup / closer to camera, clamped). */
+/** Map danger → man world Z (farther from cup when safe, closer when hot). */
 export function manZFromDanger(danger: number, max = CHASE_MAX): number {
   const t = max <= 0 ? 0 : clampDanger(danger, max) / max;
   return CHASE_MAN_Z_FAR + (CHASE_MAN_Z_NEAR - CHASE_MAN_Z_FAR) * t;
 }
 
-/** Slight horizontal ease toward cup as danger rises — stays on the right side. */
-export function manXFromDanger(danger: number, max = CHASE_MAX): number {
+/**
+ * Track the cup's laneX with a small right bias so he chases from behind
+ * the player, not from the screen edge. Bias shrinks as he closes in.
+ */
+export function manXFromDanger(
+  danger: number,
+  playerLaneX: number,
+  max = CHASE_MAX,
+): number {
   const t = max <= 0 ? 0 : clampDanger(danger, max) / max;
-  // Home on right; ease a little toward center when close, but never past mid-right
-  return CHASE_MAN_X - t * 0.35;
+  const bias = CHASE_MAN_X_BIAS * (1 - t * 0.55);
+  return playerLaneX + bias;
+}
+
+/** Scale: small when far, larger when close — never camera-filling. */
+export function manScaleFromDanger(danger: number, max = CHASE_MAX): number {
+  const t = max <= 0 ? 0 : clampDanger(danger, max) / max;
+  // Ease-in so he stays small until mid-chase, then grows with pressure
+  const eased = t * t * (3 - 2 * t);
+  return (
+    CHASE_MAN_SCALE_FAR + (CHASE_MAN_SCALE_NEAR - CHASE_MAN_SCALE_FAR) * eased
+  );
 }
