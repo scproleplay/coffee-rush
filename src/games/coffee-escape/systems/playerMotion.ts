@@ -2,7 +2,10 @@
  * Pure player motion (CE-local): lane lerp + jump / double-jump physics.
  */
 import {
-  DOUBLE_JUMP_FALL_SOFT,
+  DOUBLE_JUMP_BOOST_GRAVITY,
+  DOUBLE_JUMP_BOOST_SMOOTH,
+  DOUBLE_JUMP_IMMEDIATE_FRAC,
+  DOUBLE_JUMP_MAX_IMMEDIATE,
   DOUBLE_JUMP_RISE_KEEP,
   DOUBLE_JUMP_VY,
   FALL_GRAVITY_MULT,
@@ -19,6 +22,12 @@ export function easeOutCubic(t: number): number {
 export function easeOutQuad(t: number): number {
   const x = Math.min(1, Math.max(0, t));
   return 1 - (1 - x) * (1 - x);
+}
+
+/** Smoothstep 0→1 (professional ease, no sharp corners). */
+export function smoothstep(t: number): number {
+  const x = Math.min(1, Math.max(0, t));
+  return x * x * (3 - 2 * x);
 }
 
 export interface LaneMotion {
@@ -57,12 +66,30 @@ export interface JumpMotion {
   vy: number;
   onGround: boolean;
   airT: number;
+  /** Remaining upward boost to ease in after double jump (0 = none). */
+  doubleBoostLeft?: number;
 }
 
 export function tickJump(p: JumpMotion, dt: number): JumpMotion {
   let { y, vy, onGround, airT } = p;
-  // Stronger pull while falling → less floaty, snappier landings
-  const g = vy < 0 ? GRAVITY * FALL_GRAVITY_MULT : GRAVITY;
+  let doubleBoostLeft = p.doubleBoostLeft ?? 0;
+  const boosting = doubleBoostLeft > 0 && !onGround;
+
+  // Ease remaining double-jump boost into velocity (silky, not instant).
+  // Use a frame-rate-stable exponential toward the remaining pool so the
+  // lift never arrives as a single-frame spike.
+  if (boosting) {
+    const frac = 1 - Math.exp(-DOUBLE_JUMP_BOOST_SMOOTH * dt);
+    const apply = Math.min(doubleBoostLeft, doubleBoostLeft * frac + 1e-6);
+    vy += apply;
+    doubleBoostLeft -= apply;
+    if (doubleBoostLeft < 0.015) doubleBoostLeft = 0;
+  }
+
+  // Stronger pull while falling → clean landings without a slap.
+  // During the double-jump ease-in, lighten gravity so the puff floats up.
+  let g = vy < 0 ? GRAVITY * FALL_GRAVITY_MULT : GRAVITY;
+  if (boosting) g *= DOUBLE_JUMP_BOOST_GRAVITY;
   vy -= g * dt;
   y += vy * dt;
   if (y <= 0) {
@@ -70,38 +97,73 @@ export function tickJump(p: JumpMotion, dt: number): JumpMotion {
     vy = 0;
     onGround = true;
     airT = 0;
+    doubleBoostLeft = 0;
   } else {
     onGround = false;
     airT += dt;
   }
-  return { y, vy, onGround, airT };
+  return { y, vy, onGround, airT, doubleBoostLeft };
 }
 
 export interface JumpImpulseResult {
+  /** Immediate velocity after the jump (blended, not hard-reset). */
   vy: number;
   onGround: false;
   jumpsLeft: number;
   /** True when this was the extra air jump */
   isDouble: boolean;
+  /**
+   * Extra upward impulse to ease in over the next frames (double jump only).
+   * Ground jumps set this to 0.
+   */
+  doubleBoostLeft: number;
 }
 
 /**
- * Blend double-jump velocity instead of hard-resetting.
- * - Rising faster than DOUBLE_JUMP_VY: keep a little of the excess (no yank down)
- * - Rising slower / peaking: lift to DOUBLE_JUMP_VY
- * - Falling: soft cancel of downward speed + DOUBLE_JUMP_VY (smooth steam kick)
+ * Plan a smooth double-jump velocity change.
+ * Almost all of the lift is deferred into `boostLeft` and eased over the next
+ * frames — the press only applies a tiny, hard-capped kick so reverse-from-fall
+ * never feels sharp.
  *
- * Peak height stays near the previous hard-reset design.
+ * Net upward energy still targets DOUBLE_JUMP_VY so peak height stays fair.
  */
-export function blendDoubleJumpVy(currentVy: number): number {
+export function planDoubleJump(currentVy: number): {
+  immediateVy: number;
+  boostLeft: number;
+} {
   if (currentVy >= DOUBLE_JUMP_VY) {
-    return DOUBLE_JUMP_VY + (currentVy - DOUBLE_JUMP_VY) * DOUBLE_JUMP_RISE_KEEP;
+    // Already rising hard — keep most of the excess, no extra boost needed
+    return {
+      immediateVy:
+        DOUBLE_JUMP_VY + (currentVy - DOUBLE_JUMP_VY) * DOUBLE_JUMP_RISE_KEEP,
+      boostLeft: 0,
+    };
   }
-  if (currentVy >= 0) {
-    return DOUBLE_JUMP_VY;
+
+  // Soft-cancel a slice of downward speed on press (capped — rest eases in)
+  let base = currentVy;
+  if (currentVy < 0) {
+    const cancelNow = Math.min(-currentVy, DOUBLE_JUMP_MAX_IMMEDIATE);
+    base = currentVy + cancelNow;
   }
-  // Falling: cancel most of the drop without a harsh reverse snap
-  return DOUBLE_JUMP_VY + currentVy * DOUBLE_JUMP_FALL_SOFT;
+
+  const target = DOUBLE_JUMP_VY;
+  const gap = target - base;
+  // Tiny upward kick on top of the soft cancel
+  const kick = Math.min(
+    DOUBLE_JUMP_MAX_IMMEDIATE * 0.55,
+    Math.max(0.12, gap * DOUBLE_JUMP_IMMEDIATE_FRAC),
+  );
+  const immediateVy = base + kick;
+  // Remaining energy (including unfinished fall cancel) eases in over frames
+  const boostLeft = Math.max(0, target - immediateVy);
+  return { immediateVy, boostLeft };
+}
+
+/** @deprecated use planDoubleJump — kept for tests that check net upward intent */
+export function blendDoubleJumpVy(currentVy: number): number {
+  const { immediateVy, boostLeft } = planDoubleJump(currentVy);
+  return immediateVy + boostLeft;
 }
 
 /**
@@ -116,20 +178,23 @@ export function applyJumpImpulse(
 ): JumpImpulseResult | null {
   if (jumpsLeft <= 0) return null;
   if (onGround) {
-    // First jump from ground — spend one, leave one for double
+    // First jump from ground — full instant impulse (crisp takeoff is correct here)
     return {
       vy: JUMP_VY,
       onGround: false,
       jumpsLeft: Math.max(0, jumpsLeft - 1),
       isDouble: false,
+      doubleBoostLeft: 0,
     };
   }
-  // Air / double jump — steam puff with velocity blend (not a hard reset)
+  // Air / double jump — plan a smooth boost (no hard velocity reset)
+  const plan = planDoubleJump(currentVy);
   return {
-    vy: blendDoubleJumpVy(currentVy),
+    vy: plan.immediateVy,
     onGround: false,
     jumpsLeft: Math.max(0, jumpsLeft - 1),
     isDouble: true,
+    doubleBoostLeft: plan.boostLeft,
   };
 }
 
@@ -150,35 +215,54 @@ export function laneBank(
 }
 
 /**
- * Forward tilt / flip for cup (radians around X).
- * Double-jump reactT softens the spin so the second kick feels snappy, not snapped.
+ * Smooth ease-in-out for the double-jump flip (no sharp corners).
+ * Slightly stronger ease than plain smoothstep so the spin accelerates
+ * then settles cleanly upright.
+ */
+export function easeInOutCubic(t: number): number {
+  const x = Math.min(1, Math.max(0, t));
+  return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+}
+
+/**
+ * Forward tilt for cup (radians around X).
+ * Normal air: soft lean. Double jump: one smooth full front-flip
+ * (reactT 1 → 0 over DOUBLE_JUMP_REACT_SEC).
  */
 export function cupTiltX(
   onGround: boolean,
   airT: number,
   doubleJumpReactT = 0,
 ): number {
-  const runTilt = onGround ? 0.1 : 0;
-  let tiltX = -runTilt;
-  if (!onGround) {
-    // Slightly slower spin so air reads cleaner
-    tiltX += airT * ((2 * Math.PI) / 0.82);
-    // Quick forward kick on double jump, eases out
-    if (doubleJumpReactT > 0) {
-      const k = easeOutQuad(Math.min(1, doubleJumpReactT));
-      tiltX += -0.55 * k;
-    }
-  }
-  return tiltX;
+  if (onGround) return -0.1;
+  // Soft air lean that settles (not a continuous spin)
+  const airLean = -0.14 - Math.min(0.14, airT * 0.22);
+
+  if (doubleJumpReactT <= 0) return airLean;
+
+  // One full front flip: progress 0 at kick → 1 when react ends
+  const progress = 1 - Math.min(1, Math.max(0, doubleJumpReactT));
+  const flip = -Math.PI * 2 * easeInOutCubic(progress);
+  // Blend air lean in only near the start/end so the mid-spin is clean
+  const leanMix = 1 - Math.sin(progress * Math.PI);
+  return flip + airLean * leanMix * 0.35;
 }
 
 /**
- * Uniform scale for double-jump squash/stretch (1 = normal).
+ * Non-uniform scale for a soft double-jump squash/stretch (sx, sy, sz).
+ * Mild stretch through the flip peak — pro platformer feel.
  * reactT goes 1 → 0 over DOUBLE_JUMP_REACT_SEC.
  */
-export function doubleJumpScale(reactT: number): number {
-  if (reactT <= 0) return 1;
-  const k = easeOutQuad(Math.min(1, reactT));
-  // Brief squash then stretch back — steam kick silhouette
-  return 1 - 0.12 * k + 0.06 * Math.sin(k * Math.PI);
+export function doubleJumpScale(reactT: number): {
+  x: number;
+  y: number;
+  z: number;
+} {
+  if (reactT <= 0) return { x: 1, y: 1, z: 1 };
+  const progress = 1 - Math.min(1, reactT);
+  // Peak stretch mid-flip, settle upright
+  const wave = Math.sin(progress * Math.PI);
+  const x = 1 + 0.06 * wave;
+  const y = 1 - 0.05 * wave;
+  return { x, y, z: x };
 }

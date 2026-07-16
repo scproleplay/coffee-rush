@@ -66,11 +66,11 @@ function applyJumpNow(state: GameState): JumpResult {
   state.player.vy = imp.vy;
   state.player.onGround = imp.onGround;
   state.player.jumpsLeft = imp.jumpsLeft;
+  state.player.doubleBoostLeft = imp.doubleBoostLeft;
   // Clear buffer so one press doesn't fire twice
   state.jumpBufferT = 0;
   if (imp.isDouble) {
-    // Soft restart of air timer for cleaner spin (not a hard zero snap every frame)
-    state.player.airT = Math.min(state.player.airT || 0, 0.08);
+    // Keep air timer continuous — no spin reset snap
     state.player.doubleJumpReactT = 1;
   }
   return { ok: true, isDouble: imp.isDouble };

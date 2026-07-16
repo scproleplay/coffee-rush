@@ -17,6 +17,8 @@ export interface PlayerState {
   jumpsLeft: number;
   /** 1 → 0 visual kick window after a double jump (squash / steam react). */
   doubleJumpReactT: number;
+  /** Remaining upward boost eased in after double jump (0 when idle). */
+  doubleBoostLeft: number;
 }
 
 /** Transient FX flags attached to GameState by input (not serialized). */

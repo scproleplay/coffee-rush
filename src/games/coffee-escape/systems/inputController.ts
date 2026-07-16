@@ -40,7 +40,7 @@ export function attachInputController(deps: InputControllerDeps): InputControlle
     const r = tryJump(state);
     if (r.ok && r.isDouble) {
       // Brief flash + steam puff request for double jump feedback
-      state.flash = Math.max(state.flash, 0.1);
+      state.flash = Math.max(state.flash, 0.06);
       // Signal runtime/updateFrame via reusable dust burst at cup feet
       (state as GameState & { _doubleJumpPuff?: boolean })._doubleJumpPuff = true;
     }
