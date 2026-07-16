@@ -56,10 +56,10 @@ export interface UpdateFrameCtx {
   steamGroup: THREE.Group;
   contactShadow: THREE.Mesh;
   man: THREE.Group;
-  manArmL: THREE.Mesh;
-  manArmR: THREE.Mesh;
-  manLegL: THREE.Mesh;
-  manLegR: THREE.Mesh;
+  manArmL: THREE.Object3D;
+  manArmR: THREE.Object3D;
+  manLegL: THREE.Object3D;
+  manLegR: THREE.Object3D;
   // world
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
@@ -224,22 +224,28 @@ export function updateFrame(ctx: UpdateFrameCtx): boolean {
     boostActive: state.boost.active,
   });
 
-  // Tired man silhouette — eases closer as danger rises (no path AI)
+  // Tired man — chase run cycle + eases closer as danger rises (no path AI)
   const prox = chaseProximity(state.chase);
-  const manSwing = Math.sin(p.runAnim * 0.9) * 0.7;
-  ctx.manArmL.rotation.x = -manSwing;
-  ctx.manArmR.rotation.x = manSwing;
-  ctx.manLegL.rotation.x = manSwing;
-  ctx.manLegR.rotation.x = -manSwing;
-  ctx.man.position.y = Math.abs(Math.sin(p.runAnim * 1.8)) * 0.05;
+  // Faster, grabby run when he's close; tired lope when far
+  const manCadence = 0.85 + prox * 0.55;
+  const manSwing = Math.sin(p.runAnim * manCadence) * (0.55 + prox * 0.35);
+  const reach = 0.35 + prox * 0.55; // right arm reaches more as he closes in
+  ctx.manArmL.rotation.x = -manSwing * 0.85 - 0.15;
+  ctx.manArmR.rotation.x = manSwing * 0.5 - reach;
+  ctx.manArmL.rotation.z = -0.12 - prox * 0.05;
+  ctx.manArmR.rotation.z = 0.12 + prox * 0.08;
+  ctx.manLegL.rotation.x = manSwing * 0.9;
+  ctx.manLegR.rotation.x = -manSwing * 0.9;
+  // Soft bob + tired forward lean when desperate
+  ctx.man.position.y = Math.abs(Math.sin(p.runAnim * manCadence * 2)) * (0.04 + prox * 0.03);
+  ctx.man.rotation.x = 0.04 + prox * 0.1;
   const manTargetZ = manZFromDanger(state.chase.danger, state.chase.max);
   ctx.man.position.z += (manTargetZ - ctx.man.position.z) * Math.min(1, dt * 4);
   // Drift slightly toward the player's lane so he feels like he's closing in
   const manTargetX = LANE_X[0]! - 0.55 + p.laneX * 0.15;
   ctx.man.position.x += (manTargetX - ctx.man.position.x) * Math.min(1, dt * 3);
-  // Urgency tint when he's close
   ctx.man.visible = true;
-  ctx.man.scale.setScalar(1 + prox * 0.08);
+  ctx.man.scale.setScalar(1 + prox * 0.06);
 
   // Obstacles
   state.nextSpawn -= dt;
