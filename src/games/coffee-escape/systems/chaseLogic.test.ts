@@ -72,11 +72,13 @@ describe('applyChaseBeanRelief / boost drain', () => {
 });
 
 describe('manZFromDanger / proximity', () => {
-  it('maps far→near as danger rises', () => {
+  it('maps far→near as danger rises but stays behind camera plane', () => {
     expect(manZFromDanger(0)).toBeCloseTo(CHASE_MAN_Z_FAR, 5);
     expect(manZFromDanger(CHASE_MAX)).toBeCloseTo(CHASE_MAN_Z_NEAR, 5);
     expect(manZFromDanger(CHASE_MAX / 2)).toBeLessThan(CHASE_MAN_Z_FAR);
     expect(manZFromDanger(CHASE_MAX / 2)).toBeGreaterThan(CHASE_MAN_Z_NEAR);
+    // Never closer than ~2.9 so he doesn't fill the UI / camera
+    expect(CHASE_MAN_Z_NEAR).toBeGreaterThanOrEqual(2.8);
   });
 
   it('proximity is 0..1', () => {

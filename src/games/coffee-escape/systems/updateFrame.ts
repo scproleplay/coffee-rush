@@ -28,6 +28,7 @@ import {
   applyChaseHit,
   chaseProximity,
   isCaught,
+  manXFromDanger,
   manZFromDanger,
   tickChase,
 } from './chaseLogic';
@@ -224,28 +225,31 @@ export function updateFrame(ctx: UpdateFrameCtx): boolean {
     boostActive: state.boost.active,
   });
 
-  // Tired man — chase run cycle + eases closer as danger rises (no path AI)
+  // Tired man — clean run cycle; stays RIGHT + back so caffeine HUD stays free
   const prox = chaseProximity(state.chase);
-  // Faster, grabby run when he's close; tired lope when far
-  const manCadence = 0.85 + prox * 0.55;
-  const manSwing = Math.sin(p.runAnim * manCadence) * (0.55 + prox * 0.35);
-  const reach = 0.35 + prox * 0.55; // right arm reaches more as he closes in
-  ctx.manArmL.rotation.x = -manSwing * 0.85 - 0.15;
-  ctx.manArmR.rotation.x = manSwing * 0.5 - reach;
-  ctx.manArmL.rotation.z = -0.12 - prox * 0.05;
-  ctx.manArmR.rotation.z = 0.12 + prox * 0.08;
-  ctx.manLegL.rotation.x = manSwing * 0.9;
-  ctx.manLegR.rotation.x = -manSwing * 0.9;
-  // Soft bob + tired forward lean when desperate
-  ctx.man.position.y = Math.abs(Math.sin(p.runAnim * manCadence * 2)) * (0.04 + prox * 0.03);
-  ctx.man.rotation.x = 0.04 + prox * 0.1;
+  const manCadence = 0.8 + prox * 0.4;
+  const manSwing = Math.sin(p.runAnim * manCadence) * (0.45 + prox * 0.25);
+  const reach = 0.3 + prox * 0.4;
+  ctx.manArmL.rotation.x = -manSwing * 0.75 - 0.12;
+  ctx.manArmR.rotation.x = manSwing * 0.4 - reach;
+  ctx.manArmL.rotation.z = -0.1;
+  ctx.manArmR.rotation.z = 0.1;
+  ctx.manLegL.rotation.x = manSwing * 0.8;
+  ctx.manLegR.rotation.x = -manSwing * 0.8;
+  // Gentle bob only — no huge lean into the camera
+  ctx.man.position.y =
+    Math.abs(Math.sin(p.runAnim * manCadence * 2)) * 0.035;
+  ctx.man.rotation.x = 0.03 + prox * 0.04;
+  ctx.man.rotation.y = -0.25 + p.laneX * 0.04;
+
   const manTargetZ = manZFromDanger(state.chase.danger, state.chase.max);
-  ctx.man.position.z += (manTargetZ - ctx.man.position.z) * Math.min(1, dt * 4);
-  // Drift slightly toward the player's lane so he feels like he's closing in
-  const manTargetX = LANE_X[0]! - 0.55 + p.laneX * 0.15;
+  const manTargetX = manXFromDanger(state.chase.danger, state.chase.max);
+  ctx.man.position.z += (manTargetZ - ctx.man.position.z) * Math.min(1, dt * 3.5);
   ctx.man.position.x += (manTargetX - ctx.man.position.x) * Math.min(1, dt * 3);
   ctx.man.visible = true;
-  ctx.man.scale.setScalar(1 + prox * 0.06);
+  // Base scale is set on the model (0.82); only tiny urgency bump
+  const base = 0.82;
+  ctx.man.scale.setScalar(base * (1 + prox * 0.04));
 
   // Obstacles
   state.nextSpawn -= dt;

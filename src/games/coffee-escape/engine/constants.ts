@@ -101,6 +101,12 @@ export const CHASE_BOOST_DRAIN_PER_SEC = 16;
 export const CHASE_PASSIVE_PER_SEC = 1.1;
 /** Seconds of hit invulnerability so one obstacle can't multi-tick. */
 export const CHASE_HIT_IFRAME_SEC = 0.5;
-/** Man world-Z when danger is 0 (far behind) vs max (almost on the cup). */
-export const CHASE_MAN_Z_FAR = 5.4;
-export const CHASE_MAN_Z_NEAR = 1.35;
+/**
+ * Man world-Z when danger is 0 (far) vs max (closer but NEVER near the camera).
+ * Camera sits ~z=4.5 looking toward -Z; man stays at z≥2.9 so he stays mid-frame
+ * and never fills the bottom-left caffeine meter.
+ */
+export const CHASE_MAN_Z_FAR = 5.8;
+export const CHASE_MAN_Z_NEAR = 2.95;
+/** Horizontal home for the man — right of the track (caffeine HUD is bottom-left). */
+export const CHASE_MAN_X = 2.25;

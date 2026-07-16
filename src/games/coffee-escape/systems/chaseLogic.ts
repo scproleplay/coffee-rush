@@ -7,6 +7,7 @@ import {
   CHASE_BOOST_DRAIN_PER_SEC,
   CHASE_HIT_DANGER,
   CHASE_HIT_IFRAME_SEC,
+  CHASE_MAN_X,
   CHASE_MAN_Z_FAR,
   CHASE_MAN_Z_NEAR,
   CHASE_MAX,
@@ -95,8 +96,15 @@ export function chaseProximity(chase: Pick<ChaseState, 'danger' | 'max'>): numbe
   return Math.max(0, Math.min(1, chase.danger / chase.max));
 }
 
-/** Map danger → man world Z (higher Z = farther behind the cup at z≈0). */
+/** Map danger → man world Z (higher Z = farther from cup / closer to camera, clamped). */
 export function manZFromDanger(danger: number, max = CHASE_MAX): number {
   const t = max <= 0 ? 0 : clampDanger(danger, max) / max;
   return CHASE_MAN_Z_FAR + (CHASE_MAN_Z_NEAR - CHASE_MAN_Z_FAR) * t;
+}
+
+/** Slight horizontal ease toward cup as danger rises — stays on the right side. */
+export function manXFromDanger(danger: number, max = CHASE_MAX): number {
+  const t = max <= 0 ? 0 : clampDanger(danger, max) / max;
+  // Home on right; ease a little toward center when close, but never past mid-right
+  return CHASE_MAN_X - t * 0.35;
 }

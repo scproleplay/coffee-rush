@@ -2,12 +2,10 @@ import * as THREE from 'three';
 
 export interface ManHandles {
   man: THREE.Group;
-  /** Limb roots (groups) — rotate around shoulder / hip pivots. */
   manArmL: THREE.Object3D;
   manArmR: THREE.Object3D;
   manLegL: THREE.Object3D;
   manLegR: THREE.Object3D;
-  /** Optional face parts for expression tweaks. */
   face: {
     browL: THREE.Object3D;
     browR: THREE.Object3D;
@@ -18,339 +16,231 @@ export interface ManHandles {
 }
 
 /**
- * Tired man chaser — stylized-realistic house-morning look (CE-local).
- * Lightweight primitives only; Z driven by chase danger meter.
- * Funny, family-friendly, desperate-for-coffee energy — not scary.
+ * Tired man chaser — clean stylized 3D (CE-local).
+ * Simple readable shapes, funny morning-robe dad, not creepy.
+ * Stays on the RIGHT of the track so he never covers the caffeine meter.
  */
-export function createMan(scene: THREE.Scene, leftLaneX: number): ManHandles {
+export function createMan(scene: THREE.Scene, _leftLaneX: number): ManHandles {
   const man = new THREE.Group();
+  // Slightly smaller overall so he never dominates the frame
+  man.scale.setScalar(0.82);
 
-  // Warm morning palette — soft robe, pajama pants, cozy slippers
-  const robeMat = new THREE.MeshLambertMaterial({ color: 0x9a5a38 });
-  const robeDarkMat = new THREE.MeshLambertMaterial({ color: 0x7a4028 });
-  const robeTrimMat = new THREE.MeshLambertMaterial({ color: 0xd4a070 });
-  const skinMat = new THREE.MeshLambertMaterial({ color: 0xe8c4a0 });
-  const skinShadowMat = new THREE.MeshLambertMaterial({ color: 0xd4a888 });
-  const hairMat = new THREE.MeshLambertMaterial({ color: 0x4a3220 });
-  const hairGreyMat = new THREE.MeshLambertMaterial({ color: 0x8a7a6a });
-  const pantMat = new THREE.MeshLambertMaterial({ color: 0x3a4a62 });
-  const pantStripeMat = new THREE.MeshLambertMaterial({ color: 0x4a5a72 });
-  const slipMat = new THREE.MeshLambertMaterial({ color: 0x6a3a1a });
-  const slipInnerMat = new THREE.MeshLambertMaterial({ color: 0xc08060 });
-  const eyeWhiteMat = new THREE.MeshLambertMaterial({ color: 0xfff8f0 });
+  // Clear palette that pops against warm house floors
+  const robeMat = new THREE.MeshLambertMaterial({ color: 0xc07040 });
+  const trimMat = new THREE.MeshLambertMaterial({ color: 0xe8c090 });
+  const skinMat = new THREE.MeshLambertMaterial({ color: 0xf0d0b0 });
+  const hairMat = new THREE.MeshLambertMaterial({ color: 0x5a4030 });
+  const pantMat = new THREE.MeshLambertMaterial({ color: 0x4a6080 });
+  const slipMat = new THREE.MeshLambertMaterial({ color: 0x8a5030 });
+  const eyeWhiteMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
   const pupilMat = new THREE.MeshLambertMaterial({ color: 0x2a2018 });
   const browMat = new THREE.MeshLambertMaterial({ color: 0x3a2818 });
-  const mouthMat = new THREE.MeshLambertMaterial({ color: 0xb06060 });
+  const mouthMat = new THREE.MeshLambertMaterial({ color: 0xc07070 });
 
-  // --- Torso (shoulders + chest + soft belly under open robe) ---
+  // ===== TORSO — single clean capsule + closed robe, no melt flaps =====
   const torso = new THREE.Group();
-  torso.position.y = 1.05;
-  torso.rotation.x = 0.1; // tired forward lean
+  torso.position.y = 0.95;
 
-  // Shoulders / upper chest
-  const chest = new THREE.Mesh(
-    new THREE.CapsuleGeometry(0.28, 0.42, 4, 10),
+  const body = new THREE.Mesh(
+    new THREE.CapsuleGeometry(0.26, 0.48, 4, 10),
     robeMat,
   );
-  chest.position.y = 0.05;
-  chest.scale.set(1.15, 1, 0.85);
-  torso.add(chest);
+  body.position.y = 0.05;
+  body.scale.set(1.05, 1, 0.8);
+  torso.add(body);
 
-  // Soft belly (pajama under robe)
-  const belly = new THREE.Mesh(
-    new THREE.SphereGeometry(0.26, 10, 8),
-    new THREE.MeshLambertMaterial({ color: 0xf0e0c8 }),
+  // Soft shoulders
+  const shoulderL = new THREE.Mesh(
+    new THREE.SphereGeometry(0.1, 8, 6),
+    robeMat,
   );
-  belly.position.set(0, -0.28, 0.12);
-  belly.scale.set(1.15, 0.85, 0.9);
-  torso.add(belly);
+  shoulderL.position.set(-0.28, 0.28, 0);
+  torso.add(shoulderL);
+  const shoulderR = shoulderL.clone();
+  shoulderR.position.x = 0.28;
+  torso.add(shoulderR);
 
-  // Open robe flaps
-  const flapL = new THREE.Mesh(
-    new THREE.BoxGeometry(0.22, 0.85, 0.08),
-    robeDarkMat,
+  // Collar band (simple ring, not messy flaps)
+  const collar = new THREE.Mesh(
+    new THREE.TorusGeometry(0.16, 0.035, 6, 12),
+    trimMat,
   );
-  flapL.position.set(-0.18, -0.15, 0.22);
-  flapL.rotation.y = 0.35;
-  flapL.rotation.z = 0.08;
-  torso.add(flapL);
-  const flapR = flapL.clone();
-  flapR.position.x = 0.18;
-  flapR.rotation.y = -0.35;
-  flapR.rotation.z = -0.08;
-  torso.add(flapR);
+  collar.rotation.x = Math.PI / 2;
+  collar.position.set(0, 0.38, 0.02);
+  collar.scale.set(1.1, 0.9, 1);
+  torso.add(collar);
 
-  // Collar / lapels
-  const collarL = new THREE.Mesh(
-    new THREE.BoxGeometry(0.14, 0.28, 0.06),
-    robeTrimMat,
-  );
-  collarL.position.set(-0.14, 0.28, 0.24);
-  collarL.rotation.z = 0.4;
-  collarL.rotation.x = -0.2;
-  torso.add(collarL);
-  const collarR = collarL.clone();
-  collarR.position.x = 0.14;
-  collarR.rotation.z = -0.4;
-  torso.add(collarR);
-
-  // Belt / sash
-  const sash = new THREE.Mesh(
-    new THREE.BoxGeometry(0.62, 0.08, 0.42),
-    robeTrimMat,
-  );
-  sash.position.set(0, -0.22, 0.05);
+  // Sash
+  const sash = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.07, 0.38), trimMat);
+  sash.position.set(0, -0.12, 0.02);
   torso.add(sash);
-  const sashKnot = new THREE.Mesh(
-    new THREE.SphereGeometry(0.07, 8, 6),
-    robeTrimMat,
+
+  // Light pajama V under collar (readable house clothes)
+  const shirt = new THREE.Mesh(
+    new THREE.BoxGeometry(0.18, 0.28, 0.06),
+    new THREE.MeshLambertMaterial({ color: 0xf5e8d0 }),
   );
-  sashKnot.position.set(0.12, -0.22, 0.24);
-  torso.add(sashKnot);
+  shirt.position.set(0, 0.2, 0.2);
+  torso.add(shirt);
 
   man.add(torso);
 
-  // --- Head + face ---
+  // ===== HEAD — clean sphere + simple cap hair =====
   const headG = new THREE.Group();
-  headG.position.set(0, 1.72, 0.08);
-  headG.rotation.x = 0.06;
+  headG.position.set(0, 1.58, 0.04);
 
-  const skull = new THREE.Mesh(
-    new THREE.SphereGeometry(0.2, 14, 12),
-    skinMat,
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.18, 14, 12), skinMat);
+  head.scale.set(0.95, 1.02, 0.92);
+  headG.add(head);
+
+  // Clean hair cap — sits ON TOP of head, not a face-covering blob
+  const hair = new THREE.Mesh(
+    new THREE.SphereGeometry(0.175, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.48),
+    hairMat,
   );
-  skull.scale.set(0.95, 1.05, 0.92);
-  headG.add(skull);
+  hair.position.set(0, 0.02, -0.01);
+  hair.scale.set(1.05, 0.95, 1.0);
+  headG.add(hair);
 
-  // Soft jaw
-  const jaw = new THREE.Mesh(
-    new THREE.SphereGeometry(0.14, 10, 8),
-    skinShadowMat,
+  // Small sideburns only (not temples blobs)
+  const sideL = new THREE.Mesh(
+    new THREE.BoxGeometry(0.04, 0.08, 0.06),
+    hairMat,
   );
-  jaw.position.set(0, -0.1, 0.04);
-  jaw.scale.set(0.95, 0.7, 0.85);
-  headG.add(jaw);
+  sideL.position.set(-0.16, -0.02, 0.02);
+  headG.add(sideL);
+  const sideR = sideL.clone();
+  sideR.position.x = 0.16;
+  headG.add(sideR);
 
-  // Ears
-  const earGeo = new THREE.SphereGeometry(0.045, 8, 6);
-  const earL = new THREE.Mesh(earGeo, skinMat);
-  earL.position.set(-0.19, 0, 0);
-  earL.scale.set(0.6, 1, 0.8);
+  // Ears — small, out of the way
+  const earL = new THREE.Mesh(new THREE.SphereGeometry(0.035, 6, 6), skinMat);
+  earL.position.set(-0.175, 0, 0);
+  earL.scale.set(0.55, 1, 0.7);
   headG.add(earL);
   const earR = earL.clone();
-  earR.position.x = 0.19;
+  earR.position.x = 0.175;
   headG.add(earR);
 
-  // Messy morning hair (tufts + grey temples)
-  const hairCap = new THREE.Mesh(
-    new THREE.SphereGeometry(0.2, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.55),
-    hairMat,
+  // ===== FACE — flat, readable, tired/funny (no stacked melt spheres) =====
+  // Eye whites
+  const eyeL = new THREE.Mesh(
+    new THREE.SphereGeometry(0.032, 8, 6),
+    eyeWhiteMat,
   );
-  hairCap.position.y = 0.04;
-  hairCap.scale.set(1.02, 1.05, 1.0);
-  headG.add(hairCap);
-
-  const tuft = new THREE.Mesh(
-    new THREE.SphereGeometry(0.08, 8, 6),
-    hairMat,
-  );
-  tuft.position.set(-0.06, 0.18, 0.02);
-  tuft.scale.set(1.2, 0.9, 0.8);
-  headG.add(tuft);
-  const tuft2 = tuft.clone();
-  tuft2.position.set(0.08, 0.16, -0.02);
-  tuft2.scale.set(1.0, 0.75, 0.9);
-  headG.add(tuft2);
-
-  const templeL = new THREE.Mesh(
-    new THREE.SphereGeometry(0.05, 6, 6),
-    hairGreyMat,
-  );
-  templeL.position.set(-0.16, 0.02, 0.08);
-  headG.add(templeL);
-  const templeR = templeL.clone();
-  templeR.position.x = 0.16;
-  headG.add(templeR);
-
-  // Face — tired / desperate-for-coffee (readable, not creepy)
-  const eyeWhiteGeo = new THREE.SphereGeometry(0.038, 8, 6);
-  const eyeL = new THREE.Mesh(eyeWhiteGeo, eyeWhiteMat);
-  eyeL.position.set(-0.07, 0.03, 0.16);
-  eyeL.scale.set(1.1, 0.75, 0.6);
+  eyeL.position.set(-0.06, 0.02, 0.155);
+  eyeL.scale.set(1.15, 0.85, 0.5);
   headG.add(eyeL);
   const eyeR = eyeL.clone();
-  eyeR.position.x = 0.07;
+  eyeR.position.x = 0.06;
   headG.add(eyeR);
 
-  // Heavy lower lids (bags)
-  const bagMat = new THREE.MeshLambertMaterial({ color: 0xd0a080 });
-  const bagL = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.02, 0.02), bagMat);
-  bagL.position.set(-0.07, -0.01, 0.175);
-  headG.add(bagL);
-  const bagR = bagL.clone();
-  bagR.position.x = 0.07;
-  headG.add(bagR);
-
-  // Pupils — slightly wide / focused on the cup
-  const pupilGeo = new THREE.SphereGeometry(0.018, 8, 6);
-  const pupilL = new THREE.Mesh(pupilGeo, pupilMat);
-  pupilL.position.set(-0.065, 0.035, 0.19);
+  // Pupils (centered, slightly large = "need coffee")
+  const pupilL = new THREE.Mesh(new THREE.SphereGeometry(0.014, 6, 6), pupilMat);
+  pupilL.position.set(-0.055, 0.022, 0.175);
   headG.add(pupilL);
   const pupilR = pupilL.clone();
-  pupilR.position.x = 0.075;
+  pupilR.position.x = 0.065;
   headG.add(pupilR);
 
-  // Droopy upper lids
-  const lidMat = new THREE.MeshLambertMaterial({ color: 0xe0b898 });
-  const lidL = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.022, 0.03), lidMat);
-  lidL.position.set(-0.07, 0.055, 0.175);
-  lidL.rotation.x = -0.35;
+  // Simple upper lids (thin dark line, not bags of flesh)
+  const lidL = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.012, 0.02), browMat);
+  lidL.position.set(-0.06, 0.045, 0.17);
   headG.add(lidL);
   const lidR = lidL.clone();
-  lidR.position.x = 0.07;
+  lidR.position.x = 0.06;
   headG.add(lidR);
 
-  // Eyebrows — worried / pleading
-  const browL = new THREE.Mesh(
-    new THREE.BoxGeometry(0.08, 0.018, 0.02),
-    browMat,
-  );
-  browL.position.set(-0.075, 0.09, 0.17);
-  browL.rotation.z = 0.25;
+  // Eyebrows — gentle worried arch
+  const browL = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.014, 0.016), browMat);
+  browL.position.set(-0.065, 0.075, 0.16);
+  browL.rotation.z = 0.2;
   headG.add(browL);
   const browR = browL.clone();
-  browR.position.x = 0.075;
-  browR.rotation.z = -0.25;
+  browR.position.x = 0.065;
+  browR.rotation.z = -0.2;
   headG.add(browR);
 
-  // Soft nose
-  const nose = new THREE.Mesh(
-    new THREE.SphereGeometry(0.035, 8, 6),
-    skinShadowMat,
-  );
-  nose.position.set(0, -0.01, 0.195);
-  nose.scale.set(0.7, 0.9, 0.85);
+  // Tiny nose
+  const nose = new THREE.Mesh(new THREE.SphereGeometry(0.022, 6, 6), skinMat);
+  nose.position.set(0, -0.015, 0.175);
+  nose.scale.set(0.7, 0.85, 0.75);
   headG.add(nose);
 
-  // Mouth — small open "need coffee" oof
-  const mouth = new THREE.Mesh(
-    new THREE.SphereGeometry(0.04, 8, 6),
-    mouthMat,
-  );
-  mouth.position.set(0, -0.09, 0.17);
-  mouth.scale.set(0.9, 0.45, 0.55);
+  // Small smile-line mouth (tired "please coffee")
+  const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.018, 0.015), mouthMat);
+  mouth.position.set(0, -0.075, 0.16);
+  mouth.scale.set(1, 0.7, 1);
   headG.add(mouth);
-
-  // Stubble shadow
-  const stubble = new THREE.Mesh(
-    new THREE.SphereGeometry(0.11, 8, 6),
-    new THREE.MeshLambertMaterial({ color: 0xc4a080 }),
-  );
-  stubble.position.set(0, -0.12, 0.1);
-  stubble.scale.set(0.95, 0.55, 0.7);
-  headG.add(stubble);
 
   man.add(headG);
 
-  // --- Arms (groups pivot at shoulders for clean run cycle) ---
+  // ===== ARMS — clean capsules, shoulder pivots =====
   function makeArm(side: -1 | 1): THREE.Group {
     const root = new THREE.Group();
-    // Shoulder pivot sits on torso
-    root.position.set(side * 0.38, 1.28, 0.02);
+    root.position.set(side * 0.36, 1.2, 0);
 
     const upper = new THREE.Mesh(
-      new THREE.CapsuleGeometry(0.065, 0.28, 3, 8),
+      new THREE.CapsuleGeometry(0.055, 0.26, 3, 8),
       robeMat,
     );
-    upper.position.y = -0.2;
+    upper.position.y = -0.18;
     root.add(upper);
 
-    // Elbow joint
-    const elbow = new THREE.Group();
-    elbow.position.y = -0.38;
+    const lowerG = new THREE.Group();
+    lowerG.position.y = -0.36;
     const lower = new THREE.Mesh(
-      new THREE.CapsuleGeometry(0.055, 0.24, 3, 8),
+      new THREE.CapsuleGeometry(0.048, 0.22, 3, 8),
       skinMat,
     );
-    lower.position.y = -0.16;
-    elbow.add(lower);
+    lower.position.y = -0.14;
+    lowerG.add(lower);
 
-    // Hand
-    const hand = new THREE.Mesh(
-      new THREE.SphereGeometry(0.055, 8, 6),
-      skinMat,
-    );
-    hand.position.y = -0.34;
-    hand.scale.set(1.1, 0.75, 0.9);
-    elbow.add(hand);
+    const hand = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 6), skinMat);
+    hand.position.y = -0.3;
+    hand.scale.set(1.05, 0.8, 0.9);
+    lowerG.add(hand);
 
-    // Reaching fingers (simple mitt)
-    const fingers = new THREE.Mesh(
-      new THREE.BoxGeometry(0.08, 0.04, 0.06),
-      skinMat,
-    );
-    fingers.position.set(0, -0.4, 0.02);
-    elbow.add(fingers);
-
-    root.add(elbow);
-    // Slight reach-forward rest pose
-    root.rotation.x = -0.25;
-    root.rotation.z = side * 0.12;
+    root.add(lowerG);
+    root.rotation.z = side * 0.1;
+    root.rotation.x = -0.2;
     return root;
   }
 
   const manArmL = makeArm(-1);
   const manArmR = makeArm(1);
-  // Lead with right arm a bit (grabby for coffee)
-  manArmR.rotation.x = -0.55;
+  // Mild reach with right hand
+  manArmR.rotation.x = -0.45;
   man.add(manArmL);
   man.add(manArmR);
 
-  // --- Legs (hip pivots) ---
+  // ===== LEGS =====
   function makeLeg(side: -1 | 1): THREE.Group {
     const root = new THREE.Group();
-    root.position.set(side * 0.14, 0.72, 0);
+    root.position.set(side * 0.12, 0.62, 0);
 
     const thigh = new THREE.Mesh(
-      new THREE.CapsuleGeometry(0.09, 0.28, 3, 8),
+      new THREE.CapsuleGeometry(0.075, 0.24, 3, 8),
       pantMat,
     );
-    thigh.position.y = -0.2;
+    thigh.position.y = -0.18;
     root.add(thigh);
 
-    // Stripe detail on pajama
-    const stripe = new THREE.Mesh(
-      new THREE.BoxGeometry(0.04, 0.35, 0.02),
-      pantStripeMat,
-    );
-    stripe.position.set(side * 0.06, -0.2, 0.08);
-    root.add(stripe);
-
-    const knee = new THREE.Group();
-    knee.position.y = -0.4;
+    const shinG = new THREE.Group();
+    shinG.position.y = -0.36;
     const shin = new THREE.Mesh(
-      new THREE.CapsuleGeometry(0.075, 0.26, 3, 8),
+      new THREE.CapsuleGeometry(0.065, 0.22, 3, 8),
       pantMat,
     );
-    shin.position.y = -0.16;
-    knee.add(shin);
+    shin.position.y = -0.14;
+    shinG.add(shin);
 
-    // Slipper
-    const slip = new THREE.Mesh(
-      new THREE.BoxGeometry(0.13, 0.07, 0.26),
-      slipMat,
-    );
-    slip.position.set(0, -0.38, 0.04);
-    knee.add(slip);
-    const slipToe = new THREE.Mesh(
-      new THREE.SphereGeometry(0.06, 8, 6),
-      slipInnerMat,
-    );
-    slipToe.position.set(0, -0.36, 0.14);
-    slipToe.scale.set(1, 0.7, 0.9);
-    knee.add(slipToe);
+    // Simple slipper
+    const slip = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.055, 0.2), slipMat);
+    slip.position.set(0, -0.32, 0.03);
+    shinG.add(slip);
 
-    root.add(knee);
+    root.add(shinG);
     return root;
   }
 
@@ -359,8 +249,11 @@ export function createMan(scene: THREE.Scene, leftLaneX: number): ManHandles {
   man.add(manLegL);
   man.add(manLegR);
 
-  // Behind / side start pose — chase meter moves him closer
-  man.position.set(leftLaneX - 0.55, 0, 4.15);
+  // RIGHT side of track, well behind the cup — never over caffeine meter (bottom-left)
+  const rightX = 1.6 + 0.7; // outside right lane
+  man.position.set(rightX, 0, 5.2);
+  // Face slightly toward center / cup
+  man.rotation.y = -0.25;
   scene.add(man);
 
   return {
@@ -369,12 +262,6 @@ export function createMan(scene: THREE.Scene, leftLaneX: number): ManHandles {
     manArmR,
     manLegL,
     manLegR,
-    face: {
-      browL,
-      browR,
-      mouth,
-      eyeL,
-      eyeR,
-    },
+    face: { browL, browR, mouth, eyeL, eyeR },
   };
 }
