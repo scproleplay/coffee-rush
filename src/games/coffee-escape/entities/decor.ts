@@ -757,3 +757,210 @@ export function makeRoomArch(side: 'left' | 'right') {
   group.add(accent);
   return group;
 }
+
+/** Living-room coffee table (side decor, not a lane blocker). */
+export function makeCoffeeTable() {
+  const group = new THREE.Group();
+  const top = new THREE.Mesh(
+    new THREE.BoxGeometry(0.9, 0.06, 0.55),
+    new THREE.MeshLambertMaterial({ color: 0x8a5a30 }),
+  );
+  top.position.y = 0.38;
+  group.add(top);
+  const legMat = new THREE.MeshLambertMaterial({ color: 0x5a3a18 });
+  for (const [x, z] of [
+    [-0.35, -0.2],
+    [0.35, -0.2],
+    [-0.35, 0.2],
+    [0.35, 0.2],
+  ] as const) {
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.36, 0.06), legMat);
+    leg.position.set(x, 0.18, z);
+    group.add(leg);
+  }
+  // Book + mug clutter
+  const book = new THREE.Mesh(
+    new THREE.BoxGeometry(0.22, 0.04, 0.16),
+    new THREE.MeshLambertMaterial({ color: 0xc04040 }),
+  );
+  book.position.set(-0.15, 0.43, 0.05);
+  group.add(book);
+  const mug = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.05, 0.05, 0.08, 8),
+    new THREE.MeshLambertMaterial({ color: 0xf0e8d8 }),
+  );
+  mug.position.set(0.2, 0.45, -0.05);
+  group.add(mug);
+  return group;
+}
+
+/** Soft throw pillows stack (living clutter). */
+export function makePillowStack() {
+  const group = new THREE.Group();
+  const colors = [0xd08090, 0xe8c070, 0x7090b0];
+  for (let i = 0; i < 3; i++) {
+    const p = new THREE.Mesh(
+      new THREE.BoxGeometry(0.45, 0.14, 0.38),
+      new THREE.MeshLambertMaterial({ color: colors[i]! }),
+    );
+    p.position.set((i - 1) * 0.08, 0.1 + i * 0.12, (i % 2) * 0.05);
+    p.rotation.y = (i - 1) * 0.2;
+    group.add(p);
+  }
+  return group;
+}
+
+/** Garden fence panel (side of outdoor path). */
+export function makeFencePanel() {
+  const group = new THREE.Group();
+  const wood = new THREE.MeshLambertMaterial({ color: 0xa07840 });
+  const dark = new THREE.MeshLambertMaterial({ color: 0x6a4a22 });
+  // Horizontal rails
+  for (const y of [0.35, 0.75, 1.15]) {
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 1.4), wood);
+    rail.position.set(0, y, 0);
+    group.add(rail);
+  }
+  // Vertical pickets
+  for (let i = 0; i < 5; i++) {
+    const picket = new THREE.Mesh(new THREE.BoxGeometry(0.08, 1.35, 0.1), dark);
+    picket.position.set(0, 0.7, -0.55 + i * 0.28);
+    group.add(picket);
+  }
+  return group;
+}
+
+/** Flower pot with simple plant. */
+export function makeFlowerPot() {
+  const group = new THREE.Group();
+  const pot = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.18, 0.14, 0.28, 10),
+    new THREE.MeshLambertMaterial({ color: 0xb85a3a }),
+  );
+  pot.position.y = 0.14;
+  group.add(pot);
+  const dirt = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.15, 0.15, 0.04, 10),
+    new THREE.MeshLambertMaterial({ color: 0x3a2818 }),
+  );
+  dirt.position.y = 0.28;
+  group.add(dirt);
+  const leafMat = new THREE.MeshLambertMaterial({ color: 0x3a8a40 });
+  for (let i = 0; i < 4; i++) {
+    const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 6), leafMat);
+    const a = (i / 4) * Math.PI * 2;
+    leaf.position.set(Math.cos(a) * 0.08, 0.42, Math.sin(a) * 0.08);
+    leaf.scale.set(1, 0.7, 1);
+    group.add(leaf);
+  }
+  const bloom = new THREE.Mesh(
+    new THREE.SphereGeometry(0.08, 8, 6),
+    new THREE.MeshLambertMaterial({ color: 0xe05070 }),
+  );
+  bloom.position.y = 0.52;
+  group.add(bloom);
+  return group;
+}
+
+/** Garden hose reel. */
+export function makeHoseReel() {
+  const group = new THREE.Group();
+  const stand = new THREE.Mesh(
+    new THREE.BoxGeometry(0.12, 0.55, 0.12),
+    new THREE.MeshLambertMaterial({ color: 0x5a5a5a }),
+  );
+  stand.position.y = 0.28;
+  group.add(stand);
+  const reel = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.28, 0.28, 0.22, 12),
+    new THREE.MeshLambertMaterial({ color: 0x2a6aaa }),
+  );
+  reel.rotation.z = Math.PI / 2;
+  reel.position.set(0, 0.45, 0);
+  group.add(reel);
+  const hose = new THREE.Mesh(
+    new THREE.TorusGeometry(0.22, 0.04, 6, 14),
+    new THREE.MeshLambertMaterial({ color: 0x1a5a9a }),
+  );
+  hose.rotation.y = Math.PI / 2;
+  hose.position.set(0, 0.45, 0);
+  group.add(hose);
+  return group;
+}
+
+/** Patio chair (garden seating). */
+export function makePatioChair() {
+  const group = new THREE.Group();
+  const frame = new THREE.MeshLambertMaterial({ color: 0xc0b090 });
+  const seat = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.06, 0.5), frame);
+  seat.position.y = 0.42;
+  group.add(seat);
+  const back = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.55, 0.06), frame);
+  back.position.set(0, 0.72, -0.22);
+  group.add(back);
+  for (const x of [-0.22, 0.22]) {
+    for (const z of [-0.2, 0.2]) {
+      const leg = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.03, 0.03, 0.4, 6),
+        frame,
+      );
+      leg.position.set(x, 0.2, z);
+      group.add(leg);
+    }
+  }
+  // Soft cushion
+  const cushion = new THREE.Mesh(
+    new THREE.BoxGeometry(0.48, 0.05, 0.42),
+    new THREE.MeshLambertMaterial({ color: 0x5a9a70 }),
+  );
+  cushion.position.y = 0.48;
+  group.add(cushion);
+  return group;
+}
+
+/** Bush / shrub for garden sides. */
+export function makeBush() {
+  const group = new THREE.Group();
+  const mat = new THREE.MeshLambertMaterial({ color: 0x3a7a38 });
+  const dark = new THREE.MeshLambertMaterial({ color: 0x2a5a28 });
+  const a = new THREE.Mesh(new THREE.SphereGeometry(0.42, 10, 8), mat);
+  a.position.y = 0.4;
+  a.scale.set(1.1, 0.85, 1);
+  group.add(a);
+  const b = new THREE.Mesh(new THREE.SphereGeometry(0.32, 8, 6), dark);
+  b.position.set(0.25, 0.35, 0.1);
+  group.add(b);
+  const c = new THREE.Mesh(new THREE.SphereGeometry(0.28, 8, 6), mat);
+  c.position.set(-0.22, 0.38, -0.08);
+  group.add(c);
+  return group;
+}
+
+/** Garden gate post (transition marker). */
+export function makeGardenGate(side: 'left' | 'right') {
+  const group = new THREE.Group();
+  const post = new THREE.Mesh(
+    new THREE.BoxGeometry(0.18, 1.8, 0.18),
+    new THREE.MeshLambertMaterial({ color: 0x7a5a30 }),
+  );
+  post.position.set(side === 'left' ? 0.05 : -0.05, 0.9, 0);
+  group.add(post);
+  const cap = new THREE.Mesh(
+    new THREE.BoxGeometry(0.24, 0.1, 0.24),
+    new THREE.MeshLambertMaterial({ color: 0x5a3a18 }),
+  );
+  cap.position.set(side === 'left' ? 0.05 : -0.05, 1.85, 0);
+  group.add(cap);
+  // Small hanging lantern
+  const lamp = new THREE.Mesh(
+    new THREE.SphereGeometry(0.1, 8, 6),
+    new THREE.MeshLambertMaterial({
+      color: 0xffe8a0,
+      emissive: 0xffaa40,
+      emissiveIntensity: 0.4,
+    }),
+  );
+  lamp.position.set(side === 'left' ? 0.2 : -0.2, 1.5, 0);
+  group.add(lamp);
+  return group;
+}

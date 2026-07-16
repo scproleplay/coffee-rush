@@ -1,23 +1,36 @@
 import * as THREE from 'three';
+import type { SectionId } from './sections';
+import { SECTION_ORDER } from './sections';
 import {
   makeCeilingTexture,
   makeFloorTexture,
+  makeGrassTexture,
+  makeKitchenFloorTexture,
+  makeKitchenWallTexture,
+  makeLivingWallTexture,
+  makePathTexture,
   makeWallTexture,
 } from './textures';
 import {
   makeArmchair,
-  makeBedEdge,
   makeBookshelf,
+  makeBush,
   makeCabinet,
+  makeCoffeeTable,
   makeCouch,
   makeDiningSet,
   makeDoor,
+  makeFencePanel,
   makeFloorLamp,
+  makeFlowerPot,
   makeFridge,
+  makeGardenGate,
+  makeHoseReel,
   makeKitchenCounter,
   makeLaundryBasket,
-  makeNightstand,
+  makePatioChair,
   makePictureFrame,
+  makePillowStack,
   makePlant,
   makeRoomArch,
   makeRug,
@@ -30,28 +43,22 @@ import {
 } from '../entities/decor';
 
 export interface HallwayBundle {
+  /** Active floor texture (reassigned on section change — always scroll this). */
   floorTex: THREE.CanvasTexture;
   wallTex: THREE.CanvasTexture;
   ceilingTex: THREE.CanvasTexture;
+  pathTex: THREE.CanvasTexture;
   decorItems: THREE.Object3D[];
   DECOR_SPACING: number;
+  applySectionLook: (id: SectionId) => void;
+  resetEnvironment: () => void;
 }
 
-/**
- * Room themes cycle so the run clearly reads as a house chase:
- * kitchen → living room → hallway → bedroom → repeat.
- * Props stay OFF the three playable lanes (x≈±2.1..±2.95).
- */
-type RoomTheme = 'kitchen' | 'living' | 'hallway' | 'bedroom';
-
-const ROOM_CYCLE: RoomTheme[] = ['kitchen', 'living', 'hallway', 'bedroom'];
-
-/** Items per themed section (both sides). */
-const SECTION_LENGTH = 8;
+type Side = 'left' | 'right';
 
 function placeSide(
   item: THREE.Object3D,
-  side: 'left' | 'right',
+  side: Side,
   x: number,
   y: number,
   faceInward = true,
@@ -59,62 +66,69 @@ function placeSide(
   item.position.x = side === 'left' ? -x : x;
   item.position.y = y;
   if (faceInward) {
-    // Face toward center lane
     item.rotation.y = side === 'left' ? Math.PI / 2 : -Math.PI / 2;
   }
 }
 
-function makeKitchenProp(i: number, side: 'left' | 'right'): THREE.Object3D {
-  const slot = i % 4;
-  let item: THREE.Object3D;
-  if (slot === 0) {
-    item = makeFridge();
-    item.scale.setScalar(1.15);
-    placeSide(item, side, 2.35, 0);
-  } else if (slot === 1) {
-    item = makeStove();
-    item.scale.setScalar(1.15);
-    placeSide(item, side, 2.3, 0);
-  } else if (slot === 2) {
-    item = makeKitchenCounter();
-    item.scale.setScalar(1.2);
-    placeSide(item, side, 2.25, 0);
-  } else {
-    item = makeDiningSet();
-    item.scale.setScalar(1.15);
-    placeSide(item, side, 2.2, 0);
-  }
-  return item;
-}
-
-function makeLivingProp(i: number, side: 'left' | 'right'): THREE.Object3D {
-  const slot = i % 5;
+function makeLivingProp(i: number, side: Side): THREE.Object3D {
+  const slot = i % 6;
   let item: THREE.Object3D;
   if (slot === 0) {
     item = makeCouch();
-    item.scale.setScalar(1.2);
+    item.scale.setScalar(1.25);
     placeSide(item, side, 2.25, 0);
   } else if (slot === 1) {
     item = makeTvStand();
-    item.scale.setScalar(1.15);
+    item.scale.setScalar(1.2);
     placeSide(item, side, 2.3, 0);
   } else if (slot === 2) {
     item = makeFloorLamp();
-    item.scale.setScalar(1.25);
+    item.scale.setScalar(1.3);
     placeSide(item, side, 2.35, 0, false);
   } else if (slot === 3) {
+    item = makeCoffeeTable();
+    item.scale.setScalar(1.15);
+    placeSide(item, side, 2.15, 0, false);
+  } else if (slot === 4) {
     item = makeBookshelf();
-    item.scale.setScalar(1.1);
+    item.scale.setScalar(1.15);
     placeSide(item, side, 2.35, 0);
   } else {
-    item = makeArmchair();
-    item.scale.setScalar(1.3);
-    placeSide(item, side, 2.2, 0);
+    item = i % 2 === 0 ? makePillowStack() : makeArmchair();
+    item.scale.setScalar(i % 2 === 0 ? 1.2 : 1.3);
+    placeSide(item, side, 2.2, 0, i % 2 !== 0);
   }
   return item;
 }
 
-function makeHallwayProp(i: number, side: 'left' | 'right'): THREE.Object3D {
+function makeKitchenProp(i: number, side: Side): THREE.Object3D {
+  const slot = i % 5;
+  let item: THREE.Object3D;
+  if (slot === 0) {
+    item = makeFridge();
+    item.scale.setScalar(1.2);
+    placeSide(item, side, 2.35, 0);
+  } else if (slot === 1) {
+    item = makeStove();
+    item.scale.setScalar(1.2);
+    placeSide(item, side, 2.3, 0);
+  } else if (slot === 2) {
+    item = makeKitchenCounter();
+    item.scale.setScalar(1.25);
+    placeSide(item, side, 2.25, 0);
+  } else if (slot === 3) {
+    item = makeDiningSet();
+    item.scale.setScalar(1.15);
+    placeSide(item, side, 2.2, 0);
+  } else {
+    item = makeCabinet();
+    item.scale.setScalar(1.3);
+    placeSide(item, side, 2.25, 0);
+  }
+  return item;
+}
+
+function makeHallwayProp(i: number, side: Side): THREE.Object3D {
   const slot = i % 6;
   let item: THREE.Object3D;
   if (slot === 0) {
@@ -151,215 +165,363 @@ function makeHallwayProp(i: number, side: 'left' | 'right'): THREE.Object3D {
   return item;
 }
 
-function makeBedroomProp(i: number, side: 'left' | 'right'): THREE.Object3D {
-  const slot = i % 4;
+function makeGardenProp(i: number, side: Side): THREE.Object3D {
+  const slot = i % 6;
   let item: THREE.Object3D;
   if (slot === 0) {
-    item = makeBedEdge();
+    item = makeFencePanel();
     item.scale.setScalar(1.15);
-    placeSide(item, side, 2.3, 0);
+    placeSide(item, side, 2.85, 0, false);
   } else if (slot === 1) {
-    item = makeNightstand();
-    item.scale.setScalar(1.3);
-    placeSide(item, side, 2.25, 0, false);
+    item = makeBush();
+    item.scale.setScalar(1.2);
+    placeSide(item, side, 2.4, 0, false);
   } else if (slot === 2) {
-    item = makeCabinet();
+    item = makeFlowerPot();
     item.scale.setScalar(1.35);
-    placeSide(item, side, 2.25, 0);
-  } else {
-    item = makeSideTable();
-    item.scale.setScalar(1.45);
     placeSide(item, side, 2.2, 0, false);
+  } else if (slot === 3) {
+    item = makePatioChair();
+    item.scale.setScalar(1.15);
+    placeSide(item, side, 2.25, 0, false);
+  } else if (slot === 4) {
+    item = makeHoseReel();
+    item.scale.setScalar(1.2);
+    placeSide(item, side, 2.3, 0, false);
+  } else {
+    item = makePlant();
+    item.scale.setScalar(1.8);
+    placeSide(item, side, 2.35, 0, false);
   }
   return item;
 }
 
-function makeRoomProp(theme: RoomTheme, i: number, side: 'left' | 'right'): THREE.Object3D {
+function makeSectionProp(theme: SectionId, i: number, side: Side): THREE.Object3D {
   switch (theme) {
-    case 'kitchen':
-      return makeKitchenProp(i, side);
     case 'living':
       return makeLivingProp(i, side);
+    case 'kitchen':
+      return makeKitchenProp(i, side);
     case 'hallway':
       return makeHallwayProp(i, side);
-    case 'bedroom':
-      return makeBedroomProp(i, side);
+    case 'garden':
+      return makeGardenProp(i, side);
   }
 }
 
+function makeTransitionMarker(theme: SectionId, side: Side): THREE.Object3D {
+  if (theme === 'garden') {
+    const gate = makeGardenGate(side);
+    gate.scale.setScalar(1.1);
+    placeSide(gate, side, 2.7, 0, false);
+    return gate;
+  }
+  const arch = makeRoomArch(side);
+  arch.scale.setScalar(1.1);
+  placeSide(arch, side, 2.85, 0);
+  return arch;
+}
+
+/** Props per section (both sides interleaved). */
+const PROPS_PER_SECTION: Record<SectionId, number> = {
+  living: 14,
+  kitchen: 14,
+  hallway: 12,
+  garden: 14,
+};
+
 /**
- * Build the scrolling house interior shell + themed room decor pool (CE-local).
- * Visual-only: does not change lane collision or obstacle gameplay.
+ * Build the scrolling house-journey environment (CE-local).
+ * Shell materials + fog change per section; decor follows living→kitchen→hallway→garden.
  */
 export function createHallway(scene: THREE.Scene): HallwayBundle {
-  const floorTex = makeFloorTexture();
-  const floor = new THREE.Mesh(
-    new THREE.PlaneGeometry(12, 200),
-    new THREE.MeshLambertMaterial({ map: floorTex }),
-  );
+  const woodFloorTex = makeFloorTexture();
+  const kitchenFloorTex = makeKitchenFloorTexture();
+  const grassTex = makeGrassTexture();
+  const pathTex = makePathTexture();
+  const hallWallTex = makeWallTexture();
+  const livingWallTex = makeLivingWallTexture();
+  const kitchenWallTex = makeKitchenWallTexture();
+  const ceilingTex = makeCeilingTexture();
+
+  const floorMat = new THREE.MeshLambertMaterial({ map: woodFloorTex });
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(14, 220), floorMat);
   floor.rotation.x = -Math.PI / 2;
-  floor.position.y = 0;
-  floor.position.z = -80;
+  floor.position.set(0, 0, -90);
   scene.add(floor);
 
-  const wallTex = makeWallTexture();
   const wallMat = new THREE.MeshLambertMaterial({
-    map: wallTex,
+    map: livingWallTex,
     side: THREE.FrontSide,
   });
-  const wallL = new THREE.Mesh(new THREE.PlaneGeometry(200, 6), wallMat);
+  const wallL = new THREE.Mesh(new THREE.PlaneGeometry(220, 6), wallMat);
   wallL.rotation.y = Math.PI / 2;
-  wallL.position.set(-3, 3, -80);
+  wallL.position.set(-3, 3, -90);
   scene.add(wallL);
-  const wallR = wallL.clone();
+  const wallR = new THREE.Mesh(new THREE.PlaneGeometry(220, 6), wallMat);
   wallR.rotation.y = -Math.PI / 2;
-  wallR.position.set(3, 3, -80);
+  wallR.position.set(3, 3, -90);
   scene.add(wallR);
 
-  const ceilingTex = makeCeilingTexture();
-  const ceiling = new THREE.Mesh(
-    new THREE.PlaneGeometry(12, 200),
-    new THREE.MeshLambertMaterial({ map: ceilingTex }),
-  );
+  const ceilingMat = new THREE.MeshLambertMaterial({ map: ceilingTex });
+  const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(14, 220), ceilingMat);
   ceiling.rotation.x = Math.PI / 2;
-  ceiling.position.y = 6;
-  ceiling.position.z = -80;
+  ceiling.position.set(0, 6, -90);
   scene.add(ceiling);
 
-  // Soft runner rug down the center of the hall (visual only — not collidable)
   const runnerMat = new THREE.MeshLambertMaterial({ color: 0xa84838 });
-  const runner = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 200), runnerMat);
+  const runner = new THREE.Mesh(new THREE.PlaneGeometry(1.35, 220), runnerMat);
   runner.rotation.x = -Math.PI / 2;
-  runner.position.set(0, 0.01, -80);
+  runner.position.set(0, 0.012, -90);
+  runner.visible = false;
   scene.add(runner);
-  const runnerEdgeMat = new THREE.MeshLambertMaterial({ color: 0xe8d0a0 });
-  for (const x of [-0.72, 0.72]) {
-    const edge = new THREE.Mesh(new THREE.PlaneGeometry(0.08, 200), runnerEdgeMat);
-    edge.rotation.x = -Math.PI / 2;
-    edge.position.set(x, 0.012, -80);
-    scene.add(edge);
-  }
 
-  // Baseboards (skirt boards) — classic house interior
+  const livingRugMat = new THREE.MeshLambertMaterial({ color: 0x8a4a38 });
+  const livingRug = new THREE.Mesh(
+    new THREE.PlaneGeometry(2.4, 220),
+    livingRugMat,
+  );
+  livingRug.rotation.x = -Math.PI / 2;
+  livingRug.position.set(0, 0.011, -90);
+  scene.add(livingRug);
+
+  const pathMat = new THREE.MeshLambertMaterial({ map: pathTex });
+  const path = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 220), pathMat);
+  path.rotation.x = -Math.PI / 2;
+  path.position.set(0, 0.014, -90);
+  path.visible = false;
+  scene.add(path);
+
+  const trimGroup = new THREE.Group();
   const baseMat = new THREE.MeshLambertMaterial({ color: 0xf0e0c0 });
-  const baseL = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.22, 200), baseMat);
-  baseL.position.set(-2.94, 0.11, -80);
-  scene.add(baseL);
+  const baseL = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.22, 220), baseMat);
+  baseL.position.set(-2.94, 0.11, -90);
+  trimGroup.add(baseL);
   const baseR = baseL.clone();
   baseR.position.x = 2.94;
-  scene.add(baseR);
-  // Darker top cap on baseboard
-  const capMat = new THREE.MeshLambertMaterial({ color: 0xd4b890 });
-  const capL = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.04, 200), capMat);
-  capL.position.set(-2.94, 0.24, -80);
-  scene.add(capL);
-  const capR = capL.clone();
-  capR.position.x = 2.94;
-  scene.add(capR);
-
-  // Crown molding under ceiling
+  trimGroup.add(baseR);
   const crownMat = new THREE.MeshLambertMaterial({ color: 0xf5e8d0 });
-  const crownL = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.12, 200), crownMat);
-  crownL.position.set(-2.94, 5.9, -80);
-  scene.add(crownL);
+  const crownL = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.12, 220), crownMat);
+  crownL.position.set(-2.94, 5.9, -90);
+  trimGroup.add(crownL);
   const crownR = crownL.clone();
   crownR.position.x = 2.94;
-  scene.add(crownR);
+  trimGroup.add(crownR);
+  scene.add(trimGroup);
 
-  // Soft side floor rails (lane guides) — keep for gameplay readability
   const railMat = new THREE.MeshLambertMaterial({ color: 0x8a5a2c });
-  const railGeo = new THREE.BoxGeometry(0.06, 0.03, 200);
-  const railL = new THREE.Mesh(railGeo, railMat);
-  railL.position.set(-0.8, 0.02, -80);
+  const railL = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.03, 220), railMat);
+  railL.position.set(-0.8, 0.02, -90);
   scene.add(railL);
   const railR = railL.clone();
   railR.position.x = 0.8;
   scene.add(railR);
 
-  // Warm hanging pendant lights along the hall
+  const fenceGroup = new THREE.Group();
+  fenceGroup.visible = false;
+  const fenceMat = new THREE.MeshLambertMaterial({ color: 0x8a6a38 });
+  for (const x of [-2.95, 2.95]) {
+    for (let i = 0; i < 20; i++) {
+      const post = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.2, 0.12), fenceMat);
+      post.position.set(x, 0.6, -10 - i * 10);
+      fenceGroup.add(post);
+      const board = new THREE.Mesh(
+        new THREE.BoxGeometry(0.06, 0.9, 9.2),
+        new THREE.MeshLambertMaterial({ color: 0xa08048 }),
+      );
+      board.position.set(x, 0.55, -10 - i * 10 - 4.5);
+      fenceGroup.add(board);
+    }
+  }
+  scene.add(fenceGroup);
+
+  const pendantGroup = new THREE.Group();
   const pendantMat = new THREE.MeshLambertMaterial({
     color: 0xffe8c0,
     emissive: 0xffaa60,
     emissiveIntensity: 0.45,
   });
-  for (let i = 0; i < 8; i++) {
-    const shade = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.28, 10), pendantMat);
-    shade.position.set(0, 5.55, -10 - i * 18);
-    shade.rotation.x = Math.PI;
-    scene.add(shade);
-    const cord = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.015, 0.015, 0.4, 4),
-      new THREE.MeshLambertMaterial({ color: 0x4a3020 }),
+  for (let i = 0; i < 10; i++) {
+    const shade = new THREE.Mesh(
+      new THREE.ConeGeometry(0.22, 0.28, 10),
+      pendantMat,
     );
-    cord.position.set(0, 5.85, -10 - i * 18);
-    scene.add(cord);
+    shade.position.set(0, 5.55, -8 - i * 16);
+    shade.rotation.x = Math.PI;
+    pendantGroup.add(shade);
   }
+  scene.add(pendantGroup);
 
-  // Side area rugs (static shell accents) — living-room warmth without lane block
-  const sideRugMat = new THREE.MeshLambertMaterial({ color: 0x8a4a38 });
-  for (const x of [-2.1, 2.1]) {
-    const sideRug = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 200), sideRugMat);
-    sideRug.rotation.x = -Math.PI / 2;
-    sideRug.position.set(x, 0.008, -80);
-    scene.add(sideRug);
-  }
+  const roomKey = new THREE.DirectionalLight(0xffe4b8, 1.0);
+  roomKey.position.set(3.5, 9, -2);
+  scene.add(roomKey);
+  const roomFill = new THREE.DirectionalLight(0xffd0a8, 0.3);
+  roomFill.position.set(-5, 5, 2);
+  scene.add(roomFill);
+  const sunOutdoor = new THREE.DirectionalLight(0xfff2c8, 0);
+  sunOutdoor.position.set(4, 14, -6);
+  scene.add(sunOutdoor);
 
-  // Scrolling themed room decor — large, readable house props OFF playable lanes
-  const DECOR_SPACING = 5.2;
+  const DECOR_SPACING = 7;
   const decorItems: THREE.Object3D[] = [];
-  const COUNT = 40;
+  let zCursor = 0;
 
-  for (let i = 0; i < COUNT; i++) {
-    const side: 'left' | 'right' = i % 2 === 0 ? 'left' : 'right';
-    const section = Math.floor(i / SECTION_LENGTH);
-    const theme = ROOM_CYCLE[section % ROOM_CYCLE.length]!;
-    const localI = i % SECTION_LENGTH;
+  for (const theme of SECTION_ORDER) {
+    const count = PROPS_PER_SECTION[theme];
+    for (let i = 0; i < count; i++) {
+      const side: Side = i % 2 === 0 ? 'left' : 'right';
+      const localI = Math.floor(i / 2);
 
-    // Room transition arch at the start of each section (both sides feel like a portal)
-    if (localI === 0) {
-      const arch = makeRoomArch(side);
-      arch.scale.setScalar(1.05);
-      placeSide(arch, side, 2.85, 0);
-      arch.position.z = -i * DECOR_SPACING;
-      scene.add(arch);
-      decorItems.push(arch);
-      // Also place a small rug marker under the arch for room identity
-      const marker = makeRug();
-      marker.scale.setScalar(1.25);
-      marker.position.x = side === 'left' ? -2.05 : 2.05;
-      marker.position.y = 0;
-      marker.position.z = -i * DECOR_SPACING - 0.5;
-      scene.add(marker);
-      decorItems.push(marker);
-    }
-
-    const item = makeRoomProp(theme, localI + (side === 'right' ? 1 : 0), side);
-
-    // Occasional wall shelf / picture in non-hallway rooms for density
-    if (theme !== 'hallway' && localI === 3) {
-      const extra =
-        theme === 'kitchen'
-          ? makeShelf()
-          : makePictureFrame((i + 2) % 4, side);
-      extra.scale.setScalar(theme === 'kitchen' ? 1.35 : 1.7);
-      if (theme === 'kitchen') {
-        extra.rotation.y = side === 'left' ? -Math.PI / 2 : Math.PI / 2;
-        extra.position.x = side === 'left' ? -2.9 : 2.9;
-        extra.position.y = 0;
-      } else {
-        extra.rotation.y = side === 'left' ? -Math.PI / 2 : Math.PI / 2;
-        extra.position.x = side === 'left' ? -2.95 : 2.95;
-        extra.position.y = 2.85;
+      if (i === 0) {
+        const markerL = makeTransitionMarker(theme, 'left');
+        markerL.position.z = -zCursor;
+        scene.add(markerL);
+        decorItems.push(markerL);
+        const markerR = makeTransitionMarker(theme, 'right');
+        markerR.position.z = -zCursor;
+        scene.add(markerR);
+        decorItems.push(markerR);
+        if (theme !== 'garden') {
+          const rug = makeRug();
+          rug.scale.setScalar(1.3);
+          rug.position.set(side === 'left' ? -2.0 : 2.0, 0, -zCursor - 0.4);
+          scene.add(rug);
+          decorItems.push(rug);
+        }
       }
-      extra.position.z = -i * DECOR_SPACING - 1.2;
-      scene.add(extra);
-      decorItems.push(extra);
-    }
 
-    item.position.z = -i * DECOR_SPACING;
-    scene.add(item);
-    decorItems.push(item);
+      const item = makeSectionProp(
+        theme,
+        localI + (side === 'right' ? 1 : 0),
+        side,
+      );
+
+      if (theme === 'kitchen' && localI === 2) {
+        const shelf = makeShelf();
+        shelf.scale.setScalar(1.35);
+        shelf.rotation.y = side === 'left' ? -Math.PI / 2 : Math.PI / 2;
+        shelf.position.set(side === 'left' ? -2.9 : 2.9, 0, -zCursor - 1);
+        scene.add(shelf);
+        decorItems.push(shelf);
+      }
+      if (theme === 'living' && localI === 3) {
+        const pic = makePictureFrame((i + 1) % 4, side);
+        pic.scale.setScalar(1.7);
+        pic.rotation.y = side === 'left' ? -Math.PI / 2 : Math.PI / 2;
+        pic.position.set(side === 'left' ? -2.95 : 2.95, 2.85, -zCursor - 0.8);
+        scene.add(pic);
+        decorItems.push(pic);
+      }
+      if (theme === 'hallway' && localI === 1) {
+        const sideTable = makeSideTable();
+        sideTable.scale.setScalar(1.3);
+        placeSide(sideTable, side, 2.2, 0, false);
+        sideTable.position.z = -zCursor - 0.5;
+        scene.add(sideTable);
+        decorItems.push(sideTable);
+      }
+
+      item.position.z = -zCursor;
+      scene.add(item);
+      decorItems.push(item);
+      zCursor += DECOR_SPACING;
+    }
   }
 
-  return { floorTex, wallTex, ceilingTex, decorItems, DECOR_SPACING };
+  const bundle: HallwayBundle = {
+    floorTex: woodFloorTex,
+    wallTex: livingWallTex,
+    ceilingTex,
+    pathTex,
+    decorItems,
+    DECOR_SPACING,
+    applySectionLook: () => {},
+    resetEnvironment: () => {},
+  };
+
+  function applySectionLook(id: SectionId): void {
+    const isGarden = id === 'garden';
+    const isKitchen = id === 'kitchen';
+    const isHall = id === 'hallway';
+    const isLiving = id === 'living';
+
+    if (isGarden) {
+      floorMat.map = grassTex;
+      bundle.floorTex = grassTex;
+    } else if (isKitchen) {
+      floorMat.map = kitchenFloorTex;
+      bundle.floorTex = kitchenFloorTex;
+    } else {
+      floorMat.map = woodFloorTex;
+      bundle.floorTex = woodFloorTex;
+    }
+    floorMat.needsUpdate = true;
+
+    if (isGarden) {
+      wallL.visible = false;
+      wallR.visible = false;
+      fenceGroup.visible = true;
+      ceiling.visible = false;
+      trimGroup.visible = false;
+      pendantGroup.visible = false;
+    } else {
+      wallL.visible = true;
+      wallR.visible = true;
+      fenceGroup.visible = false;
+      ceiling.visible = true;
+      trimGroup.visible = true;
+      pendantGroup.visible = !isKitchen;
+      if (isKitchen) {
+        wallMat.map = kitchenWallTex;
+        bundle.wallTex = kitchenWallTex;
+      } else if (isLiving) {
+        wallMat.map = livingWallTex;
+        bundle.wallTex = livingWallTex;
+      } else {
+        wallMat.map = hallWallTex;
+        bundle.wallTex = hallWallTex;
+      }
+      wallMat.needsUpdate = true;
+    }
+
+    runner.visible = isHall;
+    livingRug.visible = isLiving;
+    path.visible = isGarden;
+
+    if (isGarden) {
+      scene.background = new THREE.Color(0x87b8e8);
+      scene.fog = new THREE.Fog(0x9ec8a8, 22, 90);
+      roomKey.color.setHex(0xfff0d0);
+      roomKey.intensity = 0.35;
+      roomFill.intensity = 0.15;
+      sunOutdoor.intensity = 1.25;
+    } else if (isKitchen) {
+      scene.background = new THREE.Color(0xeef4f0);
+      scene.fog = new THREE.Fog(0xd8e8e0, 16, 72);
+      roomKey.color.setHex(0xf0f4ff);
+      roomKey.intensity = 1.15;
+      roomFill.intensity = 0.4;
+      sunOutdoor.intensity = 0;
+    } else if (isHall) {
+      scene.background = new THREE.Color(0xffefd6);
+      scene.fog = new THREE.Fog(0xffd9a8, 14, 68);
+      roomKey.color.setHex(0xffe4b8);
+      roomKey.intensity = 0.95;
+      roomFill.intensity = 0.28;
+      sunOutdoor.intensity = 0;
+    } else {
+      scene.background = new THREE.Color(0xffe8c8);
+      scene.fog = new THREE.Fog(0xffd0a0, 16, 74);
+      roomKey.color.setHex(0xffe0b0);
+      roomKey.intensity = 1.05;
+      roomFill.intensity = 0.35;
+      sunOutdoor.intensity = 0;
+    }
+  }
+
+  bundle.applySectionLook = applySectionLook;
+  bundle.resetEnvironment = () => applySectionLook('living');
+  applySectionLook('living');
+
+  return bundle;
 }

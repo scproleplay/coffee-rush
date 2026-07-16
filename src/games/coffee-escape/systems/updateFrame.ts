@@ -11,6 +11,8 @@ import {
   LANE_X,
   OBSTACLE_END_Z,
 } from '../engine/constants';
+import type { SectionId } from '../engine/sections';
+import { sectionAtDistance, sectionLabel } from '../engine/sections';
 import type { GameState } from '../engine/types';
 import {
   OBSTACLE_KINDS,
@@ -55,11 +57,16 @@ export interface UpdateFrameCtx {
   camera: THREE.PerspectiveCamera;
   cameraBaseY: number;
   cameraBaseZ: number;
-  floorTex: THREE.CanvasTexture;
-  wallTex: THREE.CanvasTexture;
-  ceilingTex: THREE.CanvasTexture;
-  decorItems: THREE.Object3D[];
-  DECOR_SPACING: number;
+  /** Mutable env handle — floorTex/wallTex swap when the section changes. */
+  env: {
+    floorTex: THREE.CanvasTexture;
+    wallTex: THREE.CanvasTexture;
+    ceilingTex: THREE.CanvasTexture;
+    pathTex?: THREE.CanvasTexture;
+    decorItems: THREE.Object3D[];
+    DECOR_SPACING: number;
+    applySectionLook: (id: SectionId) => void;
+  };
   boostGlow: THREE.Mesh;
   dustPool: Array<{
     mesh: THREE.Mesh;
@@ -78,6 +85,7 @@ export interface UpdateFrameCtx {
   collectBean: (b: GameState['beans'][number]) => void;
   emitBoostParticle: () => void;
   onCrash: () => void;
+  onSectionChange?: (id: SectionId, label: string) => void;
   // DOM
   scoreEl: HTMLElement | null;
   boostFill: HTMLElement | null;
@@ -95,6 +103,19 @@ export function updateFrame(ctx: UpdateFrameCtx): boolean {
   state.worldTime += dt;
   state.speed = speedAtTime(state.worldTime);
   state.score = scoreFromTime(state.worldTime);
+
+  // House-journey distance + section (shell look + obstacle bias)
+  state.distance += state.speed * dt;
+  const section = sectionAtDistance(state.distance);
+  if (section.id !== state.sectionId) {
+    state.sectionId = section.id;
+    state.sectionCycle = section.cycleIndex;
+    ctx.env.applySectionLook(section.id);
+    state.flash = Math.max(state.flash, 0.08);
+    ctx.onSectionChange?.(section.id, sectionLabel(section.id));
+  } else {
+    state.sectionCycle = section.cycleIndex;
+  }
 
   const p = state.player;
   const wasAirborne = !p.onGround;
@@ -250,14 +271,24 @@ export function updateFrame(ctx: UpdateFrameCtx): boolean {
     }
   }
 
-  // World scroll
-  ctx.floorTex.offset.y = (state.worldTime * state.speed) / 4;
-  ctx.wallTex.offset.x = (state.worldTime * state.speed) / 6;
-  ctx.ceilingTex.offset.y = (state.worldTime * state.speed) / 6;
-  for (const d of ctx.decorItems) {
+  // World scroll — use active section textures from env handle
+  const floorTex = ctx.env.floorTex;
+  const wallTex = ctx.env.wallTex;
+  const ceilingTex = ctx.env.ceilingTex;
+  floorTex.offset.y = (state.worldTime * state.speed) / 4;
+  if (wallTex) wallTex.offset.x = (state.worldTime * state.speed) / 6;
+  ceilingTex.offset.y = (state.worldTime * state.speed) / 6;
+  if (ctx.env.pathTex) {
+    ctx.env.pathTex.offset.y = (state.worldTime * state.speed) / 5;
+  }
+  const decorRing = Math.max(
+    1,
+    ctx.env.decorItems.length * ctx.env.DECOR_SPACING,
+  );
+  for (const d of ctx.env.decorItems) {
     d.position.z += state.speed * dt;
     if (d.position.z > 8) {
-      d.position.z -= ctx.decorItems.length * ctx.DECOR_SPACING;
+      d.position.z -= decorRing;
     }
   }
 

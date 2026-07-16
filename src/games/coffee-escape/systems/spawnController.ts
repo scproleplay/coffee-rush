@@ -95,12 +95,19 @@ export function createSpawnController(state: GameState): SpawnController {
   function spawnPattern(pattern: SpawnPattern): void {
     const z = pickZ(state.lastObZ, state.speed);
     const t = state.worldTime;
+    const sectionId = state.sectionId;
 
     if (pattern === 'pair') {
       const safe = Math.floor(Math.random() * 3);
       const [l0, l1] = pairLanes(safe);
-      let k0 = pickKind(t, Math.random, { midOnly: Math.random() < 0.5 });
-      let k1 = pickKind(t, Math.random, { midOnly: Math.random() < 0.5 });
+      let k0 = pickKind(t, Math.random, {
+        midOnly: Math.random() < 0.5,
+        sectionId,
+      });
+      let k1 = pickKind(t, Math.random, {
+        midOnly: Math.random() < 0.5,
+        sectionId,
+      });
       if (isWideKind(k0)) k0 = 'chair';
       if (isWideKind(k1)) k1 = 'pillow';
       placeObstacle(k0, l0, z);
@@ -113,7 +120,7 @@ export function createSpawnController(state: GameState): SpawnController {
 
     if (pattern === 'jump_low') {
       const lane = pickLane(state.lastObLane);
-      const kind = pickKind(t, Math.random, { lowOnly: true });
+      const kind = pickKind(t, Math.random, { lowOnly: true, sectionId });
       placeObstacle(kind, lane, z);
       // Bean after hazard — single-jump height early; optional high later
       if (Math.random() < 0.7) {
@@ -124,7 +131,7 @@ export function createSpawnController(state: GameState): SpawnController {
 
     if (pattern === 'single_with_bean') {
       const lane = pickLane(state.lastObLane);
-      let kind = pickKind(t);
+      let kind = pickKind(t, Math.random, { sectionId });
       if (isWideKind(kind)) kind = 'chair';
       placeObstacle(kind, lane, z);
       // Bean on SAFE lane — never forces a jump over the obstacle to score
@@ -136,7 +143,7 @@ export function createSpawnController(state: GameState): SpawnController {
 
     // single
     const lane = pickLane(state.lastObLane);
-    let kind = pickKind(t);
+    let kind = pickKind(t, Math.random, { sectionId });
     if (t < 12 && isWideKind(kind)) kind = 'chair';
     placeObstacle(kind, lane, z);
     if (Math.random() < 0.35) {

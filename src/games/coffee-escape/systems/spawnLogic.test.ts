@@ -57,6 +57,25 @@ describe('pickKind', () => {
     }
   });
 
+  it('biases kitchen toward spills over many samples', () => {
+    const counts: Record<string, number> = { spill: 0, pillow: 0 };
+    for (let i = 0; i < 200; i++) {
+      const k = pickKind(20, seq((i * 0.017) % 1), { sectionId: 'kitchen' });
+      if (k === 'spill') counts.spill!++;
+      if (k === 'pillow') counts.pillow!++;
+    }
+    expect(counts.spill!).toBeGreaterThan(counts.pillow!);
+  });
+
+  it('biases hallway toward laundry/doorframe when available', () => {
+    let laundryOrDoor = 0;
+    for (let i = 0; i < 200; i++) {
+      const k = pickKind(20, seq((i * 0.031) % 1), { sectionId: 'hallway' });
+      if (k === 'laundry' || k === 'doorframe') laundryOrDoor++;
+    }
+    expect(laundryOrDoor).toBeGreaterThan(15);
+  });
+
   it('lowOnly only returns trip hazards', () => {
     for (let i = 0; i < 15; i++) {
       const k = pickKind(20, seq(i / 15), { lowOnly: true });

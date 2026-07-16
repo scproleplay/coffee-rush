@@ -68,8 +68,7 @@ function startCoffeeEscape() {
   }
 
   const { scene, camera, renderer, cameraBaseY, cameraBaseZ } = createScene(CANVAS);
-  const { floorTex, wallTex, ceilingTex, decorItems, DECOR_SPACING } =
-    createHallway(scene);
+  const env = createHallway(scene);
 
   const {
     cup,
@@ -139,6 +138,7 @@ function startCoffeeEscape() {
       camera,
       scoreEl: SCORE_EL,
     });
+    env.resetEnvironment();
   }
 
   function setPlayingChrome(on: boolean): void {
@@ -158,7 +158,7 @@ function startCoffeeEscape() {
     if (HUD) HUD.hidden = false;
     if (HINT) HINT.hidden = false;
     state.lastTs = performance.now();
-    flashRunStamp(RUN_STAMP);
+    flashRunStamp(RUN_STAMP, 'Living Room');
     requestAnimationFrame(loop);
   }
 
@@ -212,11 +212,7 @@ function startCoffeeEscape() {
       camera,
       cameraBaseY,
       cameraBaseZ,
-      floorTex,
-      wallTex,
-      ceilingTex,
-      decorItems,
-      DECOR_SPACING,
+      env,
       boostGlow,
       dustPool,
       spawnNext: () => spawner.spawnNext(),
@@ -225,6 +221,9 @@ function startCoffeeEscape() {
       emitBoostParticle,
       onCrash: () => {
         setTimeout(gameOver, 0);
+      },
+      onSectionChange: (_id, label) => {
+        flashRunStamp(RUN_STAMP, label);
       },
       scoreEl: SCORE_EL,
       boostFill: BOOST_FILL,

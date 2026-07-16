@@ -59,6 +59,9 @@ export function resetWorld(deps: ResetWorldDeps): void {
   state.nextSpawn = 0.55;
   state.lastObZ = -999;
   state.lastObLane = -1;
+  state.distance = 0;
+  state.sectionId = 'living';
+  state.sectionCycle = 0;
   state.shake = 0;
   state.flash = 0;
   deps.clearPointer();
@@ -74,6 +77,9 @@ export function resetWorld(deps: ResetWorldDeps): void {
   state.player.runAnim = 0;
   state.player.airT = 0;
   state.player.jumpsLeft = MAX_JUMPS;
+  state.player.doubleJumpReactT = 0;
+  state.player.doubleBoostLeft = 0;
+  state.jumpBufferT = 0;
   for (const o of state.obstacles) o.mesh.visible = false;
   state.boost.meter = 0;
   state.boost.active = false;
@@ -154,8 +160,12 @@ export function presentGameOver(deps: GameOverUiDeps): void {
   requestAnimationFrame(tick);
 }
 
-export function flashRunStamp(runStamp: HTMLElement | null): void {
+export function flashRunStamp(
+  runStamp: HTMLElement | null,
+  label?: string,
+): void {
   if (!runStamp) return;
+  if (label) runStamp.textContent = label;
   runStamp.classList.remove('is-show');
   void runStamp.offsetWidth;
   runStamp.classList.add('is-show');

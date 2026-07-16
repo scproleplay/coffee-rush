@@ -17,6 +17,9 @@ export function createInitialState(): GameState {
     nextSpawn: 0.55,
     lastObZ: -999,
     lastObLane: -1,
+    distance: 0,
+    sectionId: 'living',
+    sectionCycle: 0,
     player: {
       lane: 1,
       targetLane: 1,

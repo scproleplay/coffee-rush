@@ -115,6 +115,148 @@ export function makeCeilingTexture() {
   return tex;
 }
 
+/** Kitchen ceramic tile floor. */
+export function makeKitchenFloorTexture() {
+  const c = document.createElement('canvas');
+  c.width = 256;
+  c.height = 256;
+  const g = c.getContext('2d')!;
+  g.fillStyle = '#e8e0d4';
+  g.fillRect(0, 0, 256, 256);
+  const tile = 32;
+  for (let y = 0; y < 256; y += tile) {
+    for (let x = 0; x < 256; x += tile) {
+      const light = ((x / tile + y / tile) % 2 === 0);
+      g.fillStyle = light ? '#f2ebe0' : '#ddd4c6';
+      g.fillRect(x + 1, y + 1, tile - 2, tile - 2);
+      // Grout
+      g.strokeStyle = 'rgba(160, 150, 140, 0.55)';
+      g.lineWidth = 2;
+      g.strokeRect(x + 0.5, y + 0.5, tile - 1, tile - 1);
+    }
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(3, 24);
+  tex.anisotropy = 4;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+/** Cooler kitchen wall (soft mint / backsplash hint). */
+export function makeKitchenWallTexture() {
+  const c = document.createElement('canvas');
+  c.width = 256;
+  c.height = 256;
+  const g = c.getContext('2d')!;
+  g.fillStyle = '#e8f0ea';
+  g.fillRect(0, 0, 256, 256);
+  // Upper paint
+  g.fillStyle = '#dfeae2';
+  g.fillRect(0, 0, 256, 150);
+  // Tile backsplash lower band
+  for (let y = 150; y < 256; y += 22) {
+    for (let x = 0; x < 256; x += 28) {
+      g.fillStyle = (x / 28 + y / 22) % 2 === 0 ? '#c8ddd0' : '#b8d0c4';
+      g.fillRect(x + 1, y + 1, 26, 20);
+    }
+  }
+  g.fillStyle = 'rgba(100, 130, 110, 0.35)';
+  g.fillRect(0, 148, 256, 3);
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(8, 1);
+  tex.anisotropy = 4;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+/** Living room warm plaster (slightly rosier than hall). */
+export function makeLivingWallTexture() {
+  const c = document.createElement('canvas');
+  c.width = 256;
+  c.height = 256;
+  const g = c.getContext('2d')!;
+  g.fillStyle = '#f8e4cc';
+  g.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 36; i++) {
+    g.fillStyle = `rgba(210, 140, 90, ${0.03 + (i % 3) * 0.012})`;
+    g.beginPath();
+    g.ellipse((i * 53) % 256, (i * 91) % 256, 20, 14, 0, 0, Math.PI * 2);
+    g.fill();
+  }
+  // Soft chair rail
+  g.fillStyle = 'rgba(150, 90, 50, 0.12)';
+  g.fillRect(0, 170, 256, 86);
+  g.fillStyle = 'rgba(130, 75, 40, 0.2)';
+  g.fillRect(0, 168, 256, 3);
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(8, 1);
+  tex.anisotropy = 4;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+/** Garden grass floor. */
+export function makeGrassTexture() {
+  const c = document.createElement('canvas');
+  c.width = 256;
+  c.height = 256;
+  const g = c.getContext('2d')!;
+  g.fillStyle = '#4a8a38';
+  g.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 180; i++) {
+    const x = (i * 47) % 256;
+    const y = (i * 89) % 256;
+    g.strokeStyle = i % 3 === 0 ? 'rgba(60, 120, 40, 0.55)' : 'rgba(90, 160, 55, 0.4)';
+    g.lineWidth = 1.2;
+    g.beginPath();
+    g.moveTo(x, y + 6);
+    g.lineTo(x + (i % 5) - 2, y);
+    g.stroke();
+  }
+  // Patch variation
+  for (let i = 0; i < 12; i++) {
+    g.fillStyle = `rgba(40, 90, 30, ${0.08 + (i % 3) * 0.04})`;
+    g.beginPath();
+    g.ellipse((i * 61) % 256, (i * 97) % 256, 28, 18, 0, 0, Math.PI * 2);
+    g.fill();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(4, 22);
+  tex.anisotropy = 4;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+/** Stone patio path band texture. */
+export function makePathTexture() {
+  const c = document.createElement('canvas');
+  c.width = 128;
+  c.height = 256;
+  const g = c.getContext('2d')!;
+  g.fillStyle = '#9a9080';
+  g.fillRect(0, 0, 128, 256);
+  for (let y = 0; y < 256; y += 28) {
+    g.fillStyle = y % 56 === 0 ? '#a8a090' : '#8e8678';
+    g.fillRect(4, y + 2, 120, 24);
+    g.strokeStyle = 'rgba(60, 55, 45, 0.35)';
+    g.strokeRect(4.5, y + 2.5, 119, 23);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(1, 18);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
 export function makePictureTexture(variant: number) {
   const c = document.createElement('canvas');
   c.width = 128;

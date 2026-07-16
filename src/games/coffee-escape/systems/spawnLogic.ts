@@ -1,6 +1,7 @@
 /**
  * Pure spawn helpers for Coffee Escape (CE-local).
  * Phase 2: house kinds + controlled fair patterns.
+ * Phase 3: section-weighted obstacles for house journey.
  */
 import {
   OBSTACLE_KINDS,
@@ -17,6 +18,7 @@ import {
   SPAWN_JITTER,
   SPAWN_RAMP_SECONDS,
 } from '../engine/constants';
+import type { SectionId } from '../engine/sections';
 
 export type RandomFn = () => number;
 
@@ -49,6 +51,61 @@ const BASE_WEIGHT: Record<ObstacleKind, number> = {
   doorframe: 2,
 };
 
+/** Multipliers so obstacles match the room the player is running through. */
+const SECTION_WEIGHT: Record<SectionId, Partial<Record<ObstacleKind, number>>> = {
+  living: {
+    rug: 2.2,
+    pillow: 2.0,
+    toys: 1.8,
+    books: 1.6,
+    chair: 1.4,
+    cable: 1.2,
+    table: 1.3,
+    laundry: 0.35,
+    doorframe: 0.4,
+    spill: 0.5,
+  },
+  kitchen: {
+    spill: 2.4,
+    stool: 1.9,
+    chair: 1.5,
+    box: 1.3,
+    table: 1.5,
+    cable: 1.1,
+    laundry: 0.4,
+    doorframe: 0.35,
+    pillow: 0.4,
+    toys: 0.5,
+    rug: 0.6,
+  },
+  hallway: {
+    laundry: 2.2,
+    doorframe: 2.0,
+    cable: 1.6,
+    box: 1.5,
+    rug: 1.3,
+    chair: 1.0,
+    pillow: 0.6,
+    toys: 0.5,
+    spill: 0.7,
+    table: 0.8,
+  },
+  garden: {
+    toys: 1.8,
+    box: 1.7,
+    cable: 1.5, // hose-like clutter
+    chair: 1.4,
+    stool: 1.5,
+    rug: 0.9, // tarp / mat
+    laundry: 0.45,
+    doorframe: 0.25,
+    spill: 0.8,
+    pillow: 0.5,
+    books: 0.4,
+    table: 0.9,
+  },
+};
+
 const HARD_BOOST: Partial<Record<ObstacleKind, number>> = {
   laundry: 1.2,
   box: 0.8,
@@ -59,11 +116,17 @@ const HARD_BOOST: Partial<Record<ObstacleKind, number>> = {
 
 const LOW_JUMP_KINDS: ObstacleKind[] = ['spill', 'cable', 'rug', 'books', 'toys'];
 
+export type PickKindOpts = {
+  lowOnly?: boolean;
+  midOnly?: boolean;
+  sectionId?: SectionId;
+};
+
 /** Weighted pick of obstacle kind. Inject random for tests. */
 export function pickKind(
   worldTime: number,
   random: RandomFn = Math.random,
-  opts?: { lowOnly?: boolean; midOnly?: boolean },
+  opts?: PickKindOpts,
 ): ObstacleKind {
   let available = (Object.keys(OBSTACLE_KINDS) as ObstacleKind[]).filter((k) =>
     isKindAvailable(k, worldTime),
@@ -78,14 +141,20 @@ export function pickKind(
   }
   if (available.length === 0) return 'chair';
 
+  const sectionId = opts?.sectionId ?? 'living';
+  const sectionMul = SECTION_WEIGHT[sectionId] || {};
   const rampT = Math.min(1, worldTime / 40);
   const weights: Partial<Record<ObstacleKind, number>> = {};
   for (const k of available) {
     let w = BASE_WEIGHT[k] || 2;
+    w *= sectionMul[k] ?? 1;
     if (HARD_BOOST[k]) w += (HARD_BOOST[k] as number) * rampT;
     if (OBSTACLE_KINDS[k].wide && worldTime < 14) w *= 0.35;
     // Early game bias toward readable house junk
-    if (worldTime < 10 && (k === 'chair' || k === 'rug' || k === 'toys' || k === 'pillow')) {
+    if (
+      worldTime < 10 &&
+      (k === 'chair' || k === 'rug' || k === 'toys' || k === 'pillow')
+    ) {
       w += 2;
     }
     weights[k] = w;

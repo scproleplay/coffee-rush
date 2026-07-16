@@ -1,5 +1,6 @@
 import type { ObstacleKind } from '../entities/obstacleKinds';
 import type { Group, Mesh, Object3D } from 'three';
+import type { SectionId } from './sections';
 
 export interface PlayerState {
   lane: number;
@@ -101,4 +102,10 @@ export interface GameState {
    * pre-land buffer). 0 when idle.
    */
   jumpBufferT: number;
+  /** World-scroll distance traveled this run (speed integrated over time). */
+  distance: number;
+  /** Current house-journey section (living / kitchen / hallway / garden). */
+  sectionId: SectionId;
+  /** How many full section-cycle loops completed. */
+  sectionCycle: number;
 }
