@@ -13,7 +13,6 @@ import { createScene } from './engine/scene';
 import { createInitialState } from './engine/state';
 import { makeBean } from './entities/bean';
 import { createCup } from './entities/cup';
-import { createMan } from './entities/man';
 import { initObstaclePool } from './entities/obstaclePool';
 import { attachInputController } from './systems/inputController';
 import { renderFrame } from './systems/renderFrame';
@@ -54,6 +53,7 @@ function startCoffeeEscape() {
     BOOST_HUD_FILL,
     CHASE_FILL,
     CHASE_HUD,
+    CHASE_LABEL,
     HINT,
     RUN_STAMP,
     LB_FORM,
@@ -82,8 +82,6 @@ function startCoffeeEscape() {
     contactShadow,
   } = createCup(scene, LANE_X[1]);
 
-  const { man, manArmL, manArmR, manLegL, manLegR } = createMan(scene, LANE_X[0]);
-
   const beans = [];
   for (let i = 0; i < BEAN_POOL_SIZE; i++) {
     const b = makeBean();
@@ -108,7 +106,7 @@ function startCoffeeEscape() {
     burstDustAt(dustPool, b.mesh.position.x, b.mesh.position.y, b.mesh.position.z);
     const screen = worldToScreen(b.mesh.position, camera, STAGE);
     spawnPopup(STAGE, '+5', screen.x, screen.y - 20, '#ffb000');
-    // Small escape feedback when caffeine pulls him back
+    // Escape feedback when caffeine lowers chase danger
     spawnPopup(STAGE, '💨', screen.x + 18, screen.y + 8, '#c07040');
   }
 
@@ -207,11 +205,6 @@ function startCoffeeEscape() {
       legRGroup,
       steamGroup,
       contactShadow,
-      man,
-      manArmL,
-      manArmR,
-      manLegL,
-      manLegR,
       scene,
       camera,
       cameraBaseY,
@@ -235,6 +228,7 @@ function startCoffeeEscape() {
       boostBtn: BOOST_BTN,
       chaseFill: CHASE_FILL,
       chaseHud: CHASE_HUD,
+      chaseLabel: CHASE_LABEL,
       playerBox: _playerBox,
       obBox: _obBox,
       tmpVec: _tmpVec,

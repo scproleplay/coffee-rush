@@ -102,6 +102,29 @@ export function chaseProximity(chase: Pick<ChaseState, 'danger' | 'max'>): numbe
   return Math.max(0, Math.min(1, chase.danger / chase.max));
 }
 
+/** Meter story labels for HUD (no 3D man required). */
+export type ChaseTier = 'safe' | 'coming' | 'close' | 'caught';
+
+export function chaseTierFromProximity(prox: number): ChaseTier {
+  if (prox >= 1 - 1e-6) return 'caught';
+  if (prox >= 0.7) return 'close';
+  if (prox >= 0.35) return 'coming';
+  return 'safe';
+}
+
+export function chaseTierLabel(tier: ChaseTier): string {
+  switch (tier) {
+    case 'safe':
+      return 'SAFE';
+    case 'coming':
+      return "HE'S COMING";
+    case 'close':
+      return "HE'S CLOSE";
+    case 'caught':
+      return 'CAUGHT!';
+  }
+}
+
 export type ManPoseMode = 'play' | 'catch';
 
 /** Map danger → man world Z. Play keeps clearance from the cup; catch closes in. */
