@@ -7,9 +7,13 @@ import {
   CHASE_BOOST_DRAIN_PER_SEC,
   CHASE_HIT_DANGER,
   CHASE_HIT_IFRAME_SEC,
+  CHASE_MAN_SCALE_CATCH,
   CHASE_MAN_SCALE_FAR,
   CHASE_MAN_SCALE_NEAR,
+  CHASE_MAN_SHOW_PROX,
   CHASE_MAN_X_BIAS,
+  CHASE_MAN_Y,
+  CHASE_MAN_Z_CATCH,
   CHASE_MAN_Z_FAR,
   CHASE_MAN_Z_NEAR,
   CHASE_MAX,
@@ -98,32 +102,77 @@ export function chaseProximity(chase: Pick<ChaseState, 'danger' | 'max'>): numbe
   return Math.max(0, Math.min(1, chase.danger / chase.max));
 }
 
-/** Map danger → man world Z (farther from cup when safe, closer when hot). */
-export function manZFromDanger(danger: number, max = CHASE_MAX): number {
+export type ManPoseMode = 'play' | 'catch';
+
+/** Map danger → man world Z. Play keeps clearance from the cup; catch closes in. */
+export function manZFromDanger(
+  danger: number,
+  max = CHASE_MAX,
+  mode: ManPoseMode = 'play',
+): number {
   const t = max <= 0 ? 0 : clampDanger(danger, max) / max;
+  if (mode === 'catch') {
+    return CHASE_MAN_Z_NEAR + (CHASE_MAN_Z_CATCH - CHASE_MAN_Z_NEAR) * t;
+  }
   return CHASE_MAN_Z_FAR + (CHASE_MAN_Z_NEAR - CHASE_MAN_Z_FAR) * t;
 }
 
 /**
- * Track the cup's laneX with a small right bias so he chases from behind
- * the player, not from the screen edge. Bias shrinks as he closes in.
+ * Always offset to the RIGHT of the cup so the player silhouette stays free.
+ * Bias shrinks a little when hot, but never enough to center on the cup.
  */
 export function manXFromDanger(
   danger: number,
   playerLaneX: number,
   max = CHASE_MAX,
+  mode: ManPoseMode = 'play',
 ): number {
   const t = max <= 0 ? 0 : clampDanger(danger, max) / max;
-  const bias = CHASE_MAN_X_BIAS * (1 - t * 0.55);
-  return playerLaneX + bias;
+  if (mode === 'catch') {
+    // Slide toward the cup for the catch beat
+    return playerLaneX + CHASE_MAN_X_BIAS * (1 - t * 0.85);
+  }
+  // Keep a solid offset during play (min ~0.75 so cup is never covered)
+  const bias = CHASE_MAN_X_BIAS * (1 - t * 0.28);
+  return playerLaneX + Math.max(0.75, bias);
 }
 
-/** Scale: small when far, larger when close — never camera-filling. */
-export function manScaleFromDanger(danger: number, max = CHASE_MAX): number {
+/** Scale: tiny when far, modest when hot; catch can grow larger. */
+export function manScaleFromDanger(
+  danger: number,
+  max = CHASE_MAX,
+  mode: ManPoseMode = 'play',
+): number {
   const t = max <= 0 ? 0 : clampDanger(danger, max) / max;
-  // Ease-in so he stays small until mid-chase, then grows with pressure
   const eased = t * t * (3 - 2 * t);
+  if (mode === 'catch') {
+    return (
+      CHASE_MAN_SCALE_NEAR +
+      (CHASE_MAN_SCALE_CATCH - CHASE_MAN_SCALE_NEAR) * eased
+    );
+  }
   return (
     CHASE_MAN_SCALE_FAR + (CHASE_MAN_SCALE_NEAR - CHASE_MAN_SCALE_FAR) * eased
   );
+}
+
+/** Y sink — slightly lower in the frame so he reads under/behind the cup. */
+export function manYFromDanger(
+  danger: number,
+  max = CHASE_MAX,
+  bob = 0,
+): number {
+  const t = max <= 0 ? 0 : clampDanger(danger, max) / max;
+  // Sink a bit more when far (smaller presence); less when close
+  return CHASE_MAN_Y - 0.08 * (1 - t) + bob;
+}
+
+/** Hide when chase is quiet — meter alone carries early pressure. */
+export function manVisibleFromDanger(
+  danger: number,
+  max = CHASE_MAX,
+  forceShow = false,
+): boolean {
+  if (forceShow) return true;
+  return chaseProximity({ danger, max }) >= CHASE_MAN_SHOW_PROX;
 }

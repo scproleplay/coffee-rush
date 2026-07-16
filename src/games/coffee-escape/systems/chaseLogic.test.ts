@@ -6,6 +6,7 @@ import {
   createChaseState,
   isCaught,
   manScaleFromDanger,
+  manVisibleFromDanger,
   manXFromDanger,
   manZFromDanger,
   tickChase,
@@ -15,6 +16,8 @@ import {
   CHASE_HIT_DANGER,
   CHASE_MAN_SCALE_FAR,
   CHASE_MAN_SCALE_NEAR,
+  CHASE_MAN_SHOW_PROX,
+  CHASE_MAN_X_BIAS,
   CHASE_MAN_Z_FAR,
   CHASE_MAN_Z_NEAR,
   CHASE_MAX,
@@ -43,7 +46,6 @@ describe('applyChaseHit', () => {
 
   it('can catch after enough hits', () => {
     let c = createChaseState();
-    // Bypass i-frames between hits
     for (let i = 0; i < 5; i++) {
       c = { ...c, hitIFrame: 0 };
       const next = applyChaseHit(c);
@@ -75,31 +77,40 @@ describe('applyChaseBeanRelief / boost drain', () => {
   });
 });
 
-describe('manZFromDanger / proximity / scale', () => {
-  it('maps far→near as danger rises, always between camera and cup', () => {
+describe('man pose — never covers the cup during play', () => {
+  it('keeps Z between camera and cup, with play clearance from cup', () => {
     expect(manZFromDanger(0)).toBeCloseTo(CHASE_MAN_Z_FAR, 5);
     expect(manZFromDanger(CHASE_MAX)).toBeCloseTo(CHASE_MAN_Z_NEAR, 5);
-    expect(manZFromDanger(CHASE_MAX / 2)).toBeLessThan(CHASE_MAN_Z_FAR);
-    expect(manZFromDanger(CHASE_MAX / 2)).toBeGreaterThan(CHASE_MAN_Z_NEAR);
-    // In front of camera (~4.5), behind cup (~0)
     expect(CHASE_MAN_Z_FAR).toBeLessThan(4.0);
+    expect(CHASE_MAN_Z_NEAR).toBeGreaterThan(1.4); // clear of cup at z≈0
     expect(CHASE_MAN_Z_NEAR).toBeLessThan(CHASE_MAN_Z_FAR);
-    expect(CHASE_MAN_Z_NEAR).toBeGreaterThan(0.6);
   });
 
-  it('tracks player lane with a small right bias that shrinks when close', () => {
+  it('always offsets X to the right of the cup in play mode', () => {
     const far = manXFromDanger(0, 0);
-    const near = manXFromDanger(CHASE_MAX, 0);
-    expect(far).toBeGreaterThan(0); // bias to the right when safe
-    expect(near).toBeLessThan(far); // closer to center when hot
-    expect(manXFromDanger(0, 1.6)).toBeCloseTo(1.6 + (far - 0), 5);
+    const hot = manXFromDanger(CHASE_MAX, 0);
+    expect(far).toBeGreaterThanOrEqual(0.75);
+    expect(hot).toBeGreaterThanOrEqual(0.75);
+    expect(far).toBeCloseTo(CHASE_MAN_X_BIAS, 5);
+    // Cup at lane 0: man never at same x
+    expect(Math.abs(hot - 0)).toBeGreaterThan(0.7);
   });
 
-  it('scales up with danger but stays sub-hero size', () => {
+  it('scales modestly in play; catch can grow larger', () => {
     expect(manScaleFromDanger(0)).toBeCloseTo(CHASE_MAN_SCALE_FAR, 5);
     expect(manScaleFromDanger(CHASE_MAX)).toBeCloseTo(CHASE_MAN_SCALE_NEAR, 5);
-    expect(CHASE_MAN_SCALE_NEAR).toBeLessThan(0.85);
-    expect(CHASE_MAN_SCALE_FAR).toBeLessThan(CHASE_MAN_SCALE_NEAR);
+    expect(CHASE_MAN_SCALE_NEAR).toBeLessThan(0.6);
+    const catchScale = manScaleFromDanger(CHASE_MAX, CHASE_MAX, 'catch');
+    expect(catchScale).toBeGreaterThan(CHASE_MAN_SCALE_NEAR);
+  });
+
+  it('hides at low danger, shows when chase is meaningful', () => {
+    expect(manVisibleFromDanger(0)).toBe(false);
+    expect(manVisibleFromDanger(CHASE_MAX * CHASE_MAN_SHOW_PROX * 0.5)).toBe(
+      false,
+    );
+    expect(manVisibleFromDanger(CHASE_MAX * 0.5)).toBe(true);
+    expect(manVisibleFromDanger(0, CHASE_MAX, true)).toBe(true);
   });
 
   it('proximity is 0..1', () => {

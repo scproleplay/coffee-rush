@@ -23,7 +23,7 @@ export interface ManHandles {
 export function createMan(scene: THREE.Scene, _leftLaneX: number): ManHandles {
   const man = new THREE.Group();
   // Start small (far chase); updateFrame grows him as danger rises
-  man.scale.setScalar(0.48);
+  man.scale.setScalar(0.32);
 
   // Clear palette that pops against warm house floors
   const robeMat = new THREE.MeshLambertMaterial({ color: 0xc07040 });
@@ -234,9 +234,10 @@ export function createMan(scene: THREE.Scene, _leftLaneX: number): ManHandles {
   man.add(manLegL);
   man.add(manLegR);
 
-  // Behind the cup (z between camera ~4.5 and player ~0), slight right bias
-  man.position.set(0.42, 0, 2.55);
-  man.rotation.y = 0; // face up the hall toward the cup
+  // Behind + right of cup start pose (never centered on the player)
+  man.position.set(1.15, -0.05, 3.15);
+  man.rotation.y = -0.35;
+  man.visible = false; // shown once chase meter rises
   scene.add(man);
 
   return {
