@@ -9,7 +9,11 @@ import {
   STORAGE_KEY,
 } from '../engine/constants';
 import type { GameState } from '../engine/types';
-import { isNewBest, pickGameOverTitle } from '../systems/gameFlow';
+import {
+  isNewBest,
+  pickGameOverBlurb,
+  pickGameOverTitle,
+} from '../systems/gameFlow';
 import type { CeDom } from './domRefs';
 import type { LeaderboardFormApi } from './leaderboardForm';
 
@@ -156,6 +160,11 @@ export function presentGameOver(deps: GameOverUiDeps): void {
       ? 'New house record! ☕🏆'
       : pickGameOverTitle(finalScore, state.failReason);
   }
+  if (dom.OVER_BLURB_EL) {
+    dom.OVER_BLURB_EL.textContent = newBest
+      ? 'Personal best! Keep the chase meter green and push for the next room.'
+      : pickGameOverBlurb(finalScore, state.failReason);
+  }
   if (dom.GAME_OVER_OVERLAY) dom.GAME_OVER_OVERLAY.hidden = false;
   if (!lb.wasSubmitted()) lb.show();
   else lb.hide();
@@ -194,7 +203,10 @@ export function flashRunStamp(
   if (!runStamp) return;
   if (label) runStamp.textContent = label;
   runStamp.classList.remove('is-show');
+  // Restart CSS animation cleanly
   void runStamp.offsetWidth;
   runStamp.classList.add('is-show');
-  setTimeout(() => runStamp.classList.remove('is-show'), 1100);
+  window.setTimeout(() => {
+    runStamp.classList.remove('is-show');
+  }, 1200);
 }

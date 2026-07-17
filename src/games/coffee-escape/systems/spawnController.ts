@@ -165,43 +165,75 @@ export function createSpawnController(state: GameState): SpawnController {
   return { spawnNext, spawnBean };
 }
 
-/** Activate a dust burst around a world position (bean collect FX). */
+type DustSlot = {
+  mesh: {
+    visible: boolean;
+    position: { set: (x: number, y: number, z: number) => void };
+    material?: { color?: { set?: (c: string | number) => void } };
+  };
+  life: number;
+  maxLife: number;
+  x: number;
+  y: number;
+  z: number;
+  vx: number;
+  vy: number;
+  vz: number;
+  r: number;
+  color: string;
+};
+
+/** Activate a dust / spark burst around a world position. */
 export function burstDustAt(
-  dustPool: Array<{
-    mesh: { visible: boolean; position: { set: (x: number, y: number, z: number) => void } };
-    life: number;
-    maxLife: number;
-    x: number;
-    y: number;
-    z: number;
-    vx: number;
-    vy: number;
-    vz: number;
-    r: number;
-    color: string;
-  }>,
+  dustPool: DustSlot[],
   x: number,
   y: number,
   z: number,
   count = 6,
+  color = '#ffd24a',
+  opts?: { speed?: number; life?: number; lift?: number },
 ): void {
+  const speed = opts?.speed ?? 1.5;
+  const life = opts?.life ?? 0.5;
+  const lift = opts?.lift ?? 1.5;
   for (let i = 0; i < count; i++) {
     const dust = dustPool.find((d) => d.life <= 0);
     if (!dust) break;
-    dust.life = 0.5;
-    dust.maxLife = 0.5;
-    dust.x = x;
-    dust.y = y;
-    dust.z = z;
+    dust.life = life;
+    dust.maxLife = life;
+    dust.x = x + (Math.random() - 0.5) * 0.12;
+    dust.y = y + (Math.random() - 0.5) * 0.08;
+    dust.z = z + (Math.random() - 0.5) * 0.12;
     const a = Math.random() * Math.PI * 2;
-    const s = 1.5 + Math.random() * 1.5;
+    const s = speed + Math.random() * speed;
     dust.vx = Math.cos(a) * s;
-    dust.vy = 1.5 + Math.random() * 1.5;
-    dust.vz = Math.sin(a) * s;
-    dust.r = 0.18;
-    dust.color = '#ffd24a';
+    dust.vy = lift + Math.random() * lift;
+    dust.vz = Math.sin(a) * s * 0.6;
+    dust.r = 0.14 + Math.random() * 0.1;
+    dust.color = color;
+    try {
+      dust.mesh.material?.color?.set?.(color);
+    } catch {
+      /* ignore material shape */
+    }
     dust.mesh.visible = true;
+    dust.mesh.position.set(dust.x, dust.y, dust.z);
   }
+}
+
+/** Soft steam puffs for double jump. */
+export function burstSteamAt(
+  dustPool: DustSlot[],
+  x: number,
+  y: number,
+  z: number,
+  count = 8,
+): void {
+  burstDustAt(dustPool, x, y, z, count, '#f0f6ff', {
+    speed: 0.9,
+    life: 0.42,
+    lift: 2.2,
+  });
 }
 
 export function emitBoostParticleAt(
@@ -212,14 +244,16 @@ export function emitBoostParticleAt(
   if (!p) return;
   p.life = p.maxLife;
   p.mesh.position.set(
-    cupX + (Math.random() - 0.5) * 0.2,
-    0.4 + Math.random() * 0.4,
-    0.3 + Math.random() * 0.2,
+    cupX + (Math.random() - 0.5) * 0.35,
+    0.25 + Math.random() * 0.55,
+    0.15 + Math.random() * 0.35,
   );
-  p.vy = 1.2 + Math.random() * 0.8;
+  p.vy = 1.4 + Math.random() * 1.1;
   // @ts-expect-error material shape
-  if (p.mesh.material?.opacity != null) p.mesh.material.opacity = 0.8;
-  p.mesh.scale.setScalar(0.8);
+  if (p.mesh.material?.opacity != null) p.mesh.material.opacity = 0.85;
+  // @ts-expect-error material shape
+  if (p.mesh.material?.color?.set) p.mesh.material.color.set(0x7ad4ff);
+  p.mesh.scale.setScalar(0.7 + Math.random() * 0.35);
   p.mesh.visible = true;
 }
 

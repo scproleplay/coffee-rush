@@ -33,7 +33,7 @@ import {
   tickChase,
 } from './chaseLogic';
 import { nextBeanDelay, scoreFromTime, speedAtTime, tickBoost } from './pacingLogic';
-import { burstDustAt } from './spawnController';
+import { burstSteamAt } from './spawnController';
 import { consumeJumpBuffer } from './playerActions';
 import {
   cupTiltX,
@@ -172,16 +172,16 @@ export function updateFrame(ctx: UpdateFrameCtx): boolean {
   }
   p.runAnim = tickRunAnim(p.runAnim, dt, state.speed);
 
-  // Soft steam puff when double jump fires (one gentle burst, not a double slap)
+  // Soft steam puff when double jump fires
   const puffState = state as GameState & { _doubleJumpPuff?: boolean };
   if (puffState._doubleJumpPuff) {
     puffState._doubleJumpPuff = false;
-    burstDustAt(
-      ctx.dustPool as unknown as Parameters<typeof burstDustAt>[0],
+    burstSteamAt(
+      ctx.dustPool as unknown as Parameters<typeof burstSteamAt>[0],
       p.laneX,
-      Math.max(0.12, p.y + 0.1),
+      Math.max(0.2, p.y + 0.15),
       0,
-      5,
+      9,
     );
   }
 

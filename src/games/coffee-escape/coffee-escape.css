@@ -317,14 +317,14 @@
       .ce-boost-hud-label { font-size: 0.6rem; bottom: calc(10px + 16px); }
     }
 
-    /* Chase / danger meter — top-center under HUD, tired man closing in */
+    /* Chase / danger meter — top-center under HUD */
     .ce-chase-hud {
       position: absolute;
       left: 50%;
       top: max(52px, calc(env(safe-area-inset-top, 0px) + 48px));
       transform: translateX(-50%);
-      width: min(200px, 52vw);
-      height: 12px;
+      width: min(220px, 56vw);
+      height: 14px;
       background: linear-gradient(180deg, #fff8f0 0%, #f0e0d0 100%);
       border: 1.5px solid #c07040;
       border-radius: 999px;
@@ -333,7 +333,8 @@
       pointer-events: none;
       box-shadow:
         0 1px 2px rgba(0, 0, 0, 0.12),
-        0 3px 8px rgba(180, 80, 40, 0.18);
+        0 3px 10px rgba(180, 80, 40, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.65);
       transition: border-color 0.2s ease, box-shadow 0.2s ease;
     }
     .ce-chase-hud-fill {
@@ -341,6 +342,19 @@
       width: 0%;
       background: linear-gradient(90deg, #e8a060 0%, #d06030 55%, #b03020 100%);
       transition: width 0.12s linear;
+      box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+      position: relative;
+    }
+    .ce-chase-hud-fill::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.35) 0%,
+        transparent 55%
+      );
+      pointer-events: none;
     }
     .ce-chase-hud.is-safe {
       border-color: #80a870;
@@ -373,34 +387,52 @@
     .ce-chase-hud-label {
       position: absolute;
       left: 50%;
-      top: max(36px, calc(env(safe-area-inset-top, 0px) + 32px));
+      top: max(34px, calc(env(safe-area-inset-top, 0px) + 30px));
       transform: translateX(-50%);
       display: flex;
       align-items: center;
-      gap: 4px;
-      font-size: 0.68rem;
+      gap: 5px;
+      font-size: 0.7rem;
       font-weight: 800;
       color: #a05028;
       text-transform: uppercase;
-      letter-spacing: 0.10em;
+      letter-spacing: 0.1em;
       z-index: 3;
       pointer-events: none;
-      text-shadow: 0 1px 0 rgba(255, 255, 255, 0.75);
+      text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+      white-space: nowrap;
+      transition: color 0.2s ease;
     }
     .ce-chase-face {
       font-size: 0.95rem;
       letter-spacing: 0;
       filter: saturate(1.05);
     }
-    @media (max-width: 380px) {
+    .ce-chase-hud.is-safe + .ce-chase-hud-label,
+    .ce-chase-hud-label:has(+ .ce-chase-hud.is-safe) {
+      color: #4a8040;
+    }
+    @media (max-width: 720px) {
       .ce-chase-hud {
-        width: min(160px, 56vw);
-        height: 10px;
-        top: max(48px, calc(env(safe-area-inset-top, 0px) + 44px));
+        top: max(46px, calc(env(safe-area-inset-top, 0px) + 42px));
+        width: min(190px, 54vw);
+        height: 12px;
       }
       .ce-chase-hud-label {
-        font-size: 0.58rem;
-        top: max(32px, calc(env(safe-area-inset-top, 0px) + 28px));
+        top: max(30px, calc(env(safe-area-inset-top, 0px) + 26px));
+        font-size: 0.62rem;
+      }
+    }
+    @media (max-width: 380px) {
+      .ce-chase-hud {
+        width: min(150px, 52vw);
+        height: 10px;
+        top: max(44px, calc(env(safe-area-inset-top, 0px) + 40px));
+      }
+      .ce-chase-hud-label {
+        font-size: 0.56rem;
+        top: max(28px, calc(env(safe-area-inset-top, 0px) + 24px));
+        letter-spacing: 0.06em;
       }
     }
 
@@ -463,92 +495,153 @@
       font-style: italic;
       margin: 0 0 10px;
     }
-    /* Phase 1: start story + soft chaser silhouette (no cutscene). */
+    /* Start screen — house-journey hero + tips */
+    .ce-card-start {
+      max-width: 480px;
+    }
     .ce-start-hero {
       display: flex;
       align-items: flex-end;
       justify-content: center;
-      gap: 10px;
-      margin: 0 0 6px;
-      min-height: 42px;
+      gap: 14px;
+      margin: 0 0 4px;
+      min-height: 48px;
       line-height: 1;
       user-select: none;
       pointer-events: none;
     }
     .ce-start-cup {
-      font-size: 2.1rem;
+      font-size: 2.35rem;
       filter: drop-shadow(0 2px 0 rgba(180, 90, 0, 0.2));
       animation: ce-cup-wiggle 1.6s ease-in-out infinite;
     }
-    .ce-start-chase {
-      font-size: 1.55rem;
-      opacity: 0.55;
-      transform: translateY(2px);
-      filter: grayscale(0.35) contrast(0.9);
-      animation: ce-chase-bob 1.2s ease-in-out infinite;
+    .ce-start-room {
+      font-size: 1.35rem;
+      opacity: 0.75;
+      transform: translateY(4px);
+      animation: ce-room-float 2.2s ease-in-out infinite;
+    }
+    .ce-start-room:last-child {
+      animation-delay: 0.4s;
+    }
+    .ce-start-kicker {
+      margin: 0 0 2px !important;
+      font-size: 0.72rem !important;
+      font-weight: 800 !important;
+      letter-spacing: 0.12em !important;
+      text-transform: uppercase;
+      color: #c07030 !important;
+      font-style: normal !important;
     }
     @keyframes ce-cup-wiggle {
       0%, 100% { transform: translateX(0) rotate(-4deg); }
       50% { transform: translateX(3px) rotate(4deg); }
     }
-    @keyframes ce-chase-bob {
-      0%, 100% { transform: translateY(2px) translateX(0); }
-      50% { transform: translateY(0) translateX(2px); }
+    @keyframes ce-room-float {
+      0%, 100% { transform: translateY(4px); opacity: 0.7; }
+      50% { transform: translateY(0); opacity: 0.95; }
     }
     .ce-story {
       font-size: 0.86rem !important;
       color: #6b4220 !important;
       margin: 0 0 10px !important;
       line-height: 1.45 !important;
-      max-width: 36ch;
+      max-width: 38ch;
       margin-left: auto !important;
       margin-right: auto !important;
     }
+    .ce-start-tips {
+      list-style: none;
+      margin: 0 auto 10px;
+      padding: 8px 12px;
+      max-width: 36ch;
+      text-align: left;
+      background: linear-gradient(180deg, #fff8ec 0%, #fff1d8 100%);
+      border: 1px solid rgba(255, 179, 71, 0.55);
+      border-radius: 12px;
+      color: #5a3a14;
+      font-size: 0.8rem;
+      line-height: 1.45;
+    }
+    .ce-start-tips li {
+      margin: 3px 0;
+      padding-left: 0.1em;
+    }
+    .ce-start-tips strong {
+      color: #b25e00;
+      font-weight: 800;
+    }
+    .ce-start-best {
+      margin-top: 12px !important;
+      justify-content: center;
+      gap: 8px;
+    }
     .ce-controls-hint {
-      font-size: 0.82rem !important;
+      font-size: 0.8rem !important;
       color: #8a5a2c !important;
-      margin: 0 0 4px !important;
+      margin: 0 0 2px !important;
     }
     .ce-over-blurb {
-      font-size: 0.84rem !important;
-      color: #8a5a2c !important;
-      margin: 0 0 10px !important;
-      font-style: italic;
+      font-size: 0.86rem !important;
+      color: #6b4220 !important;
+      margin: 0 0 12px !important;
+      line-height: 1.45 !important;
+      max-width: 34ch;
+      margin-left: auto !important;
+      margin-right: auto !important;
+      font-style: normal;
     }
     @media (max-width: 380px) {
-      .ce-card { padding: 18px 16px 16px; }
-      .ce-card h2 { font-size: 1.4rem; }
-      .ce-card p { font-size: 0.92rem; }
-      .ce-card .ce-tagline { font-size: 0.88rem; }
-      .ce-story { font-size: 0.8rem !important; max-width: none; }
-      .ce-start-cup { font-size: 1.8rem; }
-      .ce-start-chase { font-size: 1.35rem; }
+      .ce-card { padding: 16px 14px 14px; border-radius: 16px; }
+      .ce-card h2 { font-size: 1.35rem; }
+      .ce-card p { font-size: 0.9rem; }
+      .ce-card .ce-tagline { font-size: 0.84rem; }
+      .ce-story { font-size: 0.78rem !important; max-width: none; }
+      .ce-start-cup { font-size: 1.9rem; }
+      .ce-start-room { font-size: 1.15rem; }
+      .ce-start-tips { font-size: 0.74rem; padding: 7px 10px; }
+      .ce-overlay { padding: 12px; }
     }
 
-    /* "RUN!" stamp — appears briefly on the first run, animates in
-       and out. Set on a child of the start overlay. */
+    /* Room transition / RUN stamp */
     .ce-run-stamp {
       position: absolute;
-      top: 18%;
+      top: 20%;
       left: 50%;
-      transform: translateX(-50%) rotate(-6deg) scale(0.6);
-      font-size: clamp(2.2rem, 8vw, 3.6rem);
+      transform: translateX(-50%) rotate(-5deg) scale(0.7);
+      font-size: clamp(1.5rem, 5.5vw, 2.6rem);
       font-weight: 900;
-      color: #c0392b;
-      text-shadow: 4px 4px 0 #fff, 6px 6px 0 rgba(0, 0, 0, 0.15);
-      letter-spacing: 0.02em;
+      color: #b25e00;
+      text-shadow:
+        0 0 0 2px #fff,
+        3px 3px 0 #fff,
+        4px 4px 0 rgba(180, 90, 0, 0.2);
+      letter-spacing: 0.04em;
       opacity: 0;
       pointer-events: none;
       z-index: 6;
+      white-space: nowrap;
+      max-width: 90%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      padding: 4px 14px;
+      border-radius: 999px;
+      background: linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.92) 0%,
+        rgba(255, 244, 220, 0.88) 100%
+      );
+      border: 2px solid rgba(255, 179, 71, 0.85);
+      box-shadow: 0 4px 14px rgba(180, 90, 0, 0.22);
     }
     .ce-run-stamp.is-show {
-      animation: ce-run-stamp 1.0s ease-out forwards;
+      animation: ce-run-stamp 1.15s cubic-bezier(0.22, 1.2, 0.36, 1) forwards;
     }
     @keyframes ce-run-stamp {
-      0%   { transform: translateX(-50%) rotate(-6deg) scale(0.6); opacity: 0; }
-      15%  { transform: translateX(-50%) rotate(-6deg) scale(1.2); opacity: 1; }
-      60%  { transform: translateX(-50%) rotate(-6deg) scale(1.0); opacity: 1; }
-      100% { transform: translateX(-50%) rotate(-6deg) scale(1.0); opacity: 0; }
+      0%   { transform: translateX(-50%) rotate(-8deg) scale(0.55); opacity: 0; }
+      12%  { transform: translateX(-50%) rotate(-4deg) scale(1.08); opacity: 1; }
+      70%  { transform: translateX(-50%) rotate(-5deg) scale(1.0); opacity: 1; }
+      100% { transform: translateX(-50%) rotate(-5deg) scale(0.96); opacity: 0; }
     }
 
     .ce-actions {

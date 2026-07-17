@@ -1,18 +1,32 @@
 import { describe, expect, it } from 'vitest';
-import { isNewBest, pickGameOverTitle } from './gameFlow';
+import {
+  isNewBest,
+  pickGameOverBlurb,
+  pickGameOverTitle,
+} from './gameFlow';
 
 describe('pickGameOverTitle', () => {
   it('tiers by score with house-chase copy', () => {
-    expect(pickGameOverTitle(0)).toMatch(/Caught|house/i);
-    expect(pickGameOverTitle(50)).toMatch(/almost had you|Caught/i);
-    expect(pickGameOverTitle(100)).toMatch(/free|Almost/i);
-    expect(pickGameOverTitle(200)).toMatch(/legend|House/i);
+    expect(pickGameOverTitle(0)).toMatch(/kitchen|Back/i);
+    expect(pickGameOverTitle(40)).toMatch(/Close call/i);
+    expect(pickGameOverTitle(80)).toMatch(/free|Almost/i);
+    expect(pickGameOverTitle(150)).toMatch(/Outran|house/i);
+    expect(pickGameOverTitle(250)).toMatch(/legend|House/i);
   });
 
   it('uses catch copy when the chase meter maxes', () => {
     expect(pickGameOverTitle(50, 'caught')).toMatch(/caught his coffee/i);
-    // Catch reason wins over high score tier
     expect(pickGameOverTitle(250, 'caught')).toMatch(/caught his coffee/i);
+  });
+});
+
+describe('pickGameOverBlurb', () => {
+  it('coaches on catch', () => {
+    expect(pickGameOverBlurb(10, 'caught')).toMatch(/chase meter/i);
+  });
+
+  it('celebrates big scores', () => {
+    expect(pickGameOverBlurb(300)).toMatch(/Submit|house/i);
   });
 });
 

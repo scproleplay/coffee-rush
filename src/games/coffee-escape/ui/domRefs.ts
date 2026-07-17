@@ -13,6 +13,7 @@ export interface CeDom {
   FINAL_SCORE_EL: HTMLElement | null;
   FINAL_BEST_EL: HTMLElement | null;
   OVER_TITLE_EL: HTMLElement | null;
+  OVER_BLURB_EL: HTMLElement | null;
   NEW_BEST_EL: HTMLElement | null;
   FINAL_SCORE_ITEM: HTMLElement | null;
   FINAL_BEST_ITEM: HTMLElement | null;
@@ -56,6 +57,7 @@ export function getCeDom(): CeDom {
     FINAL_SCORE_EL: document.getElementById('ceFinalScore'),
     FINAL_BEST_EL: document.getElementById('ceFinalBest'),
     OVER_TITLE_EL: document.getElementById('ceOverTitle'),
+    OVER_BLURB_EL: document.getElementById('ceOverBlurb'),
     NEW_BEST_EL: document.getElementById('ceNewBest'),
     FINAL_SCORE_ITEM: document.getElementById('ceFinalScoreItem'),
     FINAL_BEST_ITEM: document.getElementById('ceFinalBestItem'),

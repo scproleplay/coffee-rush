@@ -89,27 +89,33 @@
           </div>
 
           <div id="ceStartOverlay" class="ce-overlay" hidden>
-            <div class="ce-card">
+            <div class="ce-card ce-card-start">
               <div class="ce-start-hero" aria-hidden="true">
+                <span class="ce-start-room">🛋️</span>
                 <span class="ce-start-cup">☕</span>
-                <span class="ce-start-chase">🏃</span>
+                <span class="ce-start-room">🌿</span>
               </div>
-              <h2>☕ Coffee Escape</h2>
+              <p class="ce-start-kicker">House Chase · Endless Runner</p>
+              <h2>Coffee Escape</h2>
               <p class="ce-tagline">He wants his coffee. You want freedom.</p>
               <p class="ce-story">
-                You’re a living coffee cup racing through a house — kitchen,
-                hallway, living room — while a tired man tries to catch his
-                brew. Jump furniture, dodge clutter, sip caffeine boosts, and
-                keep running.
+                Race a living cup through living room, kitchen, hallway, and
+                garden. Jump clutter, double-jump for high beans, and keep the
+                chase meter green — if it fills, he catches his brew.
               </p>
+              <ul class="ce-start-tips" aria-label="How to play">
+                <li><strong>Jump</strong> clutter · <strong>double jump</strong> for height</li>
+                <li><strong>Caffeine</strong> cools the chase · <strong>boost</strong> blasts through</li>
+                <li>Watch the meter: Safe → Coming → Close → Caught</li>
+              </ul>
               <p class="ce-controls-hint">
                 <span class="ce-hint-desktop"
-                  >Desktop: Space / ↑ jump · press again for double jump · A/D
-                  lanes · Shift boost</span
+                  >Desktop: Space / ↑ jump · again for double jump · A/D lanes ·
+                  Shift boost</span
                 >
                 <span class="ce-hint-mobile"
-                  >Mobile: Swipe up to jump · swipe again to double jump · ← →
-                  lanes · Boost button</span
+                  >Mobile: Swipe up jump · again double jump · ← → lanes · Boost
+                  button</span
                 >
               </p>
               <div class="ce-actions">
@@ -122,19 +128,19 @@
                 </button>
                 <a class="btn btn-secondary" href="/">Back to Arcade</a>
               </div>
-              <div class="best-row" style="margin-top: 14px">
-                <span class="best-label">Best Score:</span>
+              <div class="best-row ce-start-best">
+                <span class="best-label">Best Score</span>
                 <span id="ceBestStart" class="best-value">0</span>
               </div>
             </div>
           </div>
 
           <div id="ceGameOverOverlay" class="ce-overlay" hidden>
-            <div class="ce-card">
-              <h2 id="ceOverTitle">Caught in the house! ☕😱</h2>
-              <p class="ce-over-blurb">
+            <div class="ce-card ce-card-over">
+              <h2 id="ceOverTitle">Back to the kitchen… ☕😵</h2>
+              <p id="ceOverBlurb" class="ce-over-blurb">
                 Keep the chase meter down — jump clutter, grab caffeine, and
-                boost to pull ahead. Escape farther next time.
+                boost to pull ahead.
               </p>
               <div id="ceNewBest" class="ce-new-best" hidden>NEW BEST!</div>
               <div class="ce-result-grid">

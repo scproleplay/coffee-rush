@@ -116,10 +116,17 @@ function startCoffeeEscape() {
     b.mesh.visible = false;
     state.score += 5;
     state.flash = 0.1;
-    burstDustAt(dustPool, b.mesh.position.x, b.mesh.position.y, b.mesh.position.z);
+    burstDustAt(
+      dustPool,
+      b.mesh.position.x,
+      b.mesh.position.y,
+      b.mesh.position.z,
+      10,
+      '#ffc84a',
+      { speed: 1.8, life: 0.45, lift: 1.8 },
+    );
     const screen = worldToScreen(b.mesh.position, camera, STAGE);
     spawnPopup(STAGE, '+5', screen.x, screen.y - 20, '#ffb000');
-    // Escape feedback when caffeine lowers chase danger
     spawnPopup(STAGE, '💨', screen.x + 18, screen.y + 8, '#c07040');
   }
 
@@ -245,6 +252,17 @@ function startCoffeeEscape() {
       },
       onSectionChange: (_id, label) => {
         flashRunStamp(RUN_STAMP, label);
+        // Soft room-transition sparkle near the cup
+        burstDustAt(
+          dustPool,
+          cup.position.x,
+          Math.max(0.4, cup.position.y + 0.5),
+          0,
+          7,
+          '#ffe8b0',
+          { speed: 1.1, life: 0.55, lift: 1.2 },
+        );
+        state.flash = Math.max(state.flash, 0.12);
       },
       onHit: () => audio.play('hit'),
       onBean: () => audio.play('bean'),
