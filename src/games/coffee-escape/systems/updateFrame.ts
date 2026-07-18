@@ -10,6 +10,9 @@ import {
   JUMP_VY,
   LANE_X,
   OBSTACLE_END_Z,
+  PLAYER_HIT_D,
+  PLAYER_HIT_H,
+  PLAYER_HIT_W,
 } from '../engine/constants';
 import type { SectionId } from '../engine/sections';
 import { sectionAtDistance, sectionLabel } from '../engine/sections';
@@ -242,22 +245,34 @@ export function updateFrame(ctx: UpdateFrameCtx): boolean {
     if (o.z > OBSTACLE_END_Z) o.mesh.visible = false;
   }
 
-  // Collision — hits raise chase danger (boost still clears through)
+  // Collision — world-space box vs obstacle (matches what the player sees).
+  // Uses interpolated laneX so hits during a lane switch still register.
+  // Soft hits raise chase danger; boost still clears through.
   ctx.playerBox.setFromCenterAndSize(
-    new THREE.Vector3(ctx.cup.position.x, ctx.cup.position.y + 0.55, ctx.cup.position.z),
-    new THREE.Vector3(0.62, 1.0, 0.62),
+    new THREE.Vector3(
+      ctx.cup.position.x,
+      ctx.cup.position.y + PLAYER_HIT_H * 0.5,
+      ctx.cup.position.z,
+    ),
+    new THREE.Vector3(PLAYER_HIT_W, PLAYER_HIT_H, PLAYER_HIT_D),
   );
   for (const o of state.obstacles) {
     if (!o.mesh.visible) continue;
-    if (!blocksPlayerLane(o.lane, p.lane, !!o.wide)) continue;
+    // Skip obstacles clearly not in our path (cheap lane prefilter)
+    if (!blocksPlayerLane(o.lane, p.targetLane, !!o.wide) &&
+        !blocksPlayerLane(o.lane, p.lane, !!o.wide)) {
+      // Still allow mid-switch hits via box test if Z is near and X overlaps
+      if (Math.abs(o.z) > 1.2) continue;
+    }
     const kindKey = typeof o.kind === 'string' ? o.kind : 'chair';
     const meta = isObstacleKind(kindKey) ? OBSTACLE_KINDS[kindKey] : null;
     const clearH = meta?.jumpHeight ?? 0.5;
     // Jump clear before box test
     if (p.y > clearH) continue;
-    const hitW = meta?.hitW ?? 1.0;
-    const hitD = meta?.hitD ?? 0.8;
-    const hitH = Math.max(0.25, clearH * 1.1);
+    // Slightly generous hit volume so visuals and feel match (mobile-forgiving)
+    const hitW = (meta?.hitW ?? 1.0) * 0.95;
+    const hitD = (meta?.hitD ?? 0.8) * 0.92;
+    const hitH = Math.max(0.28, clearH * 1.12);
     const cx = o.wide
       ? (() => {
           const a = o.lane === 0 ? 0 : o.lane === 2 ? 1 : o.lane;
@@ -265,8 +280,10 @@ export function updateFrame(ctx: UpdateFrameCtx): boolean {
           return ((LANE_X[a] ?? 0) + (LANE_X[b] ?? 0)) / 2;
         })()
       : (LANE_X[o.lane] ?? 0);
+    // Prefer live mesh X if present (keeps hitbox under the visible prop)
+    const ox = Number.isFinite(o.mesh.position.x) ? o.mesh.position.x : cx;
     ctx.obBox.setFromCenterAndSize(
-      new THREE.Vector3(cx, hitH * 0.5, o.z),
+      new THREE.Vector3(ox, hitH * 0.5, o.z),
       new THREE.Vector3(hitW, hitH, hitD),
     );
     if (ctx.playerBox.intersectsBox(ctx.obBox)) {

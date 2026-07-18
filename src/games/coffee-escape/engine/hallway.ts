@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { LANE_RAIL_X, LANE_X } from './constants';
 import type { SectionId } from './sections';
 import { SECTION_ORDER } from './sections';
 import {
@@ -68,6 +69,12 @@ export interface HallwayBundle {
 
 type Side = 'left' | 'right';
 
+/**
+ * Side-decor depth from center. Must stay clear of outer lanes (LANE_X ±2.05)
+ * plus cup half-width (~0.35) and prop bulk — keep ≥ ~2.7.
+ */
+const DECOR_CLEAR = 2.72;
+
 function placeSide(
   item: THREE.Object3D,
   side: Side,
@@ -75,7 +82,9 @@ function placeSide(
   y: number,
   faceInward = true,
 ): void {
-  item.position.x = side === 'left' ? -x : x;
+  // Never place closer than DECOR_CLEAR so the cup can't clip into furniture.
+  const depth = Math.max(x, DECOR_CLEAR);
+  item.position.x = side === 'left' ? -depth : depth;
   item.position.y = y;
   if (faceInward) {
     item.rotation.y = side === 'left' ? Math.PI / 2 : -Math.PI / 2;
@@ -177,7 +186,7 @@ function makeHallwayProp(i: number, side: Side): THREE.Object3D {
     item = makeMirror(side);
     item.scale.setScalar(1.15);
     item.rotation.y = side === 'left' ? -Math.PI / 2 : Math.PI / 2;
-    item.position.x = side === 'left' ? -2.92 : 2.92;
+    item.position.x = side === 'left' ? -3.15 : 3.15;
     item.position.y = 1.7;
   } else if (slot === 2) {
     item = makeRadiator();
@@ -199,13 +208,13 @@ function makeHallwayProp(i: number, side: Side): THREE.Object3D {
     item = makePictureFrame(i % 4, side);
     item.scale.setScalar(1.9);
     item.rotation.y = side === 'left' ? -Math.PI / 2 : Math.PI / 2;
-    item.position.x = side === 'left' ? -2.95 : 2.95;
+    item.position.x = side === 'left' ? -3.18 : 3.18;
     item.position.y = 2.9;
   } else if (slot === 7) {
     item = makeWallLamp();
     item.scale.setScalar(1.6);
     item.rotation.y = side === 'left' ? -Math.PI / 2 : Math.PI / 2;
-    item.position.x = side === 'left' ? -2.92 : 2.92;
+    item.position.x = side === 'left' ? -3.15 : 3.15;
     item.position.y = 3.0;
   } else {
     item = i % 2 === 0 ? makeLaundryBasket() : makePlant();
@@ -303,7 +312,7 @@ export function createHallway(scene: THREE.Scene): HallwayBundle {
   const ceilingTex = makeCeilingTexture();
 
   const floorMat = new THREE.MeshLambertMaterial({ map: woodFloorTex });
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(14, 220), floorMat);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(16, 220), floorMat);
   floor.rotation.x = -Math.PI / 2;
   floor.position.set(0, 0, -90);
   scene.add(floor);
@@ -312,17 +321,19 @@ export function createHallway(scene: THREE.Scene): HallwayBundle {
     map: livingWallTex,
     side: THREE.FrontSide,
   });
+  // Walls sit outside the outer lanes so side lanes feel open
+  const wallX = 3.35;
   const wallL = new THREE.Mesh(new THREE.PlaneGeometry(220, 6), wallMat);
   wallL.rotation.y = Math.PI / 2;
-  wallL.position.set(-3, 3, -90);
+  wallL.position.set(-wallX, 3, -90);
   scene.add(wallL);
   const wallR = new THREE.Mesh(new THREE.PlaneGeometry(220, 6), wallMat);
   wallR.rotation.y = -Math.PI / 2;
-  wallR.position.set(3, 3, -90);
+  wallR.position.set(wallX, 3, -90);
   scene.add(wallR);
 
   const ceilingMat = new THREE.MeshLambertMaterial({ map: ceilingTex });
-  const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(14, 220), ceilingMat);
+  const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(16, 220), ceilingMat);
   ceiling.rotation.x = Math.PI / 2;
   ceiling.position.set(0, 6, -90);
   scene.add(ceiling);
@@ -336,7 +347,7 @@ export function createHallway(scene: THREE.Scene): HallwayBundle {
 
   const livingRugMat = new THREE.MeshLambertMaterial({ color: 0x8a4a38 });
   const livingRug = new THREE.Mesh(
-    new THREE.PlaneGeometry(2.4, 220),
+    new THREE.PlaneGeometry(3.2, 220),
     livingRugMat,
   );
   livingRug.rotation.x = -Math.PI / 2;
@@ -353,32 +364,41 @@ export function createHallway(scene: THREE.Scene): HallwayBundle {
   const trimGroup = new THREE.Group();
   const baseMat = new THREE.MeshLambertMaterial({ color: 0xf0e0c0 });
   const baseL = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.22, 220), baseMat);
-  baseL.position.set(-2.94, 0.11, -90);
+  baseL.position.set(-(wallX - 0.06), 0.11, -90);
   trimGroup.add(baseL);
   const baseR = baseL.clone();
-  baseR.position.x = 2.94;
+  baseR.position.x = wallX - 0.06;
   trimGroup.add(baseR);
   const crownMat = new THREE.MeshLambertMaterial({ color: 0xf5e8d0 });
   const crownL = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.12, 220), crownMat);
-  crownL.position.set(-2.94, 5.9, -90);
+  crownL.position.set(-(wallX - 0.06), 5.9, -90);
   trimGroup.add(crownL);
   const crownR = crownL.clone();
-  crownR.position.x = 2.94;
+  crownR.position.x = wallX - 0.06;
   trimGroup.add(crownR);
   scene.add(trimGroup);
 
+  // Lane boundary rails — midpoints between center and side lanes
   const railMat = new THREE.MeshLambertMaterial({ color: 0x8a5a2c });
-  const railL = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.03, 220), railMat);
-  railL.position.set(-0.8, 0.02, -90);
+  const railL = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.035, 220), railMat);
+  railL.position.set(-LANE_RAIL_X, 0.02, -90);
   scene.add(railL);
   const railR = railL.clone();
-  railR.position.x = 0.8;
+  railR.position.x = LANE_RAIL_X;
   scene.add(railR);
+  // Soft outer lane edge marks (not walls — just readability)
+  const outerMat = new THREE.MeshLambertMaterial({ color: 0xa87848 });
+  const outerL = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.025, 220), outerMat);
+  outerL.position.set(LANE_X[0]! - 0.55, 0.015, -90);
+  scene.add(outerL);
+  const outerR = outerL.clone();
+  outerR.position.x = LANE_X[2]! + 0.55;
+  scene.add(outerR);
 
   const fenceGroup = new THREE.Group();
   fenceGroup.visible = false;
   const fenceMat = new THREE.MeshLambertMaterial({ color: 0x8a6a38 });
-  for (const x of [-2.95, 2.95]) {
+  for (const x of [-wallX + 0.1, wallX - 0.1]) {
     for (let i = 0; i < 20; i++) {
       const post = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.2, 0.12), fenceMat);
       post.position.set(x, 0.6, -10 - i * 10);
@@ -442,7 +462,7 @@ export function createHallway(scene: THREE.Scene): HallwayBundle {
         if (theme !== 'garden') {
           const rug = makeRug();
           rug.scale.setScalar(1.3);
-          rug.position.set(side === 'left' ? -2.0 : 2.0, 0, -zCursor - 0.4);
+          rug.position.set(side === 'left' ? -2.75 : 2.75, 0, -zCursor - 0.4);
           scene.add(rug);
           decorItems.push(rug);
         }
@@ -458,7 +478,7 @@ export function createHallway(scene: THREE.Scene): HallwayBundle {
         const shelf = makeShelf();
         shelf.scale.setScalar(1.35);
         shelf.rotation.y = side === 'left' ? -Math.PI / 2 : Math.PI / 2;
-        shelf.position.set(side === 'left' ? -2.9 : 2.9, 0, -zCursor - 1);
+        shelf.position.set(side === 'left' ? -3.1 : 3.1, 0, -zCursor - 1);
         scene.add(shelf);
         decorItems.push(shelf);
       }
@@ -466,7 +486,7 @@ export function createHallway(scene: THREE.Scene): HallwayBundle {
         const pic = makePictureFrame((i + 1) % 4, side);
         pic.scale.setScalar(1.7);
         pic.rotation.y = side === 'left' ? -Math.PI / 2 : Math.PI / 2;
-        pic.position.set(side === 'left' ? -2.95 : 2.95, 2.85, -zCursor - 0.8);
+        pic.position.set(side === 'left' ? -3.18 : 3.18, 2.85, -zCursor - 0.8);
         scene.add(pic);
         decorItems.push(pic);
       }

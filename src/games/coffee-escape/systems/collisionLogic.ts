@@ -17,8 +17,9 @@ export interface BeanHitInput {
 
 export function canCollectBean(b: BeanHitInput): boolean {
   if (b.beanLane !== b.playerLane) return false;
-  const zRadius = b.zRadius ?? 0.5;
-  const minHeight = b.minHeight ?? 0.2;
+  // Slightly generous Z for wider lane travel / mobile timing
+  const zRadius = b.zRadius ?? 0.58;
+  const minHeight = b.minHeight ?? 0.18;
   if (Math.abs(b.beanZ) >= zRadius) return false;
   if (b.playerY <= minHeight) return false;
   return true;

@@ -27,21 +27,21 @@ export interface ObstacleKindMeta {
 }
 
 export const OBSTACLE_KINDS: Record<ObstacleKind, ObstacleKindMeta> = {
-  // Low trip hazards — jump over
-  spill: { wide: false, jumpHeight: 0.22, color: 0x3a1f08, hitW: 1.15, hitD: 0.85 },
-  cable: { wide: false, jumpHeight: 0.2, color: 0x1a1a1a, hitW: 1.05, hitD: 0.7 },
-  rug: { wide: false, jumpHeight: 0.18, color: 0xb85a3a, hitW: 1.2, hitD: 0.95 },
-  books: { wide: false, jumpHeight: 0.32, color: 0x3a5a8a, hitW: 0.95, hitD: 0.7 },
-  toys: { wide: false, jumpHeight: 0.35, color: 0xe07040, hitW: 1.0, hitD: 0.75 },
+  // Low trip hazards — jump over (hitW sized for wider lanes, still fair)
+  spill: { wide: false, jumpHeight: 0.22, color: 0x3a1f08, hitW: 1.25, hitD: 0.9 },
+  cable: { wide: false, jumpHeight: 0.2, color: 0x1a1a1a, hitW: 1.15, hitD: 0.75 },
+  rug: { wide: false, jumpHeight: 0.18, color: 0xb85a3a, hitW: 1.3, hitD: 1.0 },
+  books: { wide: false, jumpHeight: 0.32, color: 0x3a5a8a, hitW: 1.05, hitD: 0.75 },
+  toys: { wide: false, jumpHeight: 0.35, color: 0xe07040, hitW: 1.1, hitD: 0.8 },
   // Mid furniture — clear jump
-  chair: { wide: false, jumpHeight: 0.55, color: 0x8a4a22, hitW: 1.05, hitD: 0.85 },
-  stool: { wide: false, jumpHeight: 0.5, color: 0xa07040, hitW: 0.9, hitD: 0.75 },
-  pillow: { wide: false, jumpHeight: 0.42, color: 0xd08090, hitW: 1.1, hitD: 0.8 },
-  box: { wide: false, jumpHeight: 0.55, color: 0xc9a06a, hitW: 1.1, hitD: 0.9 },
-  laundry: { wide: false, jumpHeight: 0.58, color: 0xd4a574, hitW: 1.15, hitD: 0.9 },
-  // Wide — always leave one free lane via spawn rules
-  table: { wide: true, jumpHeight: 0.48, color: 0x8a4a1f, hitW: 2.55, hitD: 0.95 },
-  doorframe: { wide: true, jumpHeight: 0.52, color: 0x6b4220, hitW: 2.5, hitD: 0.7 },
+  chair: { wide: false, jumpHeight: 0.55, color: 0x8a4a22, hitW: 1.15, hitD: 0.9 },
+  stool: { wide: false, jumpHeight: 0.5, color: 0xa07040, hitW: 1.0, hitD: 0.8 },
+  pillow: { wide: false, jumpHeight: 0.42, color: 0xd08090, hitW: 1.2, hitD: 0.85 },
+  box: { wide: false, jumpHeight: 0.55, color: 0xc9a06a, hitW: 1.2, hitD: 0.95 },
+  laundry: { wide: false, jumpHeight: 0.58, color: 0xd4a574, hitW: 1.25, hitD: 0.95 },
+  // Wide — always leave one safe lane via spawn rules (covers ~two lanes)
+  table: { wide: true, jumpHeight: 0.48, color: 0x8a4a1f, hitW: 3.15, hitD: 1.0 },
+  doorframe: { wide: true, jumpHeight: 0.52, color: 0x6b4220, hitW: 3.1, hitD: 0.75 },
 };
 
 export function isObstacleKind(k: string): k is ObstacleKind {
