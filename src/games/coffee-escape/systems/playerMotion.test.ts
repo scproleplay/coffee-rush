@@ -48,8 +48,8 @@ describe('tickLaneMotion', () => {
   });
 
   it('side lanes are clearly separated from center', () => {
-    expect(LANE_X[2]! - LANE_X[1]!).toBeGreaterThanOrEqual(2.0);
-    expect(LANE_X[1]! - LANE_X[0]!).toBeGreaterThanOrEqual(2.0);
+    expect(LANE_X[2]! - LANE_X[1]!).toBeGreaterThanOrEqual(2.4);
+    expect(LANE_X[1]! - LANE_X[0]!).toBeGreaterThanOrEqual(2.4);
   });
 });
 

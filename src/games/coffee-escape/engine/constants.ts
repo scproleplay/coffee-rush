@@ -4,16 +4,19 @@ export const STORAGE_KEY = 'codecup-coffee-escape-best';
 
 /**
  * Three lanes: left / center / right.
- * Wider spacing so side lanes read clearly and sit away from wall decor.
+ * Wide track so left/right moves are obvious and away from wall decor.
  */
-export const LANE_X = [-2.05, 0, 2.05] as const;
+export const LANE_X = [-2.45, 0, 2.45] as const;
 /** Half-gap markers between lanes (visual guides on the floor). */
-export const LANE_RAIL_X = 1.02;
-export const LANE_SWITCH_MS = 175;
-/** Player collision width/depth (forgiving on mobile, matches cup body). */
-export const PLAYER_HIT_W = 0.58;
-export const PLAYER_HIT_D = 0.58;
-export const PLAYER_HIT_H = 0.95;
+export const LANE_RAIL_X = 1.22;
+export const LANE_SWITCH_MS = 180;
+/**
+ * Player collision box — large enough that obstacle meshes that touch the cup
+ * actually register, still fair (slightly smaller than full visual bulk).
+ */
+export const PLAYER_HIT_W = 0.78;
+export const PLAYER_HIT_D = 0.72;
+export const PLAYER_HIT_H = 1.0;
 export const GROUND_Y = 0;
 /** First jump: clears mid furniture with a tighter arc (less hang / less “far”) */
 export const JUMP_VY = 8.6;

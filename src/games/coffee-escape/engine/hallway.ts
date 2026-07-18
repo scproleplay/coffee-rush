@@ -70,10 +70,10 @@ export interface HallwayBundle {
 type Side = 'left' | 'right';
 
 /**
- * Side-decor depth from center. Must stay clear of outer lanes (LANE_X ±2.05)
- * plus cup half-width (~0.35) and prop bulk — keep ≥ ~2.7.
+ * Side-decor depth from center. Outer lanes are ±2.45; keep furniture well
+ * outside the cup so side lanes never clip into wall props.
  */
-const DECOR_CLEAR = 2.72;
+const DECOR_CLEAR = 3.15;
 
 function placeSide(
   item: THREE.Object3D,
@@ -186,7 +186,7 @@ function makeHallwayProp(i: number, side: Side): THREE.Object3D {
     item = makeMirror(side);
     item.scale.setScalar(1.15);
     item.rotation.y = side === 'left' ? -Math.PI / 2 : Math.PI / 2;
-    item.position.x = side === 'left' ? -3.15 : 3.15;
+    item.position.x = side === 'left' ? -3.55 : 3.55;
     item.position.y = 1.7;
   } else if (slot === 2) {
     item = makeRadiator();
@@ -208,13 +208,13 @@ function makeHallwayProp(i: number, side: Side): THREE.Object3D {
     item = makePictureFrame(i % 4, side);
     item.scale.setScalar(1.9);
     item.rotation.y = side === 'left' ? -Math.PI / 2 : Math.PI / 2;
-    item.position.x = side === 'left' ? -3.18 : 3.18;
+    item.position.x = side === 'left' ? -3.58 : 3.58;
     item.position.y = 2.9;
   } else if (slot === 7) {
     item = makeWallLamp();
     item.scale.setScalar(1.6);
     item.rotation.y = side === 'left' ? -Math.PI / 2 : Math.PI / 2;
-    item.position.x = side === 'left' ? -3.15 : 3.15;
+    item.position.x = side === 'left' ? -3.55 : 3.55;
     item.position.y = 3.0;
   } else {
     item = i % 2 === 0 ? makeLaundryBasket() : makePlant();
@@ -322,7 +322,7 @@ export function createHallway(scene: THREE.Scene): HallwayBundle {
     side: THREE.FrontSide,
   });
   // Walls sit outside the outer lanes so side lanes feel open
-  const wallX = 3.35;
+  const wallX = 3.75;
   const wallL = new THREE.Mesh(new THREE.PlaneGeometry(220, 6), wallMat);
   wallL.rotation.y = Math.PI / 2;
   wallL.position.set(-wallX, 3, -90);
@@ -389,10 +389,10 @@ export function createHallway(scene: THREE.Scene): HallwayBundle {
   // Soft outer lane edge marks (not walls — just readability)
   const outerMat = new THREE.MeshLambertMaterial({ color: 0xa87848 });
   const outerL = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.025, 220), outerMat);
-  outerL.position.set(LANE_X[0]! - 0.55, 0.015, -90);
+  outerL.position.set(LANE_X[0]! - 0.6, 0.015, -90);
   scene.add(outerL);
   const outerR = outerL.clone();
-  outerR.position.x = LANE_X[2]! + 0.55;
+  outerR.position.x = LANE_X[2]! + 0.6;
   scene.add(outerR);
 
   const fenceGroup = new THREE.Group();
@@ -462,7 +462,7 @@ export function createHallway(scene: THREE.Scene): HallwayBundle {
         if (theme !== 'garden') {
           const rug = makeRug();
           rug.scale.setScalar(1.3);
-          rug.position.set(side === 'left' ? -2.75 : 2.75, 0, -zCursor - 0.4);
+          rug.position.set(side === 'left' ? -3.15 : 3.15, 0, -zCursor - 0.4);
           scene.add(rug);
           decorItems.push(rug);
         }
@@ -478,7 +478,7 @@ export function createHallway(scene: THREE.Scene): HallwayBundle {
         const shelf = makeShelf();
         shelf.scale.setScalar(1.35);
         shelf.rotation.y = side === 'left' ? -Math.PI / 2 : Math.PI / 2;
-        shelf.position.set(side === 'left' ? -3.1 : 3.1, 0, -zCursor - 1);
+        shelf.position.set(side === 'left' ? -3.45 : 3.45, 0, -zCursor - 1);
         scene.add(shelf);
         decorItems.push(shelf);
       }
@@ -486,7 +486,7 @@ export function createHallway(scene: THREE.Scene): HallwayBundle {
         const pic = makePictureFrame((i + 1) % 4, side);
         pic.scale.setScalar(1.7);
         pic.rotation.y = side === 'left' ? -Math.PI / 2 : Math.PI / 2;
-        pic.position.set(side === 'left' ? -3.18 : 3.18, 2.85, -zCursor - 0.8);
+        pic.position.set(side === 'left' ? -3.58 : 3.58, 2.85, -zCursor - 0.8);
         scene.add(pic);
         decorItems.push(pic);
       }

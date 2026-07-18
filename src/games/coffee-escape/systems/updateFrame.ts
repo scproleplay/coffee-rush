@@ -245,34 +245,33 @@ export function updateFrame(ctx: UpdateFrameCtx): boolean {
     if (o.z > OBSTACLE_END_Z) o.mesh.visible = false;
   }
 
-  // Collision — world-space box vs obstacle (matches what the player sees).
-  // Uses interpolated laneX so hits during a lane switch still register.
+  // Collision — if the cup visibly touches an obstacle, it counts.
+  // Uses world X for player + mesh X for obstacles so lane switches still hit.
   // Soft hits raise chase danger; boost still clears through.
   ctx.playerBox.setFromCenterAndSize(
     new THREE.Vector3(
       ctx.cup.position.x,
-      ctx.cup.position.y + PLAYER_HIT_H * 0.5,
+      Math.max(PLAYER_HIT_H * 0.45, ctx.cup.position.y + PLAYER_HIT_H * 0.45),
       ctx.cup.position.z,
     ),
     new THREE.Vector3(PLAYER_HIT_W, PLAYER_HIT_H, PLAYER_HIT_D),
   );
   for (const o of state.obstacles) {
     if (!o.mesh.visible) continue;
-    // Skip obstacles clearly not in our path (cheap lane prefilter)
-    if (!blocksPlayerLane(o.lane, p.targetLane, !!o.wide) &&
-        !blocksPlayerLane(o.lane, p.lane, !!o.wide)) {
-      // Still allow mid-switch hits via box test if Z is near and X overlaps
-      if (Math.abs(o.z) > 1.2) continue;
-    }
+    // Only test nearby obstacles (cheap cull); don't require exact lane match
+    // so a wide visual that overlaps the cup still registers.
+    if (Math.abs(o.z) > 1.35) continue;
+
     const kindKey = typeof o.kind === 'string' ? o.kind : 'chair';
     const meta = isObstacleKind(kindKey) ? OBSTACLE_KINDS[kindKey] : null;
     const clearH = meta?.jumpHeight ?? 0.5;
     // Jump clear before box test
-    if (p.y > clearH) continue;
-    // Slightly generous hit volume so visuals and feel match (mobile-forgiving)
-    const hitW = (meta?.hitW ?? 1.0) * 0.95;
-    const hitD = (meta?.hitD ?? 0.8) * 0.92;
-    const hitH = Math.max(0.28, clearH * 1.12);
+    if (p.y > clearH + 0.02) continue;
+
+    // Full meta size — no shrink factor so mesh/hitbox match what you see
+    const hitW = meta?.hitW ?? 1.2;
+    const hitD = meta?.hitD ?? 0.95;
+    const hitH = Math.max(0.32, clearH * 1.2);
     const cx = o.wide
       ? (() => {
           const a = o.lane === 0 ? 0 : o.lane === 2 ? 1 : o.lane;
@@ -280,38 +279,45 @@ export function updateFrame(ctx: UpdateFrameCtx): boolean {
           return ((LANE_X[a] ?? 0) + (LANE_X[b] ?? 0)) / 2;
         })()
       : (LANE_X[o.lane] ?? 0);
-    // Prefer live mesh X if present (keeps hitbox under the visible prop)
+    // Prefer live mesh X (keeps hitbox under the visible prop)
     const ox = Number.isFinite(o.mesh.position.x) ? o.mesh.position.x : cx;
     ctx.obBox.setFromCenterAndSize(
       new THREE.Vector3(ox, hitH * 0.5, o.z),
       new THREE.Vector3(hitW, hitH, hitD),
     );
-    if (ctx.playerBox.intersectsBox(ctx.obBox)) {
-      if (state.boost.active) {
-        state.score += 1;
-        state.flash = 0.15;
-        o.lane = -1;
-        o.mesh.visible = false;
-        continue;
-      }
-      // Soft hit: bump chase danger, knock obstacle away, keep running
-      const hit = applyChaseHit(state.chase);
-      if (hit) {
-        state.chase = hit;
-        state.shake = Math.max(state.shake, 0.28);
-        state.flash = Math.max(state.flash, 0.18);
-        ctx.onHit?.();
-      }
+    if (!ctx.playerBox.intersectsBox(ctx.obBox)) continue;
+
+    // Optional lane sanity: if neither current nor target lane is blocked and
+    // X centers are far apart, skip (avoids false hits from huge wide boxes).
+    const laneNear =
+      blocksPlayerLane(o.lane, p.lane, !!o.wide) ||
+      blocksPlayerLane(o.lane, p.targetLane, !!o.wide);
+    if (!laneNear && Math.abs(ox - ctx.cup.position.x) > hitW * 0.55) continue;
+
+    if (state.boost.active) {
+      state.score += 1;
+      state.flash = 0.15;
       o.lane = -1;
       o.mesh.visible = false;
-      if (isCaught(state.chase)) {
-        state.failReason = 'caught';
-        state.shake = 0.45;
-        state.flash = 0.25;
-        state.gameOver = true;
-        ctx.onCrash();
-        return false;
-      }
+      continue;
+    }
+    // Soft hit: bump chase danger, knock obstacle away, keep running
+    const hit = applyChaseHit(state.chase);
+    if (hit) {
+      state.chase = hit;
+      state.shake = Math.max(state.shake, 0.32);
+      state.flash = Math.max(state.flash, 0.2);
+      ctx.onHit?.();
+    }
+    o.lane = -1;
+    o.mesh.visible = false;
+    if (isCaught(state.chase)) {
+      state.failReason = 'caught';
+      state.shake = 0.45;
+      state.flash = 0.25;
+      state.gameOver = true;
+      ctx.onCrash();
+      return false;
     }
   }
 
